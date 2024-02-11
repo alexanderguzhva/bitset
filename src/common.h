@@ -25,5 +25,56 @@ enum class CompareType {
     NEQ = 6,
 };
 
+template<CompareType Op>
+struct CompareOperator {};
+
+template<>
+struct CompareOperator<CompareType::EQ> {
+    template<typename T, typename U>
+    static inline bool compare(const T t, const U u) {
+        return (t == u);
+    }
+};
+
+template<>
+struct CompareOperator<CompareType::GE> {
+    template<typename T, typename U>
+    static inline bool compare(const T t, const U u) {
+        return (t >= u);
+    }
+};
+
+template<>
+struct CompareOperator<CompareType::GT> {
+    template<typename T, typename U>
+    static inline bool compare(const T t, const U u) {
+        return (t > u);
+    }
+};
+
+template<>
+struct CompareOperator<CompareType::LE> {
+    template<typename T, typename U>
+    static inline bool compare(const T t, const U u) {
+        return (t <= u);
+    }
+};
+
+template<>
+struct CompareOperator<CompareType::LT> {
+    template<typename T, typename U>
+    static inline bool compare(const T t, const U u) {
+        return (t < u);
+    }
+};
+
+template<>
+struct CompareOperator<CompareType::NEQ> {
+    template<typename T, typename U>
+    static inline bool compare(const T t, const U u) {
+        return (t != u);
+    }
+};
+
 }
 }

@@ -421,15 +421,43 @@ public:
         const size_type size,
         CompareType op
     ) {
+        if (op == CompareType::EQ) {
+            this->inplace_compare<T, U, CompareType::EQ>(t, u, size);
+        }
+        else if (op == CompareType::GE) {
+            this->inplace_compare<T, U, CompareType::GE>(t, u, size);
+        }
+        else if (op == CompareType::GT) {
+            this->inplace_compare<T, U, CompareType::GT>(t, u, size);
+        }
+        else if (op == CompareType::LE) {
+            this->inplace_compare<T, U, CompareType::LE>(t, u, size);
+        }
+        else if (op == CompareType::LT) {
+            this->inplace_compare<T, U, CompareType::LT>(t, u, size);
+        }
+        else if (op == CompareType::NEQ) {
+            this->inplace_compare<T, U, CompareType::NEQ>(t, u, size);
+        }
+        else {
+            // unimplemented
+        }
+    }
+
+    template<typename T, typename U, CompareType Op>
+    void inplace_compare(
+        const T* const __restrict t,
+        const U* const __restrict u,
+        const size_type size
+    ) {
         range_checker::le(size, this->size());
 
-        policy_type::op_compare(
+        policy_type::template op_compare<T, U, Op>(
             this->data(),
             this->offset(),
             t,
             u,
-            size,
-            op
+            size
         );
     }
 

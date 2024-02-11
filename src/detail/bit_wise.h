@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <optional>
 
+#include "proxy.h"
+
 namespace milvus {
 namespace bitset {
 namespace detail {
@@ -18,84 +20,10 @@ struct CustomBitsetPolicy {
 
     using size_type = size_t;
 
-    struct ConstProxy {
-        using parent_type = CustomBitsetPolicy;
-        using size_type = parent_type::size_type;
-        using data_type = parent_type::data_type;
-        using self_type = ConstProxy;
+    using self_type = CustomBitsetPolicy<ElementT>;
 
-        const data_type& element;
-        data_type mask;
-
-        inline ConstProxy(const data_type& _element, const size_type _shift) : 
-            element{_element}
-        {
-            mask = (data_type(1) << _shift);
-        } 
-
-        inline operator bool() const { return ((element & mask) != 0); }
-        inline bool operator~() const { return ((element & mask) == 0); }
-    };
-
-    struct Proxy {
-        using parent_type = CustomBitsetPolicy;
-        using size_type = parent_type::size_type;
-        using data_type = parent_type::data_type;
-        using self_type = Proxy;
-
-        data_type& element;
-        data_type mask;
-
-        inline Proxy(data_type& _element, const size_type _shift) : 
-            element{_element}
-        {
-            mask = (data_type(1) << _shift);
-        } 
-
-        inline operator bool() const { return ((element & mask) != 0); }
-        inline bool operator~() const { return ((element & mask) == 0); }
-
-        inline self_type& operator=(const bool value) {
-            if (value) { set(); } else { reset(); }
-            return *this;
-        }
-
-        inline self_type& operator=(const self_type& other) {
-            bool value = other.operator bool();
-            if (value) { set(); } else { reset(); }
-            return *this;
-        }
-
-        inline self_type& operator|=(const bool value) {
-            if (value) { set(); }
-            return *this;
-        }
-
-        inline self_type& operator&=(const bool value) {
-            if (!value) { reset(); }
-            return *this;
-        }
-
-        inline self_type& operator^=(const bool value) {
-            if (value) { flip(); }
-            return *this;
-        }
-
-        inline void set() {
-            element |= mask;
-        }
-
-        inline void reset() {
-            element &= ~mask;
-        }
-
-        inline void flip() {
-            element ^= mask;
-        }
-    };
-
-    using proxy_type = Proxy;
-    using const_proxy_type = ConstProxy;
+    using proxy_type = Proxy<self_type>;
+    using const_proxy_type = ConstProxy<self_type>;
 
     static inline size_type get_element(const size_t idx) {
         return idx / data_bits;
@@ -365,6 +293,20 @@ struct CustomBitsetPolicy {
         }
 
         return std::nullopt;
+    }
+
+    //
+    template<typename T, typename U, CompareType Op>
+    static inline void op_compare(
+        data_type* const __restrict data, 
+        const size_type start,
+        const T* const __restrict t,
+        const U* const __restrict u,
+        const size_type size
+    ) {
+        for (size_type i = 0; i < size; i++) {
+            get_proxy(data, start + i) = CompareOperator<Op>::compare(t[i], u[i]);
+        }
     }
 };
 

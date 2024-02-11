@@ -1,7 +1,8 @@
 include_directories(${CMAKE_HOME_DIRECTORY}/src)
 
 set(BITSET_TEST_SRCS
-    test_avx512.cpp
+    # test_avx512.cpp
+    test_functionality.cpp
 )
 
 find_package(GTest REQUIRED)

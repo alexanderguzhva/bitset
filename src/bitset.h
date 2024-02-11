@@ -3,412 +3,76 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <type_traits>
+
+#include "common.h"
 
 namespace milvus {
 namespace bitset {
 
-//
+namespace {
+
+// A supporting facility for checking out of range.
+// It is needed to add a capability to verify that we won't go out of 
+//   range even for the Release build.
 template<bool RangeCheck>
 struct RangeChecker{};
 
+// disabled.
 template<>
 struct RangeChecker<false> {
+    // Check if a < max
     template<typename SizeT>
-    static inline void lt(const SizeT idx, const SizeT max) {}
+    static inline void lt(const SizeT a, const SizeT max) {}
 
+    // Check if a <= max
     template<typename SizeT>
-    static inline void le(const SizeT idx, const SizeT max) {}
+    static inline void le(const SizeT a, const SizeT max) {}
 
+    // Check if a == b
     template<typename SizeT>
     static inline void eq(const SizeT a, const SizeT b) {}
 };
 
+// enabled.
 template<>
 struct RangeChecker<true> {
+    // Check if a < max
     template<typename SizeT>
-    static inline void lt(const SizeT idx, const SizeT max) {
-        assert(idx < max);
+    static inline void lt(const SizeT a, const SizeT max) {
+        // todo: replace
+        assert(a < max);
     }
 
+    // Check if a <= max
     template<typename SizeT>
-    static inline void le(const SizeT idx, const SizeT max) {
-        assert(idx <= max);
+    static inline void le(const SizeT a, const SizeT max) {
+        // todo: replace
+        assert(a <= max);
     }
 
+    // Check if a == b
     template<typename SizeT>
     static inline void eq(const SizeT a, const SizeT b) {
+        // todo: replace
         assert(a == b);
     }
 };
 
-//
-template<typename ElementT>
-struct CustomBitsetPolicy {
-    using data_type = ElementT;
-    constexpr static auto data_bits = sizeof(data_type) * 8;
-
-    using size_type = size_t;
-
-    struct ConstProxy {
-        using parent_type = CustomBitsetPolicy;
-        using size_type = parent_type::size_type;
-        using data_type = parent_type::data_type;
-        using self_type = ConstProxy;
-
-        const data_type& element;
-        data_type mask;
-
-        inline ConstProxy(const data_type& _element, const size_type _shift) : 
-            element{_element}
-        {
-            mask = (data_type(1) << _shift);
-        } 
-
-        inline operator bool() const { return ((element & mask) != 0); }
-        inline bool operator~() const { return ((element & mask) == 0); }
-    };
-
-    struct Proxy {
-        using parent_type = CustomBitsetPolicy;
-        using size_type = parent_type::size_type;
-        using data_type = parent_type::data_type;
-        using self_type = Proxy;
-
-        data_type& element;
-        data_type mask;
-
-        inline Proxy(data_type& _element, const size_type _shift) : 
-            element{_element}
-        {
-            mask = (data_type(1) << _shift);
-        } 
-
-        inline operator bool() const { return ((element & mask) != 0); }
-        inline bool operator~() const { return ((element & mask) == 0); }
-
-        inline self_type& operator=(const bool value) {
-            if (value) { set(); } else { reset(); }
-            return *this;
-        }
-
-        inline self_type& operator=(const self_type& other) {
-            bool value = other.operator bool();
-            if (value) { set(); } else { reset(); }
-            return *this;
-        }
-
-        inline self_type& operator|=(const bool value) {
-            if (value) { set(); }
-            return *this;
-        }
-
-        inline self_type& operator&=(const bool value) {
-            if (!value) { reset(); }
-            return *this;
-        }
-
-        inline self_type& operator^=(const bool value) {
-            if (value) { flip(); }
-            return *this;
-        }
-
-        inline void set() {
-            element |= mask;
-        }
-
-        inline void reset() {
-            element &= ~mask;
-        }
-
-        inline void flip() {
-            element ^= mask;
-        }
-    };
-
-    using proxy_type = Proxy;
-    using const_proxy_type = ConstProxy;
-
-    static inline size_type get_element(const size_t idx) {
-        return idx / data_bits;
-    }
-
-    static inline size_type get_shift(const size_t idx) {
-        return idx % data_bits;
-    }
-
-    static inline size_type get_required_size_in_elements(const size_t size) {
-        return (size + data_bits - 1) / data_bits;
-    }
-
-    static inline size_type get_required_size_in_bytes(const size_t size) {
-        return get_required_size_in_elements(size) * sizeof(data_type);
-    }
-
-    static inline proxy_type get_proxy(
-        data_type* const __restrict data, 
-        const size_type idx
-    ) {
-        data_type& element = data[get_element(idx)];
-        const size_type shift = get_shift(idx);
-        return proxy_type{element, shift};
-    }
-
-    static inline const_proxy_type get_proxy(
-        const data_type* const __restrict data, 
-        const size_type idx
-    ) {
-        const data_type& element = data[get_element(idx)];
-        const size_type shift = get_shift(idx);
-        return const_proxy_type{element, shift};
-    }
-
-    static inline data_type read(
-        const data_type* const data,
-        const size_type start,
-        const size_type nbits
-    ) {
-        data_type value = 0;
-        for (size_type i = 0; i < nbits; i++) {
-            const auto proxy = get_proxy(data, start + i);
-            value += proxy ? (data_type(1) << i) : 0;
-        }
-
-        return value;
-    }
-
-    static void write(
-        data_type* const data,
-        const size_type start,
-        const size_type nbits,
-        const data_type value
-    ) {
-        for (size_type i = 0; i < nbits; i++) {
-            auto proxy = get_proxy(data, start + i);
-            data_type mask = data_type(1) << i;
-            if ((value & mask) == mask) {
-                proxy = true;
-            }
-            else {
-                proxy = false;
-            }
-        }
-    }
-
-    static inline void op_flip(
-        data_type* const data, 
-        const size_type start, 
-        const size_type size
-    ) {
-        for (size_type i = 0; i < size; i++) {
-            auto proxy = get_proxy(data, start + i);
-            proxy.flip();
-        }
-    }
-
-    static inline void op_and(
-        data_type* left, 
-        const data_type* right, 
-        const size_t start_left,
-        const size_t start_right, 
-        const size_t size
-    ) {
-        // todo: check if intersect
-
-        for (size_type i = 0; i < size; i++) {
-            auto proxy_left = get_proxy(left, start_left + i);
-            auto proxy_right = get_proxy(right, start_right + i);
-
-            proxy_left &= proxy_right;
-        }
-    }
-
-    static inline void op_or(
-        data_type* left, 
-        const data_type* right, 
-        const size_t start_left,
-        const size_t start_right, 
-        const size_t size
-    ) {
-        // todo: check if intersect
-
-        for (size_type i = 0; i < size; i++) {
-            auto proxy_left = get_proxy(left, start_left + i);
-            auto proxy_right = get_proxy(right, start_right + i);
-
-            proxy_left |= proxy_right;
-        }
-    }
-
-    static inline void set(
-        data_type* const data, 
-        const size_type start, 
-        const size_type size
-    ) {
-        for (size_type i = 0; i < size; i++) {
-            get_proxy(data, start + i) = true;
-        }
-    }
-
-    static inline void reset(
-        data_type* const data, 
-        const size_type start, 
-        const size_type size
-    ) {
-        for (size_type i = 0; i < size; i++) {
-            get_proxy(data, start + i) = false;
-        }
-    }
-
-    static inline bool all(
-        const data_type* const data, 
-        const size_type start, 
-        const size_type size
-    ) {
-        for (size_type i = 0; i < size; i++) {
-            if (!get_proxy(data, start + i)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    static inline bool none(
-        const data_type* const data, 
-        const size_type start, 
-        const size_type size
-    ) {
-        for (size_type i = 0; i < size; i++) {
-            if (get_proxy(data, start + i)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    static void copy(
-        const data_type* const src,
-        const size_type start_src,
-        data_type* const dst,
-        const size_type start_dst,
-        const size_type size
-    ) {
-        for (size_type i = 0; i < size; i++) {
-            const auto src_p = get_proxy(src, start_src + i);
-            auto dst_p = get_proxy(dst, start_dst + i);
-            dst_p = src_p.operator bool();
-        }
-    }
-
-    static void fill(
-        data_type* const dst,
-        const size_type start_dst,
-        const size_type size,
-        const bool value 
-    ) {
-        for (size_type i = 0; i < size; i++) {
-            auto dst_p = get_proxy(dst, start_dst + i);
-            dst_p = value;
-        }
-    }
-
-    static inline size_type op_count(
-        const data_type* const data, 
-        const size_type start, 
-        const size_type size
-    ) {
-        size_type count = 0;
-
-        for (size_type i = 0; i < size; i++) {
-            auto proxy = get_proxy(data, start + i);
-            count += (proxy) ? 1 : 0;
-        }
-
-        return count;
-    }
-
-    static inline bool op_eq(
-        const data_type* left, 
-        const data_type* right, 
-        const size_t start_left,
-        const size_t start_right, 
-        const size_t size
-    ) {
-        for (size_type i = 0; i < size; i++) {
-            const auto proxy_left = get_proxy(left, start_left + i);
-            const auto proxy_right = get_proxy(right, start_right + i);
-
-            if (proxy_left != proxy_right) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    static inline void op_xor(
-        data_type* left, 
-        const data_type* right, 
-        const size_t start_left,
-        const size_t start_right, 
-        const size_t size
-    ) {
-        // todo: check if intersect
-
-        for (size_type i = 0; i < size; i++) {
-            auto proxy_left = get_proxy(left, start_left + i);
-            const auto proxy_right = get_proxy(right, start_right + i);
-
-            proxy_left ^= proxy_right;
-        }
-    }
-
-    static inline void op_sub(
-        data_type* left, 
-        const data_type* right, 
-        const size_t start_left,
-        const size_t start_right, 
-        const size_t size
-    ) {
-        // todo: check if intersect
-
-        for (size_type i = 0; i < size; i++) {
-            auto proxy_left = get_proxy(left, start_left + i);
-            const auto proxy_right = get_proxy(right, start_right + i);
-
-            proxy_left &= ~proxy_right;
-        }
-    }
-
-    //
-    static constexpr size_type npos = size_type(-1);
-
-    static inline size_type find(
-        const data_type* const data, 
-        const size_type start, 
-        const size_type size,
-        const size_type starting_idx
-    ) {
-        for (size_type i = starting_idx; i < size; i++) {
-            const auto proxy = get_proxy(data, start + i);
-            if (proxy) {
-                return start + i;
-            }
-        }
-
-        return npos;
-    }
-};
+}
 
 // CRTP
+
+// Bitset view, which does not own the data.
 template<typename PolicyT, bool IsRangeCheckEnabled>
 class CustomBitsetNonOwning;
 
+// Bitset, which owns the data.
 template<typename PolicyT, typename ContainerT, bool IsRangeCheckEnabled>
 class CustomBitsetOwning;
 
+// This is the base CRTP class.
 template<typename PolicyT, typename ImplT, bool IsRangeCheckEnabled>
 class CustomBitsetBase {
    template<typename, bool>
@@ -436,17 +100,19 @@ public:
         return as_derived().data_impl();
     }
 
-    //
+    // Return the number of bits we're working with.
     inline size_type size() const {
         return as_derived().size_impl();
     }
 
-    //
+    // Return the number of bytes which is needed to 
+    //   contain all our bits.
     inline size_type size_in_bytes() const { 
         return policy_type::get_required_size_in_bytes(this->size());
     }
 
-    //
+    // Return the number of elements which is needed to 
+    //   contain all our bits.
     inline size_type size_in_elements() const { 
         return policy_type::get_required_size_in_elements(this->size());
     }
@@ -457,66 +123,63 @@ public:
     }
 
     //
-    inline proxy_type operator[](const size_type idx) {
-        range_checker::lt(idx, this->size());
+    inline proxy_type operator[](const size_type bit_idx) {
+        range_checker::lt(bit_idx, this->size());
 
-        const size_type idx_v = idx + this->offset();
+        const size_type idx_v = bit_idx + this->offset();
         return policy_type::get_proxy(this->data(), idx_v);
     }
 
     //
-    inline bool operator[](const size_type idx) const {
-        range_checker::lt(idx, this->size());
+    inline bool operator[](const size_type bit_idx) const {
+        range_checker::lt(bit_idx, this->size());
 
-        const size_type idx_v = idx + this->offset();
+        const size_type idx_v = bit_idx + this->offset();
         const auto proxy = policy_type::get_proxy(this->data(), idx_v);
         return proxy.operator bool();
     }
 
-    //
+    // Set all bits to true.
     inline void set() {
         policy_type::set(this->data(), this->offset(), this->size());
     }
 
-    //
-    inline void set(const size_type idx, const bool value = true) {
-        range_checker::lt(idx, this->size());
-
-        const size_type idx_v = idx + this->offset();
-        auto proxy = policy_type::get_proxy(this->data(), idx_v);
-        proxy = value;
+    // Set a given bit to true.
+    inline void set(const size_type bit_idx) {
+        this->operator[](bit_idx) = true;
     }
 
-    //
+    // Set a given bit to a given value.
+    inline void set(const size_type bit_idx, const bool value = true) {
+        this->operator[](bit_idx) = value;
+    }
+
+    // Set all bits to false.
     inline void reset() {
         policy_type::reset(this->data(), this->offset(), this->size());
     }
 
-    //
-    inline void reset(const size_type idx) {
-        range_checker::lt(idx, this->size());
-
-        const size_type idx_v = idx + this->offset();
-        auto proxy = policy_type::get_proxy(this->data(), idx_v);
-        proxy = false;
+    // Set a given bit to false.
+    inline void reset(const size_type bit_idx) {
+        this->operator[](bit_idx) = false;
     }
 
-    //
+    // Return whether all bits are set to true.
     inline bool all() const {
         return policy_type::all(this->data(), this->offset(), this->size());
     }
 
-    //
+    // Return whether any of the bits is set to true.
     inline bool any() const {
         return (!this->none());
     }
 
-    //
+    // Return whether all bits are set to false.
     inline bool none() const {
         return policy_type::none(this->data(), this->offset(), this->size());
     }
 
-    //
+    // Inplace and.
     template<typename I, bool R>
     inline void inplace_and(const CustomBitsetBase<PolicyT, I, R>& other, const size_type size) {
         range_checker::le(size, this->size());
@@ -531,14 +194,16 @@ public:
         );
     }
 
-    //
+    // Inplace and. A given bitset / bitset view is expected to have the same size.
     template<typename I, bool R>
     inline ImplT& operator&=(const CustomBitsetBase<PolicyT, I, R>& other) {
+        range_checker::eq(other.size(), this->size());
+
         this->inplace_and(other, this->size());
         return as_derived();
     }
 
-    //
+    // Inplace or.
     template<typename I, bool R>
     inline void inplace_or(const CustomBitsetBase<PolicyT, I, R>& other, const size_type size) {
         range_checker::le(size, this->size());
@@ -553,14 +218,16 @@ public:
         );
     }
 
-    //
+    // Inplace or. A given bitset / bitset view is expected to have the same size.
     template<typename I, bool R>
     inline ImplT& operator|=(const CustomBitsetBase<PolicyT, I, R>& other) {
+        range_checker::eq(other.size(), this->size());
+
         this->inplace_or(other, this->size());
         return as_derived();
     }
 
-    //
+    // Revert all bits.
     inline void flip() {
         policy_type::op_flip(this->data(), this->offset(), this->size());
     }
@@ -570,7 +237,7 @@ public:
         return this->view(offset);
     }
 
-    //
+    // Create a view of a given size from the given position.
     inline CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled> view(const size_type offset, const size_type size) {
         range_checker::le(offset, this->size());
         range_checker::le(offset + size, this->size());
@@ -582,7 +249,19 @@ public:
         );
     }
 
-    //
+    // Create a const view of a given size from the given position.
+    inline CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled> view(const size_type offset, const size_type size) const {
+        range_checker::le(offset, this->size());
+        range_checker::le(offset + size, this->size());
+
+        return CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled>(
+            const_cast<data_type*>(this->data()),
+            this->offset() + offset,
+            size
+        );
+    }
+
+    // Create a view from the given position, which uses all available size.
     inline CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled> view(const size_type offset) {
         range_checker::le(offset, this->size());
 
@@ -593,6 +272,7 @@ public:
         );
     }
 
+    // Create a const view from the given position, which uses all available size.
     inline const CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled> view(const size_type offset) const {
         range_checker::le(offset, this->size());
 
@@ -603,21 +283,22 @@ public:
         );
     }
 
-    //
+    // Create a view.
     inline CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled> view() {
         return this->view(0);
     }
 
-    //
+    // Create a const view.
     inline const CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled> view() const {
         return this->view(0);
     }
 
-    //
+    // Return the number of bits which are set to true.
     inline size_type count() const {
         return policy_type::op_count(this->data(), this->offset(), this->size());
     }
 
+    // Compare the current bitset with another bitset / bitset view.
     template<typename I, bool R>
     inline bool operator==(const CustomBitsetBase<PolicyT, I, R>& other) {
         if (this->size() != other.size()) {
@@ -633,109 +314,143 @@ public:
         );
     }
 
+    // Compare the current bitset with another bitset / bitset view.
     template<typename I, bool R>
     inline bool operator!=(const CustomBitsetBase<PolicyT, I, R>& other) {
         return (!(*this == other));
     }
 
+    // Inplace xor.
     template<typename I, bool R>
-    inline void inplace_xor(const CustomBitsetBase<PolicyT, I, R>& other) {
-        range_checker::eq(other.size(), this->size());
+    inline void inplace_xor(const CustomBitsetBase<PolicyT, I, R>& other, const size_type size) {
+        range_checker::le(offset, this->size());
+        range_checker::le(offset + size, this->size());
     
         policy_type::op_xor(
             this->data(),
             other.data(),
             this->offset(),
             other.offset(),
-            this->size()
+            size
         );
     }
 
+    // Inplace xor. A given bitset / bitset view is expected to have the same size.
     template<typename I, bool R>
     inline ImplT& operator^=(const CustomBitsetBase<PolicyT, I, R>& other) {
-        this->inplace_xor(other);
+        range_checker::eq(other.size(), this->size());
+
+        this->inplace_xor(other, this->size());
         return as_derived();
     }
 
+    // Inplace sub.
     template<typename I, bool R>
-    inline void inplace_sub(const CustomBitsetBase<PolicyT, I, R>& other) {
-        range_checker::eq(other.size(), this->size());
+    inline void inplace_sub(const CustomBitsetBase<PolicyT, I, R>& other, const size_type size) {
+        range_checker::le(offset, this->size());
+        range_checker::le(offset + size, this->size());
     
         policy_type::op_sub(
             this->data(),
             other.data(),
             this->offset(),
             other.offset(),
-            this->size()
+            size
         );
     }
 
+    // Inplace sub. A given bitset / bitset view is expected to have the same size.
     template<typename I, bool R>
     inline ImplT& operator-=(const CustomBitsetBase<PolicyT, I, R>& other) {
-        this->inplace_sub(other);
+        range_checker::eq(other.size(), this->size());
+
+        this->inplace_sub(other, this->size());
         return as_derived();
     }
 
-    //
-    static constexpr size_type npos = policy_type::npos;
-
-    inline size_type find_first() const {
+    // Find the index of the first bit set to true.
+    inline std::optional<size_type> find_first() const {
         return policy_type::find(this->data(), this->offset(), this->size(), 0);
     }
 
-    inline size_type find_next(const size_type starting_index) const {
+    // Find the index of the first bit set to true, starting from a given bit index.
+    inline std::optional<size_type> find_next(const size_type starting_bit_idx) const {
         const size_type size_v = this->size();
-        if (starting_index >= size_v) {
-            return npos;
+        if (starting_bit_idx >= size_v) {
+            return std::nullopt;
         }
 
-        return policy_type::find(this->data(), this->offset(), this->size(), starting_index + 1);
+        return policy_type::find(this->data(), this->offset(), this->size(), starting_bit_idx + 1);
     }
 
-    //
+    // Read multiple bits starting from a given bit index.
     inline data_type read(
-        const size_type idx,
+        const size_type starting_bit_idx,
         const size_type nbits
     ) {
+        range_checker::le(nbits, sizeof(data_type));
+
         return policy_type::read(
             this->data(),
-            this->offset() + idx,
+            this->offset() + starting_bit_idx,
             nbits
         );
     }
 
+    // Write multiple bits starting from a given bit index.
     inline void write(
-        const size_type idx,
-        const size_type value,
+        const size_type starting_bit_idx,
+        const data_type value,
         const size_type nbits
     ) {
+        range_checker::le(nbits, sizeof(data_type));
+
         policy_type::write(
             this->data(),
-            this->offset() + idx,
+            this->offset() + starting_bit_idx,
             nbits,
             value
         );
     }
 
+    // Compare 
+    template<typename T, typename U>
+    void inplace_compare(
+        const T* const __restrict t,
+        const U* const __restrict u,
+        const size_type size,
+        CompareType op
+    ) {
+        range_checker::le(size, this->size());
+
+        policy_type::op_compare(
+            this->data(),
+            this->offset(),
+            t,
+            u,
+            size,
+            op
+        );
+    }
+
 private:
-    //
+    // Return the starting bit offset in our container.
     inline size_type offset() const {
         return as_derived().offset_impl();
     }
 
-private:
-    //
+    // CRTP
     inline ImplT& as_derived() {
         return static_cast<ImplT&>(*this);
     }
 
-    //
+    // CRTP
     inline const ImplT& as_derived() const {
         return static_cast<const ImplT&>(*this);
     }
 };
 
-//
+// Bitset view
 template<typename PolicyT, bool IsRangeCheckEnabled>
 class CustomBitsetNonOwning : public CustomBitsetBase<PolicyT, CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled>, IsRangeCheckEnabled> {
     friend class CustomBitsetBase<PolicyT, CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled>, IsRangeCheckEnabled>;
@@ -779,7 +494,7 @@ private:
     inline size_type offset_impl() const { return Offset; }
 };
 
-//
+// Bitset
 template<typename PolicyT, typename ContainerT, bool IsRangeCheckEnabled>
 class CustomBitsetOwning : public CustomBitsetBase<PolicyT, CustomBitsetOwning<PolicyT, ContainerT, IsRangeCheckEnabled>, IsRangeCheckEnabled> {
     friend class CustomBitsetBase<PolicyT, CustomBitsetOwning<PolicyT, ContainerT, IsRangeCheckEnabled>, IsRangeCheckEnabled>;
@@ -791,28 +506,34 @@ public:
     using proxy_type = typename policy_type::proxy_type;
     using const_proxy_type = typename policy_type::const_proxy_type;
 
-    // this is the container
+    // This is the container type.
     using container_type = ContainerT;
-    // this is how we store the data. For example, we may operate using
+    // This is how the data is stored. For example, we may operate using
     //   uint64_t values, but store the data in std::vector<uint8_t> container.
+    //   This is useful if we need to convert a bitset into a container
+    //   using move operator.
     using container_data_type = typename container_type::value_type;
 
     using range_checker = RangeChecker<IsRangeCheckEnabled>;
 
-    // allocate an empty one
+    // Allocate an empty one.
     CustomBitsetOwning() {}
-    // allocate the given number of bits
+    // Allocate the given number of bits.
     CustomBitsetOwning(const size_type size) : 
         Data(get_required_size_in_container_elements(size)), Size{size} {}
-    // allocate the given number of bits being filled with data
+    // Allocate the given number of bits, initialize with a given value.
     CustomBitsetOwning(const size_type size, const bool init) : 
         Data(
             get_required_size_in_container_elements(size), 
             init ? data_type(-1) : 0),
         Size{size} {}
+    // Do not allow implicit copies (Rust style).
     CustomBitsetOwning(const CustomBitsetOwning &) = delete;
+    // Allow default move.
     CustomBitsetOwning(CustomBitsetOwning&&) = default;
+    // Do not allow implicit copies (Rust style).
     CustomBitsetOwning& operator =(const CustomBitsetOwning&) = delete;
+    // Allow default move.
     CustomBitsetOwning& operator =(CustomBitsetOwning&&) = default;
 
     template<typename C, bool R>
@@ -829,7 +550,7 @@ public:
         );
     }
 
-    // rust style
+    // Clone a current bitset (Rust style).
     CustomBitsetOwning clone() const {
         CustomBitsetOwning cloned;
         cloned.Data = Data;
@@ -837,12 +558,12 @@ public:
         return cloned;
     }
 
-    //
+    // Rust style.
     inline container_type into() && {
         return std::move(this->Data);
     }
 
-    //
+    // Resize.
     void resize(const size_type new_size) {
         const size_type new_size_in_container_elements = 
             get_required_size_in_container_elements(new_size);
@@ -850,7 +571,7 @@ public:
         Size = new_size;
     }
 
-    //
+    // Resize and initialize new bits with a given value if grown. 
     void resize(const size_type new_size, const bool init) {
         const size_type old_size = this->size();
         this->resize(new_size);
@@ -860,25 +581,27 @@ public:
         }
     }
 
-    //
+    // Append data from another bitset / bitset view in 
+    //   [starting_bit_idx, starting_bit_idx + count) range
+    //   to the end of this bitset.
     template<typename I, bool R>
-    void append(const CustomBitsetBase<PolicyT, I, R>& other, const size_type start, const size_type count) {
-        // This function appends data from other in [start, start + count) range
-        // to the end of Data.
-        range_checker::le(start, other.size());
+    void append(const CustomBitsetBase<PolicyT, I, R>& other, const size_type starting_bit_idx, const size_type count) {
+        range_checker::le(starting_bit_idx, other.size());
         
         const size_type old_size = this->size();
         this->resize(this->size() + count);
 
         policy_type::copy(
             other.data(),
-            other.offset() + start,
+            other.offset() + starting_bit_idx,
             this->data(),
             this->offset() + old_size,
             count
         );
     }
 
+    // Append data from another bitset / bitset view
+    //   to the end of this bitset.
     template<typename I, bool R>
     void append(const CustomBitsetBase<PolicyT, I, R>& other) {
         this->append(
@@ -888,20 +611,20 @@ public:
         );
     }
 
-    //
+    // Make bitset empty.
     inline void clear() {
         Data.clear();
         Size = 0;
     }
 
-    //
+    // Reserve
     inline void reserve(const size_type capacity) {
         const size_type capacity_in_container_elements = 
             get_required_size_in_container_elements(capacity);
         Data.reserve(capacity_in_container_elements);
     }
 
-    //
+    // Return a new bitset, equal to a | b
     template<typename I1, bool R1, typename I2, bool R2>
     friend CustomBitsetOwning operator|(
         const CustomBitsetBase<PolicyT, I1, R1>& a, 
@@ -911,7 +634,7 @@ public:
         return std::move(clone |= b);
     }
 
-    //
+    // Return a new bitset, equal to a - b
     template<typename I1, bool R1, typename I2, bool R2>
     friend CustomBitsetOwning operator-(
         const CustomBitsetBase<PolicyT, I1, R1>& a, 

@@ -8,8 +8,10 @@
 
 #include <avx512.h>
 #include <bitset.h>
+#include <detail/bit_wise.h>
 
 using namespace milvus::bitset;
+using namespace milvus::bitset::detail;
 
 using policy_type = CustomBitsetPolicy<uint64_t>;
 using container_type = std::vector<uint8_t>;

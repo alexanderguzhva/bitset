@@ -23,7 +23,7 @@ struct CompareColumnAVX2Impl {
 
 template <CompareType Op>
 struct CompareColumnAVX2Impl<float, Op> {
-    static void Compare(
+    static inline void Compare(
         const float* const __restrict left, 
         const float* const __restrict right, 
         const size_t size,
@@ -38,6 +38,8 @@ struct CompareColumnAVX2Impl<float, Op> {
         constexpr auto pred = ComparePredicate<float, Op>::value;
 
         // todo: aligned reads & writes
+
+        // todo: process in 64 elements
 
         const size_t size8 = (size / 8) * 8;
         for (size_t i = 0; i < size8; i += 8) {

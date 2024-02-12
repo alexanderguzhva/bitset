@@ -11,7 +11,7 @@
 #include <detail/bit_wise.h>
 #include <detail/element_wise.h>
 #include <detail/element_vectorized.h>
-
+#include <detail/platform/dynamic.h>
 #include <detail/platform/x86/avx2.h>
 
 using namespace milvus::bitset;
@@ -46,6 +46,18 @@ using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_ty
 using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 
 }
+
+//
+namespace dynamic_u64_u8 {
+
+using vectorized_type = milvus::bitset::detail::VectorizedDynamic;
+using policy_type = milvus::bitset::detail::CustomBitsetVectorizedPolicy<uint64_t, vectorized_type>;
+using container_type = std::vector<uint8_t>;
+using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_type, false>;
+using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
+
+}
+
 
 
 template<typename BitsetT>
@@ -175,7 +187,7 @@ void TestInplaceCompareImpl() {
             BitsetT bitset(n);
             bitset.reset();
 
-            printf("Testing bitset, n=%zd, op=%zd\n", n, (size_t)op);
+            // printf("Testing bitset, n=%zd, op=%zd\n", n, (size_t)op);
             TestInplaceCompareImpl<BitsetT, float, float>(bitset, op);
 
             for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63}) {
@@ -186,19 +198,24 @@ void TestInplaceCompareImpl() {
                 bitset.reset();
                 auto view = bitset.view(offset);
 
-                printf("Testing bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
+                // printf("Testing bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
                 TestInplaceCompareImpl<decltype(view), float, float>(view, op);
             }
         }
     }
 }
 
-//
-TEST(InplaceCompareRef, f) {
-    TestInplaceCompareImpl<ref_u64_u8::bitset_type>();
-}
+// //
+// TEST(InplaceCompareRef, f) {
+//     TestInplaceCompareImpl<ref_u64_u8::bitset_type>();
+// }
+
+// //
+// TEST(InplaceCompareAvx2, f) {
+//     TestInplaceCompareImpl<avx2_u64_u8::bitset_type>();
+// }
 
 //
-TEST(InplaceCompareAvx2, f) {
-    TestInplaceCompareImpl<avx2_u64_u8::bitset_type>();
+TEST(InplaceCompareDynamic, f) {
+    TestInplaceCompareImpl<dynamic_u64_u8::bitset_type>();
 }

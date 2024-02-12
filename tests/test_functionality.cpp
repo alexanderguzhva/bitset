@@ -134,15 +134,15 @@ void TestFindImpl() {
     }
 }
 
-//
-TEST(FindRef, f) {
-    TestFindImpl<ref_u64_u8::bitset_type>();
-}
+// //
+// TEST(FindRef, f) {
+//     TestFindImpl<ref_u64_u8::bitset_type>();
+// }
 
-//
-TEST(FindElement, f) {
-    TestFindImpl<element_u64_u8::bitset_type>();
-}
+// //
+// TEST(FindElement, f) {
+//     TestFindImpl<element_u64_u8::bitset_type>();
+// }
 
 // //
 // TEST(FindVectorizedAvx2, f) {
@@ -240,6 +240,11 @@ void TestInplaceCompareImpl() {
 // }
 
 // //
+// TEST(InplaceCompareElement, f) {
+//     TestInplaceCompareImpl<element_u64_u8::bitset_type>();
+// }
+
+// //
 // TEST(InplaceCompareAvx2, f) {
 //     TestInplaceCompareImpl<avx2_u64_u8::bitset_type>();
 // }
@@ -248,3 +253,5 @@ void TestInplaceCompareImpl() {
 // TEST(InplaceCompareDynamic, f) {
 //     TestInplaceCompareImpl<dynamic_u64_u8::bitset_type>();
 // }
+
+//

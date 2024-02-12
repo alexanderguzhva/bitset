@@ -12,24 +12,11 @@
 using namespace milvus::bitset::detail::x86;
 #endif
 
+#include "vectorized_ref.h"
+
 namespace milvus {
 namespace bitset {
 namespace detail {
-
-// The default vectorizer that refuses to process anything.
-// As a result, a default implementation will be called in the caller code.
-struct VectorizedRef {
-    // size is in bytes
-    template<typename T, typename U, CompareType Op>
-    static bool op_compare(
-        uint8_t* const __restrict data, 
-        const T* const __restrict t,
-        const U* const __restrict u,
-        const size_t size
-    ) {
-        return false;
-    }
-};
 
 // Define pointers for op_compare
 template<typename T, typename U, CompareType Op>

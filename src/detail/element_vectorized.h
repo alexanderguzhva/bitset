@@ -85,6 +85,16 @@ struct CustomBitsetVectorizedPolicy {
     }
 
     //
+    static inline std::optional<size_type> find(
+        const data_type* const data, 
+        const size_type start, 
+        const size_type size,
+        const size_type starting_idx
+    ) {
+        return CustomBitsetPolicy2<ElementT>::find(data, start, size, starting_idx);
+    }
+
+    //
     template<typename T, typename U, CompareType Op>
     static inline void op_compare(
         data_type* const __restrict data, 
@@ -140,7 +150,7 @@ struct CustomBitsetVectorizedPolicy {
                     current_u,
                     nbits)
             ) {
-                // vectorized implementation is not available, run the default one
+                // vectorized implementation is not available, invoke the default one
                 CustomBitsetPolicy2<ElementT>::template op_compare<T, U, Op>(
                     data, 
                     start_element * data_bits, 

@@ -29,6 +29,7 @@ struct CompareColumnAVX2Impl<float, Op> {
         const size_t size,
         void* const __restrict res
     ) {
+/*
         // the restriction of the API
         assert((uintptr_t(res) % 8) == 0);
         assert((size % 8) == 0);
@@ -49,6 +50,43 @@ struct CompareColumnAVX2Impl<float, Op> {
             const uint8_t mmask = _mm256_movemask_ps(cmp);
 
             res_u8[i / 8] = mmask;
+        }
+        */
+
+        union {
+            uint8_t u8[8];
+            uint64_t u64;
+        } foo;
+
+        //
+        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
+        uint64_t* const __restrict res_u64 = reinterpret_cast<uint64_t*>(res);
+        constexpr auto pred = _CMP_EQ_OQ;
+
+        // todo: aligned reads & writes
+
+        // todo: process in 64 elements
+
+        const size_t size64 = (size / 64) * 64;
+        for (size_t i = 0; i < size64; i += 64) {
+            for (size_t j = 0; j < 64; j += 8) {
+                const __m256 v0 = _mm256_loadu_ps(left + i + j);
+                const __m256 v1 = _mm256_loadu_ps(right + i + j);
+                const __m256 cmp = _mm256_cmp_ps(v0, v1, pred);
+                const uint8_t mmask = _mm256_movemask_ps(cmp);
+                foo.u8[j / 8] = mmask;
+            }
+
+            res_u64[i / 64] = foo.u64;
+        }
+
+        for (size_t i = size64; i < size; i += 8) {
+            const __m256 v0 = _mm256_loadu_ps(left + i);
+            const __m256 v1 = _mm256_loadu_ps(right + i);
+            const __m256 cmp = _mm256_cmp_ps(v0, v1, pred);
+            const uint8_t mmask = _mm256_movemask_ps(cmp);
+
+            res_u8[i / 8] = mmask;            
         }
     }
 };

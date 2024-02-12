@@ -14,6 +14,8 @@
 #include <detail/platform/dynamic.h>
 #include <detail/platform/x86/avx2.h>
 
+#include "utils.h"
+
 using namespace milvus::bitset;
 
 //
@@ -159,7 +161,9 @@ void TestInplaceCompareImpl(
     FillRandom(t, rng, max_v);
     FillRandom(u, rng, max_v);
 
+    StopWatch sw;
     bitset.inplace_compare(t.data(), u.data(), n, op);
+    printf("elapsed %f\n", sw.elapsed());
 
     for (size_t i = 0; i < n; i++) {
         if (op == CompareType::EQ) {
@@ -205,15 +209,15 @@ void TestInplaceCompareImpl() {
     }
 }
 
-// //
-// TEST(InplaceCompareRef, f) {
-//     TestInplaceCompareImpl<ref_u64_u8::bitset_type>();
-// }
+//
+TEST(InplaceCompareRef, f) {
+    TestInplaceCompareImpl<ref_u64_u8::bitset_type>();
+}
 
-// //
-// TEST(InplaceCompareAvx2, f) {
-//     TestInplaceCompareImpl<avx2_u64_u8::bitset_type>();
-// }
+//
+TEST(InplaceCompareAvx2, f) {
+    TestInplaceCompareImpl<avx2_u64_u8::bitset_type>();
+}
 
 //
 TEST(InplaceCompareDynamic, f) {

@@ -7,6 +7,7 @@
 #if defined(__x86_64__)
 #include "x86/instruction_set.h"
 #include "x86/avx2.h"
+#include "x86/avx512.h"
 
 using namespace milvus::bitset::detail::x86;
 #endif
@@ -128,9 +129,28 @@ static void init_dynamic_hook() {
     using namespace milvus::bitset::detail;
 
 #if defined(__x86_64__)
-    if (cpu_support_avx2()) {
-        // initialize avx2 support
+    // AVX512 ?
+    if (cpu_support_avx512()) {
+// define a pointer assigner
+#define SET_OP_COMPARE_AVX512(TTYPE, UTYPE, OP) \
+    op_compare_##TTYPE##_##UTYPE##_##OP = VectorizedAvx512::template op_compare<TTYPE, UTYPE, CompareType::OP>;
 
+        // assign AVX2-related pointers
+        SET_OP_COMPARE_AVX512(float, float, EQ);
+        SET_OP_COMPARE_AVX512(float, float, GE);
+        SET_OP_COMPARE_AVX512(float, float, GT);
+        SET_OP_COMPARE_AVX512(float, float, LE);
+        SET_OP_COMPARE_AVX512(float, float, LT);
+        SET_OP_COMPARE_AVX512(float, float, NEQ);
+
+#undef SET_OP_COMPARE_AVX512
+
+        return;
+
+    }
+
+    // AVX2 ?
+    if (cpu_support_avx2()) {
 // define a pointer assigner
 #define SET_OP_COMPARE_AVX2(TTYPE, UTYPE, OP) \
     op_compare_##TTYPE##_##UTYPE##_##OP = VectorizedAvx2::template op_compare<TTYPE, UTYPE, CompareType::OP>;
@@ -144,6 +164,8 @@ static void init_dynamic_hook() {
         SET_OP_COMPARE_AVX2(float, float, NEQ);
 
 #undef SET_OP_COMPARE_AVX2
+
+        return;
     }
 #endif
 }

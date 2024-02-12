@@ -3,8 +3,12 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "common.h"
+
 namespace milvus {
 namespace bitset {
+namespace detail {
+namespace x86 {
 
 // all values for 'size' are counted in bytes.
 
@@ -62,5 +66,53 @@ template <typename T>
 void
 NotEqualColumnAVX512(const T* const __restrict left, const T* const __restrict right, const size_t size, void* const __restrict res);
 
+//
+struct VectorizedAvx512 {
+    // size is in bytes
+    template<typename T, typename U, CompareType Op>
+    static inline bool op_compare(
+        uint8_t* const __restrict data, 
+        const T* const __restrict t,
+        const U* const __restrict u,
+        const size_t size
+    ) {
+        // todo: aligned reads
+        
+        // same data types for both t and u?
+        if constexpr(std::is_same_v<T, U>) {
+             op_compare_same<T, Op>(data, t, u, size);
+        }
+
+        return false;
+    }
+
+private:
+    template<typename T, CompareType Op>
+    static inline void op_compare_same(
+        uint8_t* const __restrict data, 
+        const T* const __restrict t,
+        const T* const __restrict u,
+        const size_t size
+    ) {
+        if constexpr(Op == CompareType::EQ) {
+            EqualColumnAVX512<T>(t, u, size, data);
+        } else if constexpr(Op == CompareType::GE) {
+            GreaterEqualColumnAVX512<T>(t, u, size, data);
+        } else if constexpr(Op == CompareType::GT) {
+            GreaterColumnAVX512<T>(t, u, size, data);
+        } else if constexpr(Op == CompareType::LE) {
+            LessEqualColumnAVX512<T>(t, u, size, data);
+        } else if constexpr(Op == CompareType::LT) {
+            LessColumnAVX512<T>(t, u, size, data);
+        } else if constexpr(Op == CompareType::NEQ) {
+            NotEqualColumnAVX512<T>(t, u, size, data);
+        } else {
+            // unimplemented
+        }
+    }
+};
+
+}
+}
 }
 }

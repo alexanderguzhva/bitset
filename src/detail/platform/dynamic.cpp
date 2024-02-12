@@ -43,20 +43,20 @@ bool VectorizedDynamic::op_compare(
     const size_t size
 ) {
 // define the comparator
-#define CALL_OP_COMPARE(TTYPE, UTYPE, OP) \
+#define DISPATCH_OP_COMPARE(TTYPE, UTYPE, OP) \
     if constexpr(std::is_same_v<T, TTYPE> && std::is_same_v<U, UTYPE> && Op == CompareType::OP) { \
         return op_compare_##TTYPE##_##UTYPE##_##OP(data, t, u, size); \
     }
 
     // find the appropriate function pointer
-    CALL_OP_COMPARE(float, float, EQ)
-    CALL_OP_COMPARE(float, float, GE)
-    CALL_OP_COMPARE(float, float, GT)
-    CALL_OP_COMPARE(float, float, LE)
-    CALL_OP_COMPARE(float, float, LT)
-    CALL_OP_COMPARE(float, float, NEQ)
+    DISPATCH_OP_COMPARE(float, float, EQ)
+    DISPATCH_OP_COMPARE(float, float, GE)
+    DISPATCH_OP_COMPARE(float, float, GT)
+    DISPATCH_OP_COMPARE(float, float, LE)
+    DISPATCH_OP_COMPARE(float, float, LT)
+    DISPATCH_OP_COMPARE(float, float, NEQ)
 
-#undef CALL_OP_COMPARE
+#undef DISPATCH_OP_COMPARE
 
     return false;
 }

@@ -413,31 +413,31 @@ public:
         );
     }
 
-    // Compare 
+    // Compare two arrays element-wise
     template<typename T, typename U>
-    void inplace_compare(
+    void inplace_compare_column(
         const T* const __restrict t,
         const U* const __restrict u,
         const size_type size,
         CompareType op
     ) {
         if (op == CompareType::EQ) {
-            this->inplace_compare<T, U, CompareType::EQ>(t, u, size);
+            this->inplace_compare_column<T, U, CompareType::EQ>(t, u, size);
         }
         else if (op == CompareType::GE) {
-            this->inplace_compare<T, U, CompareType::GE>(t, u, size);
+            this->inplace_compare_column<T, U, CompareType::GE>(t, u, size);
         }
         else if (op == CompareType::GT) {
-            this->inplace_compare<T, U, CompareType::GT>(t, u, size);
+            this->inplace_compare_column<T, U, CompareType::GT>(t, u, size);
         }
         else if (op == CompareType::LE) {
-            this->inplace_compare<T, U, CompareType::LE>(t, u, size);
+            this->inplace_compare_column<T, U, CompareType::LE>(t, u, size);
         }
         else if (op == CompareType::LT) {
-            this->inplace_compare<T, U, CompareType::LT>(t, u, size);
+            this->inplace_compare_column<T, U, CompareType::LT>(t, u, size);
         }
         else if (op == CompareType::NEQ) {
-            this->inplace_compare<T, U, CompareType::NEQ>(t, u, size);
+            this->inplace_compare_column<T, U, CompareType::NEQ>(t, u, size);
         }
         else {
             // unimplemented
@@ -445,19 +445,67 @@ public:
     }
 
     template<typename T, typename U, CompareType Op>
-    void inplace_compare(
+    void inplace_compare_column(
         const T* const __restrict t,
         const U* const __restrict u,
         const size_type size
     ) {
         range_checker::le(size, this->size());
 
-        policy_type::template op_compare<T, U, Op>(
+        policy_type::template op_compare_column<T, U, Op>(
             this->data(),
             this->offset(),
             t,
             u,
             size
+        );
+    }
+
+    // Compare elements of an given array with a given value
+    template<typename T>
+    void inplace_compare_val(
+        const T* const __restrict t,
+        const size_type size,
+        const T value,
+        CompareType op
+    ) {
+        if (op == CompareType::EQ) {
+            this->inplace_compare_val<T, CompareType::EQ>(t, size, value);
+        }
+        else if (op == CompareType::GE) {
+            this->inplace_compare_val<T, CompareType::GE>(t, size, value);
+        }
+        else if (op == CompareType::GT) {
+            this->inplace_compare_val<T, CompareType::GT>(t, size, value);
+        }
+        else if (op == CompareType::LE) {
+            this->inplace_compare_val<T, CompareType::LE>(t, size, value);
+        }
+        else if (op == CompareType::LT) {
+            this->inplace_compare_val<T, CompareType::LT>(t, size, value);
+        }
+        else if (op == CompareType::NEQ) {
+            this->inplace_compare_val<T, CompareType::NEQ>(t, size, value);
+        }
+        else {
+            // unimplemented
+        }
+    }
+
+    template<typename T, CompareType Op>
+    void inplace_compare_val(
+        const T* const __restrict t,
+        const size_type size,
+        const T value
+    ) {
+        range_checker::le(size, this->size());
+
+        policy_type::template op_compare_val<T, Op>(
+            this->data(),
+            this->offset(),
+            t,
+            size,
+            value
         );
     }
 

@@ -297,7 +297,7 @@ struct CustomBitsetPolicy {
 
     //
     template<typename T, typename U, CompareType Op>
-    static inline void op_compare(
+    static inline void op_compare_column(
         data_type* const __restrict data, 
         const size_type start,
         const T* const __restrict t,
@@ -306,6 +306,20 @@ struct CustomBitsetPolicy {
     ) {
         for (size_type i = 0; i < size; i++) {
             get_proxy(data, start + i) = CompareOperator<Op>::compare(t[i], u[i]);
+        }
+    }
+
+    //
+    template<typename T, CompareType Op>
+    static inline void op_compare_val(
+        data_type* const __restrict data, 
+        const size_type start,
+        const T* const __restrict t,
+        const size_type size,
+        const T value
+    ) {
+        for (size_type i = 0; i < size; i++) {
+            get_proxy(data, start + i) = CompareOperator<Op>::compare(t[i], value);
         }
     }
 };

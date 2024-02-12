@@ -68,45 +68,77 @@ NotEqualColumnAVX2(const T* const __restrict left, const T* const __restrict rig
 
 //
 struct VectorizedAvx2 {
-    // size is in bytes
+    // API requirement: size % 8 == 0
     template<typename T, typename U, CompareType Op>
-    static inline bool op_compare(
-        uint8_t* const __restrict data, 
+    static inline bool op_compare_column(
+        uint8_t* const __restrict output, 
         const T* const __restrict t,
         const U* const __restrict u,
         const size_t size
     ) {
-        // todo: aligned reads
-        
         // same data types for both t and u?
         if constexpr(std::is_same_v<T, U>) {
-             op_compare_same<T, Op>(data, t, u, size);
+             op_compare_column_same<T, Op>(output, t, u, size);
              return true;
         }
+
+        // technically, it is possible to add T != U cases by 
+        // utilizing SIMD data conversion functions
 
         return false;
     }
 
+    template<typename T, CompareType Op>
+    static inline bool op_compare_val(
+        uint8_t* const __restrict output, 
+        const T* const __restrict t,
+        const size_t size,
+        const T value
+    ) {
+        if constexpr(Op == CompareType::EQ) {
+            EqualValAVX2(t, size, value, output);
+            return true;
+        } else if constexpr(Op == CompareType::GE) {
+            GreaterEqualValAVX2(t, size, value, output);
+            return true;
+        } else if constexpr(Op == CompareType::GT) {
+            GreaterValAVX2(t, size, value, output);            
+            return true;
+        } else if constexpr(Op == CompareType::LE) {
+            LessEqualValAVX2(t, size, value, output);            
+            return true;
+        } else if constexpr(Op == CompareType::LT) {
+            LessValAVX2(t, size, value, output);            
+            return true;
+        } else if constexpr(Op == CompareType::NEQ) {
+            NotEqualValAVX2(t, size, value, output);
+            return true;
+        } else {
+            // unimplemented
+            return false;
+        }
+    }
+
 private:
     template<typename T, CompareType Op>
-    static inline void op_compare_same(
-        uint8_t* const __restrict data, 
+    static inline void op_compare_column_same(
+        uint8_t* const __restrict output, 
         const T* const __restrict t,
         const T* const __restrict u,
         const size_t size
     ) {
         if constexpr(Op == CompareType::EQ) {
-            EqualColumnAVX2<T>(t, u, size, data);
+            EqualColumnAVX2<T>(t, u, size, output);
         } else if constexpr(Op == CompareType::GE) {
-            GreaterEqualColumnAVX2<T>(t, u, size, data);
+            GreaterEqualColumnAVX2<T>(t, u, size, output);
         } else if constexpr(Op == CompareType::GT) {
-            GreaterColumnAVX2<T>(t, u, size, data);
+            GreaterColumnAVX2<T>(t, u, size, output);
         } else if constexpr(Op == CompareType::LE) {
-            LessEqualColumnAVX2<T>(t, u, size, data);
+            LessEqualColumnAVX2<T>(t, u, size, output);
         } else if constexpr(Op == CompareType::LT) {
-            LessColumnAVX2<T>(t, u, size, data);
+            LessColumnAVX2<T>(t, u, size, output);
         } else if constexpr(Op == CompareType::NEQ) {
-            NotEqualColumnAVX2<T>(t, u, size, data);
+            NotEqualColumnAVX2<T>(t, u, size, output);
         } else {
             // unimplemented
         }

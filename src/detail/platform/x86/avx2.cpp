@@ -12,10 +12,88 @@ namespace bitset {
 namespace detail {
 namespace x86 {
 
+//
+template <typename T, CompareType Op>
+struct CompareValAVX2Impl {
+    static void
+    Compare(const T* const __restrict src, const size_t size, const T val, void* const __restrict res) {
+        static_assert(std::is_integral_v<T> || std::is_floating_point_v<T>,
+                      "T must be integral or float/double type");
+    }
+};
+
+template<CompareType Op>
+struct CompareValAVX2Impl<float, Op> {
+    static void Compare(
+        const float* const __restrict src, 
+        const size_t size, 
+        const float val, 
+        void* const __restrict res
+    ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+
+        //
+        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
+        constexpr auto pred = ComparePredicate<float, Op>::value;
+
+        const __m256 target = _mm256_set1_ps(val);
+
+        // todo: aligned reads & writes
+
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const __m256 v0 = _mm256_loadu_ps(src + i);
+            const __m256 cmp = _mm256_cmp_ps(v0, target, pred);
+            const uint8_t mmask = _mm256_movemask_ps(cmp);
+
+            res_u8[i / 8] = mmask;
+        }
+    }
+};
+
+#define DECLARE_VAL_AVX2(NAME, OP) \
+    template<typename T> \
+    void NAME##ValAVX2( \
+        const T* const __restrict src, \
+        const size_t size, \
+        const T val, \
+        void* const __restrict res \
+    ) { \
+        CompareValAVX2Impl<T, CompareType::OP>::Compare(src, size, val, res); \
+    }
+
+DECLARE_VAL_AVX2(Equal, EQ);
+DECLARE_VAL_AVX2(GreaterEqual, GE);
+DECLARE_VAL_AVX2(Greater, GT);
+DECLARE_VAL_AVX2(LessEqual, LE);
+DECLARE_VAL_AVX2(Less, LT);
+DECLARE_VAL_AVX2(NotEqual, NEQ);
+
+#undef DECLARE_VAL_AVX2
+
+#define INSTANTIATE_VAL_AVX2(NAME, TTYPE) \
+    template void NAME##ValAVX2( \
+        const TTYPE* const __restrict src, \
+        const size_t size, \
+        const TTYPE val, \
+        void* const __restrict res \
+    );
+
+INSTANTIATE_VAL_AVX2(Equal, float);
+INSTANTIATE_VAL_AVX2(GreaterEqual, float);
+INSTANTIATE_VAL_AVX2(Greater, float);
+INSTANTIATE_VAL_AVX2(LessEqual, float);
+INSTANTIATE_VAL_AVX2(Less, float);
+INSTANTIATE_VAL_AVX2(NotEqual, float);
+
+#undef INSTANTIATE_VAL_AVX2
+
+//
 template <typename T, CompareType Op>
 struct CompareColumnAVX2Impl {
     static void
-    Compare(const T* const __restrict src, const size_t size, const T val, void* const __restrict res) {
+    Compare(const T* const __restrict left, const T* const __restrict right, const size_t size, void* const __restrict res) {
         static_assert(std::is_integral_v<T> || std::is_floating_point_v<T>,
                       "T must be integral or float/double type");
     }
@@ -29,9 +107,7 @@ struct CompareColumnAVX2Impl<float, Op> {
         const size_t size,
         void* const __restrict res
     ) {
-/*
         // the restriction of the API
-        assert((uintptr_t(res) % 8) == 0);
         assert((size % 8) == 0);
 
         //
@@ -39,8 +115,6 @@ struct CompareColumnAVX2Impl<float, Op> {
         constexpr auto pred = ComparePredicate<float, Op>::value;
 
         // todo: aligned reads & writes
-
-        // todo: process in 64 elements
 
         const size_t size8 = (size / 8) * 8;
         for (size_t i = 0; i < size8; i += 8) {
@@ -50,43 +124,6 @@ struct CompareColumnAVX2Impl<float, Op> {
             const uint8_t mmask = _mm256_movemask_ps(cmp);
 
             res_u8[i / 8] = mmask;
-        }
-        */
-
-        union {
-            uint8_t u8[8];
-            uint64_t u64;
-        } foo;
-
-        //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
-        uint64_t* const __restrict res_u64 = reinterpret_cast<uint64_t*>(res);
-        constexpr auto pred = ComparePredicate<float, Op>::value;
-
-        // todo: aligned reads & writes
-
-        // todo: process in 64 elements
-
-        const size_t size64 = (size / 64) * 64;
-        for (size_t i = 0; i < size64; i += 64) {
-            for (size_t j = 0; j < 64; j += 8) {
-                const __m256 v0 = _mm256_loadu_ps(left + i + j);
-                const __m256 v1 = _mm256_loadu_ps(right + i + j);
-                const __m256 cmp = _mm256_cmp_ps(v0, v1, pred);
-                const uint8_t mmask = _mm256_movemask_ps(cmp);
-                foo.u8[j / 8] = mmask;
-            }
-
-            res_u64[i / 64] = foo.u64;
-        }
-
-        for (size_t i = size64; i < size; i += 8) {
-            const __m256 v0 = _mm256_loadu_ps(left + i);
-            const __m256 v1 = _mm256_loadu_ps(right + i);
-            const __m256 cmp = _mm256_cmp_ps(v0, v1, pred);
-            const uint8_t mmask = _mm256_movemask_ps(cmp);
-
-            res_u8[i / 8] = mmask;            
         }
     }
 };

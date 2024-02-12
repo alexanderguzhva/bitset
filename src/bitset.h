@@ -376,7 +376,7 @@ public:
     // Find the index of the first bit set to true, starting from a given bit index.
     inline std::optional<size_type> find_next(const size_type starting_bit_idx) const {
         const size_type size_v = this->size();
-        if (starting_bit_idx >= size_v) {
+        if (starting_bit_idx + 1 >= size_v) {
             return std::nullopt;
         }
 

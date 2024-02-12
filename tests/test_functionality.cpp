@@ -60,8 +60,12 @@ using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 
 }
 
+//
+static constexpr bool print_log = true;
+static constexpr bool print_timing = true;
 
 
+//
 template<typename BitsetT>
 void TestFindImpl(BitsetT& bitset, const size_t max_v) {
     const size_t n = bitset.size();
@@ -78,6 +82,8 @@ void TestFindImpl(BitsetT& bitset, const size_t max_v) {
         }
     }
 
+    StopWatch sw;
+
     auto bit_idx = bitset.find_first();
     if (!bit_idx.has_value()) {
         ASSERT_EQ(one_pos.size(), 0);
@@ -90,7 +96,11 @@ void TestFindImpl(BitsetT& bitset, const size_t max_v) {
         bit_idx = bitset.find_next(bit_idx.value());
     }
 
-    ASSERT_FALSE(bit_idx.has_value());
+    ASSERT_FALSE(bit_idx.has_value()) << n << ", " << max_v << ", " << bit_idx.value();
+
+    if (print_timing) {
+        printf("elapsed %f\n", sw.elapsed());
+    }
 }
 
 template<typename BitsetT>
@@ -100,10 +110,13 @@ void TestFindImpl() {
             BitsetT bitset(n);
             bitset.reset();
 
-            printf("Testing bitset, n=%zd, pr=%zd\n", n, pr);
+            if (print_log) {
+                printf("Testing bitset, n=%zd, pr=%zd\n", n, pr);
+            }
+            
             TestFindImpl(bitset, pr);
 
-            for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63}) {
+            for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
                 if (offset >= n) {
                     continue;
                 }
@@ -111,22 +124,25 @@ void TestFindImpl() {
                 bitset.reset();
                 auto view = bitset.view(offset);
 
-                printf("Testing bitset view, n=%zd, offset=%zd, pr=%zd\n", n, offset, pr);
+                if (print_log) {
+                    printf("Testing bitset view, n=%zd, offset=%zd, pr=%zd\n", n, offset, pr);
+                }
+                
                 TestFindImpl(view, pr);
             }
         }
     }
 }
 
-// //
-// TEST(FindRef, f) {
-//     TestFindImpl<ref_u64_u8::bitset_type>();
-// }
+//
+TEST(FindRef, f) {
+    TestFindImpl<ref_u64_u8::bitset_type>();
+}
 
-// //
-// TEST(FindElement, f) {
-//     TestFindImpl<element_u64_u8::bitset_type>();
-// }
+//
+TEST(FindElement, f) {
+    TestFindImpl<element_u64_u8::bitset_type>();
+}
 
 // //
 // TEST(FindVectorizedAvx2, f) {
@@ -163,7 +179,10 @@ void TestInplaceCompareImpl(
 
     StopWatch sw;
     bitset.inplace_compare(t.data(), u.data(), n, op);
-    printf("elapsed %f\n", sw.elapsed());
+    
+    if (print_timing) {
+        printf("elapsed %f\n", sw.elapsed());
+    }
 
     for (size_t i = 0; i < n; i++) {
         if (op == CompareType::EQ) {
@@ -191,10 +210,13 @@ void TestInplaceCompareImpl() {
             BitsetT bitset(n);
             bitset.reset();
 
-            // printf("Testing bitset, n=%zd, op=%zd\n", n, (size_t)op);
+            if (print_log) {
+                printf("Testing bitset, n=%zd, op=%zd\n", n, (size_t)op);
+            }
+            
             TestInplaceCompareImpl<BitsetT, float, float>(bitset, op);
 
-            for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63}) {
+            for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
                 if (offset >= n) {
                     continue;
                 }
@@ -202,24 +224,27 @@ void TestInplaceCompareImpl() {
                 bitset.reset();
                 auto view = bitset.view(offset);
 
-                // printf("Testing bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
+                if (print_log) {
+                    printf("Testing bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
+                }
+                
                 TestInplaceCompareImpl<decltype(view), float, float>(view, op);
             }
         }
     }
 }
 
-//
-TEST(InplaceCompareRef, f) {
-    TestInplaceCompareImpl<ref_u64_u8::bitset_type>();
-}
+// //
+// TEST(InplaceCompareRef, f) {
+//     TestInplaceCompareImpl<ref_u64_u8::bitset_type>();
+// }
 
-//
-TEST(InplaceCompareAvx2, f) {
-    TestInplaceCompareImpl<avx2_u64_u8::bitset_type>();
-}
+// //
+// TEST(InplaceCompareAvx2, f) {
+//     TestInplaceCompareImpl<avx2_u64_u8::bitset_type>();
+// }
 
-//
-TEST(InplaceCompareDynamic, f) {
-    TestInplaceCompareImpl<dynamic_u64_u8::bitset_type>();
-}
+// //
+// TEST(InplaceCompareDynamic, f) {
+//     TestInplaceCompareImpl<dynamic_u64_u8::bitset_type>();
+// }

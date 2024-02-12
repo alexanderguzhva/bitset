@@ -81,6 +81,7 @@ struct VectorizedAvx512 {
         // same data types for both t and u?
         if constexpr(std::is_same_v<T, U>) {
              op_compare_same<T, Op>(data, t, u, size);
+             return true;
         }
 
         return false;

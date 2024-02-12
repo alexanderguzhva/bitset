@@ -61,7 +61,7 @@ struct CompareColumnAVX2Impl<float, Op> {
         //
         uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
         uint64_t* const __restrict res_u64 = reinterpret_cast<uint64_t*>(res);
-        constexpr auto pred = _CMP_EQ_OQ;
+        constexpr auto pred = ComparePredicate<float, Op>::value;
 
         // todo: aligned reads & writes
 

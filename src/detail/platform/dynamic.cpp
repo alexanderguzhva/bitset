@@ -14,6 +14,18 @@ using namespace milvus::bitset::detail::x86;
 
 #include "vectorized_ref.h"
 
+
+// a facility to run through all possible operations
+#define ALL_OPS(FUNC,...) \
+    FUNC(__VA_ARGS__,EQ); \
+    FUNC(__VA_ARGS__,GE); \
+    FUNC(__VA_ARGS__,GT); \
+    FUNC(__VA_ARGS__,LE); \
+    FUNC(__VA_ARGS__,LT); \
+    FUNC(__VA_ARGS__,NEQ);
+
+
+//
 namespace milvus {
 namespace bitset {
 namespace detail {
@@ -28,12 +40,7 @@ using OpCompareColumnPtr = bool(*)(uint8_t* const __restrict output, const T* co
 #define DECLARE_OP_COMPARE_COLUMN(TTYPE, UTYPE, OP) \
     OpCompareColumnPtr<TTYPE, UTYPE, CompareType::OP> op_compare_column_##TTYPE##_##UTYPE##_##OP = VectorizedRef::template op_compare_column<TTYPE, UTYPE, CompareType::OP>;
 
-DECLARE_OP_COMPARE_COLUMN(float, float, EQ);
-DECLARE_OP_COMPARE_COLUMN(float, float, GE);
-DECLARE_OP_COMPARE_COLUMN(float, float, GT);
-DECLARE_OP_COMPARE_COLUMN(float, float, LE);
-DECLARE_OP_COMPARE_COLUMN(float, float, LT);
-DECLARE_OP_COMPARE_COLUMN(float, float, NEQ);
+ALL_OPS(DECLARE_OP_COMPARE_COLUMN, float, float)
 
 #undef DECLARE_OP_COMPARE_COLUMN
 
@@ -52,12 +59,7 @@ bool VectorizedDynamic::op_compare_column(
     }
 
     // find the appropriate function pointer
-    DISPATCH_OP_COMPARE_COLUMN(float, float, EQ)
-    DISPATCH_OP_COMPARE_COLUMN(float, float, GE)
-    DISPATCH_OP_COMPARE_COLUMN(float, float, GT)
-    DISPATCH_OP_COMPARE_COLUMN(float, float, LE)
-    DISPATCH_OP_COMPARE_COLUMN(float, float, LT)
-    DISPATCH_OP_COMPARE_COLUMN(float, float, NEQ)
+    ALL_OPS(DISPATCH_OP_COMPARE_COLUMN, float, float)
 
 #undef DISPATCH_OP_COMPARE_COLUMN
 
@@ -74,12 +76,7 @@ bool VectorizedDynamic::op_compare_column(
         const size_t size \
     );
 
-INSTANTIATE_TEMPLATE_OP_COMPARE_COLUMN(float, float, EQ);
-INSTANTIATE_TEMPLATE_OP_COMPARE_COLUMN(float, float, GE);
-INSTANTIATE_TEMPLATE_OP_COMPARE_COLUMN(float, float, GT);
-INSTANTIATE_TEMPLATE_OP_COMPARE_COLUMN(float, float, LE);
-INSTANTIATE_TEMPLATE_OP_COMPARE_COLUMN(float, float, LT);
-INSTANTIATE_TEMPLATE_OP_COMPARE_COLUMN(float, float, NEQ);
+ALL_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_COLUMN, float, float)
 
 #undef INSTANTIATE_TEMPLATE_OP_COMPARE_COLUMN
 
@@ -92,19 +89,8 @@ using OpCompareValPtr = bool(*)(uint8_t* const __restrict output, const T* const
 #define DECLARE_OP_COMPARE_VAL(TTYPE, OP) \
     OpCompareValPtr<TTYPE, CompareType::OP> op_compare_val_##TTYPE##_##OP = VectorizedRef::template op_compare_val<TTYPE, CompareType::OP>;
 
-DECLARE_OP_COMPARE_VAL(float, EQ);
-DECLARE_OP_COMPARE_VAL(float, GE);
-DECLARE_OP_COMPARE_VAL(float, GT);
-DECLARE_OP_COMPARE_VAL(float, LE);
-DECLARE_OP_COMPARE_VAL(float, LT);
-DECLARE_OP_COMPARE_VAL(float, NEQ);
-
-DECLARE_OP_COMPARE_VAL(int8_t, EQ);
-DECLARE_OP_COMPARE_VAL(int8_t, GE);
-DECLARE_OP_COMPARE_VAL(int8_t, GT);
-DECLARE_OP_COMPARE_VAL(int8_t, LE);
-DECLARE_OP_COMPARE_VAL(int8_t, LT);
-DECLARE_OP_COMPARE_VAL(int8_t, NEQ);
+ALL_OPS(DECLARE_OP_COMPARE_VAL, float)
+ALL_OPS(DECLARE_OP_COMPARE_VAL, int8_t)
 
 #undef DECLARE_OP_COMPARE_VAL
 
@@ -123,19 +109,8 @@ bool VectorizedDynamic::op_compare_val(
     }
 
     // find the appropriate function pointer
-    DISPATCH_OP_COMPARE_VAL(float, EQ)
-    DISPATCH_OP_COMPARE_VAL(float, GE)
-    DISPATCH_OP_COMPARE_VAL(float, GT)
-    DISPATCH_OP_COMPARE_VAL(float, LE)
-    DISPATCH_OP_COMPARE_VAL(float, LT)
-    DISPATCH_OP_COMPARE_VAL(float, NEQ)
-
-    DISPATCH_OP_COMPARE_VAL(int8_t, EQ)
-    DISPATCH_OP_COMPARE_VAL(int8_t, GE)
-    DISPATCH_OP_COMPARE_VAL(int8_t, GT)
-    DISPATCH_OP_COMPARE_VAL(int8_t, LE)
-    DISPATCH_OP_COMPARE_VAL(int8_t, LT)
-    DISPATCH_OP_COMPARE_VAL(int8_t, NEQ)
+    ALL_OPS(DISPATCH_OP_COMPARE_VAL, float)
+    ALL_OPS(DISPATCH_OP_COMPARE_VAL, int8_t)
 
 #undef DISPATCH_OP_COMPARE_VAL
 
@@ -152,19 +127,8 @@ bool VectorizedDynamic::op_compare_val(
         const TTYPE value \
     );
 
-INSTANTIATE_TEMPLATE_OP_COMPARE_VAL(float, EQ);
-INSTANTIATE_TEMPLATE_OP_COMPARE_VAL(float, GE);
-INSTANTIATE_TEMPLATE_OP_COMPARE_VAL(float, GT);
-INSTANTIATE_TEMPLATE_OP_COMPARE_VAL(float, LE);
-INSTANTIATE_TEMPLATE_OP_COMPARE_VAL(float, LT);
-INSTANTIATE_TEMPLATE_OP_COMPARE_VAL(float, NEQ);
-
-INSTANTIATE_TEMPLATE_OP_COMPARE_VAL(int8_t, EQ);
-INSTANTIATE_TEMPLATE_OP_COMPARE_VAL(int8_t, GE);
-INSTANTIATE_TEMPLATE_OP_COMPARE_VAL(int8_t, GT);
-INSTANTIATE_TEMPLATE_OP_COMPARE_VAL(int8_t, LE);
-INSTANTIATE_TEMPLATE_OP_COMPARE_VAL(int8_t, LT);
-INSTANTIATE_TEMPLATE_OP_COMPARE_VAL(int8_t, NEQ);
+ALL_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_VAL, float)
+ALL_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_VAL, int8_t)
 
 #undef INSTANTIATE_TEMPLATE_OP_COMPARE_VAL
 
@@ -186,19 +150,9 @@ static void init_dynamic_hook() {
     op_compare_val_##TTYPE##_##OP = VectorizedAvx512::template op_compare_val<TTYPE, CompareType::OP>;
 
         // assign AVX2-related pointers
-        SET_OP_COMPARE_COLUMN_AVX512(float, float, EQ);
-        SET_OP_COMPARE_COLUMN_AVX512(float, float, GE);
-        SET_OP_COMPARE_COLUMN_AVX512(float, float, GT);
-        SET_OP_COMPARE_COLUMN_AVX512(float, float, LE);
-        SET_OP_COMPARE_COLUMN_AVX512(float, float, LT);
-        SET_OP_COMPARE_COLUMN_AVX512(float, float, NEQ);
+        ALL_OPS(SET_OP_COMPARE_COLUMN_AVX512, float, float)
 
-        SET_OP_COMPARE_VAL_AVX512(float, EQ);
-        SET_OP_COMPARE_VAL_AVX512(float, GE);
-        SET_OP_COMPARE_VAL_AVX512(float, GT);
-        SET_OP_COMPARE_VAL_AVX512(float, LE);
-        SET_OP_COMPARE_VAL_AVX512(float, LT);
-        SET_OP_COMPARE_VAL_AVX512(float, NEQ);
+        ALL_OPS(SET_OP_COMPARE_VAL_AVX512, float)
 
 #undef SET_OP_COMPARE_COLUMN_AVX512
 #undef SET_OP_COMPARE_VAL_AVX512
@@ -214,19 +168,9 @@ static void init_dynamic_hook() {
     op_compare_val_##TTYPE##_##OP = VectorizedAvx2::template op_compare_val<TTYPE, CompareType::OP>;
 
         // assign AVX2-related pointers
-        SET_OP_COMPARE_COLUMN_AVX2(float, float, EQ);
-        SET_OP_COMPARE_COLUMN_AVX2(float, float, GE);
-        SET_OP_COMPARE_COLUMN_AVX2(float, float, GT);
-        SET_OP_COMPARE_COLUMN_AVX2(float, float, LE);
-        SET_OP_COMPARE_COLUMN_AVX2(float, float, LT);
-        SET_OP_COMPARE_COLUMN_AVX2(float, float, NEQ);
+        ALL_OPS(SET_OP_COMPARE_COLUMN_AVX2, float, float)
 
-        SET_OP_COMPARE_VAL_AVX2(float, EQ);
-        SET_OP_COMPARE_VAL_AVX2(float, GE);
-        SET_OP_COMPARE_VAL_AVX2(float, GT);
-        SET_OP_COMPARE_VAL_AVX2(float, LE);
-        SET_OP_COMPARE_VAL_AVX2(float, LT);
-        SET_OP_COMPARE_VAL_AVX2(float, NEQ);
+        ALL_OPS(SET_OP_COMPARE_VAL_AVX2, float)
 
 #undef SET_OP_COMPARE_COLUMN_AVX2
 #undef SET_OP_COMPARE_VAL_AVX2
@@ -235,6 +179,9 @@ static void init_dynamic_hook() {
     }
 #endif
 }
+
+// no longer needed
+#undef ALL_OPS
 
 //
 static int init_dynamic_ = []() {

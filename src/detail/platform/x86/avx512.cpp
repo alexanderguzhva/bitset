@@ -10,7 +10,7 @@
 namespace milvus {
 namespace bitset {
 namespace detail {
-namespace x86 {    
+namespace x86 {
 
 // count is expected to be in range [0, 64)
 inline uint64_t get_mask(const size_t count) {
@@ -189,6 +189,13 @@ INSTANTIATE_VAL_AVX512(Greater, float);
 INSTANTIATE_VAL_AVX512(LessEqual, float);
 INSTANTIATE_VAL_AVX512(Less, float);
 INSTANTIATE_VAL_AVX512(NotEqual, float);
+
+INSTANTIATE_VAL_AVX512(Equal, int8_t);
+INSTANTIATE_VAL_AVX512(GreaterEqual, int8_t);
+INSTANTIATE_VAL_AVX512(Greater, int8_t);
+INSTANTIATE_VAL_AVX512(LessEqual, int8_t);
+INSTANTIATE_VAL_AVX512(Less, int8_t);
+INSTANTIATE_VAL_AVX512(NotEqual, int8_t);
 
 #undef INSTANTIATE_VAL_AVX512
 

@@ -275,6 +275,11 @@ public:
     std::vector<std::array<int, 4>> extdata_;    
 };
 
+bool cpu_support_avx512();
+bool cpu_support_avx2();
+bool cpu_support_sse4_2();
+bool cpu_support_sse2();
+
 }
 }
 }

@@ -88,6 +88,35 @@ InstructionSet::InstructionSet()
     }
 };
 
+//
+bool
+cpu_support_avx512() {
+    InstructionSet& instruction_set_inst = InstructionSet::GetInstance();
+    return (instruction_set_inst.AVX512F() && instruction_set_inst.AVX512DQ() &&
+            instruction_set_inst.AVX512BW() && instruction_set_inst.AVX512VL());
+}
+
+//
+bool
+cpu_support_avx2() {
+    InstructionSet& instruction_set_inst = InstructionSet::GetInstance();
+    return (instruction_set_inst.AVX2());
+}
+
+//
+bool
+cpu_support_sse4_2() {
+    InstructionSet& instruction_set_inst = InstructionSet::GetInstance();
+    return (instruction_set_inst.SSE42());
+}
+
+//
+bool
+cpu_support_sse2() {
+    InstructionSet& instruction_set_inst = InstructionSet::GetInstance();
+    return (instruction_set_inst.SSE2());
+}
+
 }
 }
 }

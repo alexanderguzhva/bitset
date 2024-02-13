@@ -89,8 +89,12 @@ using OpCompareValPtr = bool(*)(uint8_t* const __restrict output, const T* const
 #define DECLARE_OP_COMPARE_VAL(TTYPE, OP) \
     OpCompareValPtr<TTYPE, CompareType::OP> op_compare_val_##TTYPE##_##OP = VectorizedRef::template op_compare_val<TTYPE, CompareType::OP>;
 
-ALL_OPS(DECLARE_OP_COMPARE_VAL, float)
 ALL_OPS(DECLARE_OP_COMPARE_VAL, int8_t)
+ALL_OPS(DECLARE_OP_COMPARE_VAL, int16_t)
+ALL_OPS(DECLARE_OP_COMPARE_VAL, int32_t)
+ALL_OPS(DECLARE_OP_COMPARE_VAL, int64_t)
+ALL_OPS(DECLARE_OP_COMPARE_VAL, float)
+ALL_OPS(DECLARE_OP_COMPARE_VAL, double)
 
 #undef DECLARE_OP_COMPARE_VAL
 
@@ -109,8 +113,12 @@ bool VectorizedDynamic::op_compare_val(
     }
 
     // find the appropriate function pointer
-    ALL_OPS(DISPATCH_OP_COMPARE_VAL, float)
     ALL_OPS(DISPATCH_OP_COMPARE_VAL, int8_t)
+    ALL_OPS(DISPATCH_OP_COMPARE_VAL, int16_t)
+    ALL_OPS(DISPATCH_OP_COMPARE_VAL, int32_t)
+    ALL_OPS(DISPATCH_OP_COMPARE_VAL, int64_t)
+    ALL_OPS(DISPATCH_OP_COMPARE_VAL, float)
+    ALL_OPS(DISPATCH_OP_COMPARE_VAL, double)
 
 #undef DISPATCH_OP_COMPARE_VAL
 
@@ -127,8 +135,12 @@ bool VectorizedDynamic::op_compare_val(
         const TTYPE value \
     );
 
-ALL_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_VAL, float)
 ALL_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_VAL, int8_t)
+ALL_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_VAL, int16_t)
+ALL_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_VAL, int32_t)
+ALL_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_VAL, int64_t)
+ALL_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_VAL, float)
+ALL_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_VAL, double)
 
 #undef INSTANTIATE_TEMPLATE_OP_COMPARE_VAL
 
@@ -152,7 +164,12 @@ static void init_dynamic_hook() {
         // assign AVX2-related pointers
         ALL_OPS(SET_OP_COMPARE_COLUMN_AVX512, float, float)
 
+        ALL_OPS(SET_OP_COMPARE_VAL_AVX512, int8_t)
+        ALL_OPS(SET_OP_COMPARE_VAL_AVX512, int16_t)
+        ALL_OPS(SET_OP_COMPARE_VAL_AVX512, int32_t)
+        ALL_OPS(SET_OP_COMPARE_VAL_AVX512, int64_t)
         ALL_OPS(SET_OP_COMPARE_VAL_AVX512, float)
+        ALL_OPS(SET_OP_COMPARE_VAL_AVX512, double)
 
 #undef SET_OP_COMPARE_COLUMN_AVX512
 #undef SET_OP_COMPARE_VAL_AVX512

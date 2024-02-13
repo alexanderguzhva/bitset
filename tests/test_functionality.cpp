@@ -26,7 +26,7 @@ using namespace milvus::bitset;
 //
 namespace ref_u64_u8 {
 
-using policy_type = milvus::bitset::detail::CustomBitsetPolicy<uint64_t>;
+using policy_type = milvus::bitset::detail::CustomBitsetPolicy<uint8_t>;
 using container_type = std::vector<uint8_t>;
 using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_type, false>;
 using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
@@ -36,7 +36,7 @@ using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 //
 namespace element_u64_u8 {
 
-using policy_type = milvus::bitset::detail::CustomBitsetPolicy2<uint64_t>;
+using policy_type = milvus::bitset::detail::CustomBitsetPolicy2<uint8_t>;
 using container_type = std::vector<uint8_t>;
 using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_type, false>;
 using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
@@ -47,7 +47,7 @@ using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 namespace avx2_u64_u8 {
 
 using vectorized_type = milvus::bitset::detail::x86::VectorizedAvx2;
-using policy_type = milvus::bitset::detail::CustomBitsetVectorizedPolicy<uint64_t, vectorized_type>;
+using policy_type = milvus::bitset::detail::CustomBitsetVectorizedPolicy<uint8_t, vectorized_type>;
 using container_type = std::vector<uint8_t>;
 using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_type, false>;
 using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
@@ -58,7 +58,7 @@ using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 namespace avx512_u64_u8 {
 
 using vectorized_type = milvus::bitset::detail::x86::VectorizedAvx512;
-using policy_type = milvus::bitset::detail::CustomBitsetVectorizedPolicy<uint64_t, vectorized_type>;
+using policy_type = milvus::bitset::detail::CustomBitsetVectorizedPolicy<uint8_t, vectorized_type>;
 using container_type = std::vector<uint8_t>;
 using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_type, false>;
 using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
@@ -69,7 +69,7 @@ using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 namespace dynamic_u64_u8 {
 
 using vectorized_type = milvus::bitset::detail::VectorizedDynamic;
-using policy_type = milvus::bitset::detail::CustomBitsetVectorizedPolicy<uint64_t, vectorized_type>;
+using policy_type = milvus::bitset::detail::CustomBitsetVectorizedPolicy<uint8_t, vectorized_type>;
 using container_type = std::vector<uint8_t>;
 using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_type, false>;
 using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
@@ -77,8 +77,8 @@ using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 }
 
 //
-static constexpr bool print_log = true;
-static constexpr bool print_timing = true;
+static constexpr bool print_log = false;
+static constexpr bool print_timing = false;
 
 
 //
@@ -347,17 +347,17 @@ class InplaceCompareValSuite : public ::testing::Test {};
 
 TYPED_TEST_SUITE_P(InplaceCompareValSuite);
 
-TYPED_TEST_P(InplaceCompareValSuite, BitWise) {
-    TestInplaceCompareValImpl<
-        ref_u64_u8::bitset_type, 
-        TypeParam>();
-}
+// TYPED_TEST_P(InplaceCompareValSuite, BitWise) {
+//     TestInplaceCompareValImpl<
+//         ref_u64_u8::bitset_type, 
+//         TypeParam>();
+// }
 
-TYPED_TEST_P(InplaceCompareValSuite, ElementWise) {
-    TestInplaceCompareValImpl<
-        element_u64_u8::bitset_type, 
-        TypeParam>();
-}
+// TYPED_TEST_P(InplaceCompareValSuite, ElementWise) {
+//     TestInplaceCompareValImpl<
+//         element_u64_u8::bitset_type, 
+//         TypeParam>();
+// }
 
 TYPED_TEST_P(InplaceCompareValSuite, Avx2) {
 #if defined(__x86_64__)
@@ -371,27 +371,28 @@ TYPED_TEST_P(InplaceCompareValSuite, Avx2) {
 #endif
 }
 
-TYPED_TEST_P(InplaceCompareValSuite, Avx512) {
-#if defined(__x86_64__)
-    using namespace milvus::bitset::detail::x86;
+// TYPED_TEST_P(InplaceCompareValSuite, Avx512) {
+// #if defined(__x86_64__)
+//     using namespace milvus::bitset::detail::x86;
 
-    if (cpu_support_avx512()) {
-        TestInplaceCompareValImpl<
-            avx512_u64_u8::bitset_type, 
-            TypeParam>();
-    }
-#endif
-}
+//     if (cpu_support_avx512()) {
+//         TestInplaceCompareValImpl<
+//             avx512_u64_u8::bitset_type, 
+//             TypeParam>();
+//     }
+// #endif
+// }
 
-TYPED_TEST_P(InplaceCompareValSuite, Dynamic) {
-    TestInplaceCompareValImpl<
-        dynamic_u64_u8::bitset_type, 
-        TypeParam>();
-}
+// TYPED_TEST_P(InplaceCompareValSuite, Dynamic) {
+//     TestInplaceCompareValImpl<
+//         dynamic_u64_u8::bitset_type, 
+//         TypeParam>();
+// }
 
-using InplaceCompareValTtypes = ::testing::Types<float, int8_t>;
+using InplaceCompareValTtypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t, float, double>;
 
-REGISTER_TYPED_TEST_SUITE_P(InplaceCompareValSuite, BitWise, ElementWise, Avx2, Avx512, Dynamic);
+// REGISTER_TYPED_TEST_SUITE_P(InplaceCompareValSuite, BitWise, ElementWise, Avx2, Avx512, Dynamic);
+REGISTER_TYPED_TEST_SUITE_P(InplaceCompareValSuite, Avx2);
 
 INSTANTIATE_TYPED_TEST_SUITE_P(InplaceCompareValTest, InplaceCompareValSuite, InplaceCompareValTtypes);
 

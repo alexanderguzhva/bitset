@@ -12,6 +12,15 @@ namespace bitset {
 namespace detail {
 namespace x86 {
 
+// a facility to run through all possible operations
+#define ALL_OPS(FUNC,...) \
+    FUNC(Equal,__VA_ARGS__); \
+    FUNC(GreaterEqual,__VA_ARGS__); \
+    FUNC(Greater,__VA_ARGS__); \
+    FUNC(LessEqual,__VA_ARGS__); \
+    FUNC(Less,__VA_ARGS__); \
+    FUNC(NotEqual,__VA_ARGS__);
+
 // count is expected to be in range [0, 64)
 inline uint64_t get_mask(const size_t count) {
     return (uint64_t(1) << count) - uint64_t(1);
@@ -61,14 +70,9 @@ OrAVX512(void* const left, const void* const right, const size_t size) {
     }
 }
 
+//
 template <typename T, CompareType Op>
-struct CompareValAVX512Impl {
-    static void
-    Compare(const T* const __restrict src, const size_t size, const T val, void* const __restrict res) {
-        static_assert(std::is_integral_v<T> || std::is_floating_point_v<T>,
-                      "T must be integral or float/double type");
-    }
-};
+struct CompareValAVX512Impl {};
 
 template <CompareType Op>
 struct CompareValAVX512Impl<int8_t, Op> {
@@ -107,7 +111,132 @@ struct CompareValAVX512Impl<int8_t, Op> {
             _mm_mask_storeu_epi8(
                 res_u64 + size64 / 64, 
                 store_mask, 
-                _mm_setr_epi64(__m64(cmp_mask), __m64(0ULL)));
+                _mm_setr_epi64(__m64(cmp_mask), __m64(0ULL))
+            );
+        }
+    }
+};
+
+template <CompareType Op>
+struct CompareValAVX512Impl<int16_t, Op> {
+    static void Compare(
+        const int16_t* const __restrict src, 
+        const size_t size, 
+        const int16_t val, 
+        void* const __restrict res
+    ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        
+        //
+        const __m512i target = _mm512_set1_epi16(val);
+        uint32_t* const __restrict res_u32 = reinterpret_cast<uint32_t*>(res); 
+        constexpr auto pred = ComparePredicate<int16_t, Op>::value;
+
+        // todo: aligned reads & writes
+
+        // process big blocks
+        const size_t size32 = (size / 32) * 32;
+        for (size_t i = 0; i < size32; i += 32) {
+            const __m512i v = _mm512_loadu_si512(src + i);
+            const __mmask32 cmp_mask = _mm512_cmp_epi16_mask(v, target, pred);
+
+            res_u32[i / 32] = cmp_mask;
+        }
+
+        // process leftovers
+        if (size32 != size) {
+            const uint32_t mask = get_mask(size - size32);
+            const __m512i v = _mm512_maskz_loadu_epi16(mask, src + size32);
+            const __mmask32 cmp_mask = _mm512_cmp_epi16_mask(v, target, pred);
+
+            const uint16_t store_mask = get_mask((size - size32) / 8);
+            _mm_mask_storeu_epi8(
+                res_u32 + size32 / 32, 
+                store_mask, 
+                _mm_setr_epi32(cmp_mask, 0, 0, 0)
+            );
+        }
+    }
+};
+
+template <CompareType Op>
+struct CompareValAVX512Impl<int32_t, Op> {
+    static void Compare(
+        const int32_t* const __restrict src, 
+        const size_t size, 
+        const int32_t val, 
+        void* const __restrict res
+    ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        
+        //
+        const __m512i target = _mm512_set1_epi32(val);
+        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res); 
+        constexpr auto pred = ComparePredicate<int32_t, Op>::value;
+
+        // todo: aligned reads & writes
+
+        // process big blocks
+        const size_t size16 = (size / 16) * 16;
+        for (size_t i = 0; i < size16; i += 16) {
+            const __m512i v = _mm512_loadu_si512(src + i);
+            const __mmask16 cmp_mask = _mm512_cmp_epi32_mask(v, target, pred);
+
+            res_u16[i / 16] = cmp_mask;
+        }
+
+        // process leftovers
+        if (size16 != size) {
+            const uint16_t mask = get_mask(size - size16);
+            const __m512i v = _mm512_maskz_loadu_epi32(mask, src + size16);
+            const __mmask16 cmp_mask = _mm512_cmp_epi32_mask(v, target, pred);
+
+            const uint16_t store_mask = get_mask((size - size16) / 8);
+            _mm_mask_storeu_epi8(
+                res_u16 + size16 / 16, 
+                store_mask, 
+                _mm_setr_epi16(cmp_mask, 0, 0, 0, 0, 0, 0, 0)
+            );
+        }
+    }
+};
+
+template <CompareType Op>
+struct CompareValAVX512Impl<int64_t, Op> {
+    static void Compare(
+        const int64_t* const __restrict src, 
+        const size_t size, 
+        const int64_t val, 
+        void* const __restrict res
+    ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        
+        //
+        const __m512i target = _mm512_set1_epi64(val);
+        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res); 
+        constexpr auto pred = ComparePredicate<int64_t, Op>::value;
+
+        // todo: aligned reads & writes
+
+        // process big blocks
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const __m512i v = _mm512_loadu_si512(src + i);
+            const __mmask8 cmp_mask = _mm512_cmp_epi64_mask(v, target, pred);
+
+            res_u8[i / 8] = cmp_mask;
+        }
+
+        // process leftovers
+        if (size8 != size) {
+            const uint8_t mask = get_mask(size - size8);
+            const __m512i v = _mm512_maskz_loadu_epi32(mask, src + size8);
+            const __mmask8 cmp_mask = _mm512_cmp_epi32_mask(v, target, pred);
+
+            res_u8[size8 / 8] = cmp_mask;
         }
     }
 };
@@ -142,16 +271,57 @@ struct CompareValAVX512Impl<float, Op> {
         }
 
         // process leftovers
-        // todo: move to AVX512
-        for (size_t i = size16; i < size; i += 8) {
-            const __m256 target_sh = _mm256_set1_ps(val);
+        if (size16 != size) {
+            const uint16_t mask = get_mask(size - size16);
+            const __m512 v = _mm512_maskz_loadu_ps(mask, src + size16);
+            const __mmask16 cmp_mask = _mm512_cmp_ps_mask(v, target, pred);
 
-            const __m256 v0 = _mm256_loadu_ps(src + i);
-            const __m256 cmp = _mm256_cmp_ps(v0, target_sh, pred);
-            const uint8_t mmask = _mm256_movemask_ps(cmp);
+            const uint16_t store_mask = get_mask((size - size16) / 8);
+            _mm_mask_storeu_epi8(
+                res_u16 + size16 / 16, 
+                store_mask, 
+                _mm_setr_epi16(cmp_mask, 0, 0, 0, 0, 0, 0, 0)
+            );
+        }
+    }
+};
 
-            res_u8[i / 8] = mmask;            
-        }     
+template <CompareType Op>
+struct CompareValAVX512Impl<double, Op> {
+    static void Compare(
+        const double* const __restrict src, 
+        const size_t size, 
+        const double val, 
+        void* const __restrict res
+    ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        
+        //
+        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
+        constexpr auto pred = ComparePredicate<double, Op>::value;
+
+        const __m512d target = _mm512_set1_pd(val);
+
+        // todo: aligned reads & writes
+
+        // process big blocks
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const __m512d v = _mm512_loadu_pd(src + i);
+            const __mmask8 cmp_mask = _mm512_cmp_pd_mask(v, target, pred);
+
+            res_u8[i / 8] = cmp_mask;
+        }
+
+        // process leftovers
+        if (size8 != size) {
+            const uint8_t mask = get_mask(size - size8);
+            const __m512d v = _mm512_maskz_loadu_pd(mask, src + size8);
+            const __mmask8 cmp_mask = _mm512_cmp_pd_mask(v, target, pred);
+
+            res_u8[size8 / 8] = cmp_mask;
+        }
     }
 };
 
@@ -183,31 +353,18 @@ DECLARE_VAL_AVX512(NotEqual, NEQ);
         void* const __restrict res \
     );
 
-INSTANTIATE_VAL_AVX512(Equal, float);
-INSTANTIATE_VAL_AVX512(GreaterEqual, float);
-INSTANTIATE_VAL_AVX512(Greater, float);
-INSTANTIATE_VAL_AVX512(LessEqual, float);
-INSTANTIATE_VAL_AVX512(Less, float);
-INSTANTIATE_VAL_AVX512(NotEqual, float);
-
-INSTANTIATE_VAL_AVX512(Equal, int8_t);
-INSTANTIATE_VAL_AVX512(GreaterEqual, int8_t);
-INSTANTIATE_VAL_AVX512(Greater, int8_t);
-INSTANTIATE_VAL_AVX512(LessEqual, int8_t);
-INSTANTIATE_VAL_AVX512(Less, int8_t);
-INSTANTIATE_VAL_AVX512(NotEqual, int8_t);
+ALL_OPS(INSTANTIATE_VAL_AVX512, int8_t)
+ALL_OPS(INSTANTIATE_VAL_AVX512, int16_t)
+ALL_OPS(INSTANTIATE_VAL_AVX512, int32_t)
+ALL_OPS(INSTANTIATE_VAL_AVX512, int64_t)
+ALL_OPS(INSTANTIATE_VAL_AVX512, float)
+ALL_OPS(INSTANTIATE_VAL_AVX512, double)
 
 #undef INSTANTIATE_VAL_AVX512
 
 //
 template <typename T, CompareType Op>
-struct CompareColumnAVX512Impl {
-    static void
-    Compare(const T* const __restrict src, const size_t size, const T val, void* const __restrict res) {
-        static_assert(std::is_integral_v<T> || std::is_floating_point_v<T>,
-                      "T must be integral or float/double type");
-    }
-};
+struct CompareColumnAVX512Impl {};
 
 template <CompareType Op>
 struct CompareColumnAVX512Impl<float, Op> {
@@ -372,6 +529,8 @@ void NotEqualColumnAVX512(
     const size_t size, 
     void* const __restrict res
 );
+
+#undef ALL_OPS
 
 }
 }

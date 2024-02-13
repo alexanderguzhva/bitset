@@ -509,6 +509,45 @@ public:
         );
     }
 
+    //
+    template<typename T>
+    void inplace_within_range(
+        const T* const __restrict lower,
+        const T* const __restrict upper,
+        const size_type size,
+        const RangeType op
+    ) {
+        if (op == RangeType::IncInc) {
+            this->inplace_within_range<T, RangeType::IncInc>(lower, upper, size);
+        } else if (op == RangeType::IncExc) {
+            this->inplace_within_range<T, RangeType::IncExc>(lower, upper, size);            
+        } else if (op == RangeType::ExcInc) {
+            this->inplace_within_range<T, RangeType::ExcInc>(lower, upper, size);
+        } else if (op == RangeType::ExcExc) {
+            this->inplace_within_range<T, RangeType::ExcExc>(lower, upper, size);
+        } else {
+            // unimplemented
+        }            
+    }
+
+    template<typename T, RangeType Op>
+    void inplace_within_range(
+        const T* const __restrict lower,
+        const T* const __restrict upper,
+        const size_type size
+    ) {
+        range_checker::le(size, this->size());
+
+        policy_type::template op_within_range<T, Op>(
+            this->data(),
+            this->offset(),
+            lower,
+            upper,
+            size
+        );
+    }
+
+
 private:
     // Return the starting bit offset in our container.
     inline size_type offset() const {

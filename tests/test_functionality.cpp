@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <optional>
 #include <random>
+#include <tuple>
 #include <vector>
 
 #include <bitset.h>
@@ -219,7 +220,7 @@ void TestInplaceCompareColumnImpl(
     }
 }
 
-template<typename BitsetT>
+template<typename BitsetT, typename T, typename U>
 void TestInplaceCompareColumnImpl() {
     for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
         for (const auto op : {CompareType::EQ, CompareType::GE, CompareType::GT, CompareType::LE, CompareType::LT, CompareType::NEQ}) {
@@ -230,7 +231,7 @@ void TestInplaceCompareColumnImpl() {
                 printf("Testing bitset, n=%zd, op=%zd\n", n, (size_t)op);
             }
             
-            TestInplaceCompareColumnImpl<BitsetT, float, float>(bitset, op);
+            TestInplaceCompareColumnImpl<BitsetT, T, U>(bitset, op);
 
             for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
                 if (offset >= n) {
@@ -244,7 +245,7 @@ void TestInplaceCompareColumnImpl() {
                     printf("Testing bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
                 }
                 
-                TestInplaceCompareColumnImpl<decltype(view), float, float>(view, op);
+                TestInplaceCompareColumnImpl<decltype(view), T, U>(view, op);
             }
         }
     }
@@ -269,6 +270,74 @@ void TestInplaceCompareColumnImpl() {
 // TEST(InplaceCompareColumnDynamic, f) {
 //     TestInplaceCompareColumnImpl<dynamic_u64_u8::bitset_type>();
 // }
+
+//
+template<typename T>
+class InplaceCompareColumnSuite : public ::testing::Test {};
+
+TYPED_TEST_SUITE_P(InplaceCompareColumnSuite);
+
+TYPED_TEST_P(InplaceCompareColumnSuite, BitWise) {
+    TestInplaceCompareColumnImpl<
+        ref_u64_u8::bitset_type, 
+        std::tuple_element_t<0, TypeParam>,
+        std::tuple_element_t<1, TypeParam>>();
+}
+
+TYPED_TEST_P(InplaceCompareColumnSuite, ElementWise) {
+    TestInplaceCompareColumnImpl<
+        element_u64_u8::bitset_type, 
+        std::tuple_element_t<0, TypeParam>,
+        std::tuple_element_t<1, TypeParam>>();
+}
+
+TYPED_TEST_P(InplaceCompareColumnSuite, Avx2) {
+#if defined(__x86_64__)
+    using namespace milvus::bitset::detail::x86;
+
+    if (cpu_support_avx2()) {
+        TestInplaceCompareColumnImpl<
+            avx2_u64_u8::bitset_type, 
+            std::tuple_element_t<0, TypeParam>,
+            std::tuple_element_t<1, TypeParam>>();
+    }
+#endif
+}
+
+TYPED_TEST_P(InplaceCompareColumnSuite, Avx512) {
+#if defined(__x86_64__)
+    using namespace milvus::bitset::detail::x86;
+
+    if (cpu_support_avx512()) {
+        TestInplaceCompareColumnImpl<
+            avx512_u64_u8::bitset_type, 
+            std::tuple_element_t<0, TypeParam>,
+            std::tuple_element_t<1, TypeParam>>();
+    }
+#endif
+}
+
+TYPED_TEST_P(InplaceCompareColumnSuite, Dynamic) {
+    TestInplaceCompareColumnImpl<
+        dynamic_u64_u8::bitset_type, 
+        std::tuple_element_t<0, TypeParam>,
+        std::tuple_element_t<1, TypeParam>>();
+}
+
+using InplaceCompareColumnTtypes = ::testing::Types<
+    std::tuple<int8_t, int8_t>,
+    std::tuple<int16_t, int16_t>,
+    std::tuple<int32_t, int32_t>, 
+    std::tuple<int64_t, int64_t>, 
+    std::tuple<float, float>,
+    std::tuple<double, double>
+>;
+
+REGISTER_TYPED_TEST_SUITE_P(InplaceCompareColumnSuite, BitWise, ElementWise, Avx2, Avx512, Dynamic);
+
+INSTANTIATE_TYPED_TEST_SUITE_P(InplaceCompareColumnTest, InplaceCompareColumnSuite, InplaceCompareColumnTtypes);
+
+//////////////////////////////////////////////////////////////////////////////////////////
 
 //
 template<typename BitsetT, typename T>
@@ -347,17 +416,17 @@ class InplaceCompareValSuite : public ::testing::Test {};
 
 TYPED_TEST_SUITE_P(InplaceCompareValSuite);
 
-// TYPED_TEST_P(InplaceCompareValSuite, BitWise) {
-//     TestInplaceCompareValImpl<
-//         ref_u64_u8::bitset_type, 
-//         TypeParam>();
-// }
+TYPED_TEST_P(InplaceCompareValSuite, BitWise) {
+    TestInplaceCompareValImpl<
+        ref_u64_u8::bitset_type, 
+        TypeParam>();
+}
 
-// TYPED_TEST_P(InplaceCompareValSuite, ElementWise) {
-//     TestInplaceCompareValImpl<
-//         element_u64_u8::bitset_type, 
-//         TypeParam>();
-// }
+TYPED_TEST_P(InplaceCompareValSuite, ElementWise) {
+    TestInplaceCompareValImpl<
+        element_u64_u8::bitset_type, 
+        TypeParam>();
+}
 
 TYPED_TEST_P(InplaceCompareValSuite, Avx2) {
 #if defined(__x86_64__)
@@ -371,28 +440,28 @@ TYPED_TEST_P(InplaceCompareValSuite, Avx2) {
 #endif
 }
 
-// TYPED_TEST_P(InplaceCompareValSuite, Avx512) {
-// #if defined(__x86_64__)
-//     using namespace milvus::bitset::detail::x86;
+TYPED_TEST_P(InplaceCompareValSuite, Avx512) {
+#if defined(__x86_64__)
+    using namespace milvus::bitset::detail::x86;
 
-//     if (cpu_support_avx512()) {
-//         TestInplaceCompareValImpl<
-//             avx512_u64_u8::bitset_type, 
-//             TypeParam>();
-//     }
-// #endif
-// }
+    if (cpu_support_avx512()) {
+        TestInplaceCompareValImpl<
+            avx512_u64_u8::bitset_type, 
+            TypeParam>();
+    }
+#endif
+}
 
-// TYPED_TEST_P(InplaceCompareValSuite, Dynamic) {
-//     TestInplaceCompareValImpl<
-//         dynamic_u64_u8::bitset_type, 
-//         TypeParam>();
-// }
+TYPED_TEST_P(InplaceCompareValSuite, Dynamic) {
+    TestInplaceCompareValImpl<
+        dynamic_u64_u8::bitset_type, 
+        TypeParam>();
+}
 
 using InplaceCompareValTtypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t, float, double>;
 
-// REGISTER_TYPED_TEST_SUITE_P(InplaceCompareValSuite, BitWise, ElementWise, Avx2, Avx512, Dynamic);
-REGISTER_TYPED_TEST_SUITE_P(InplaceCompareValSuite, Avx2);
+REGISTER_TYPED_TEST_SUITE_P(InplaceCompareValSuite, BitWise, ElementWise, Avx2, Avx512, Dynamic);
+//REGISTER_TYPED_TEST_SUITE_P(InplaceCompareValSuite, Avx2);
 
 INSTANTIATE_TYPED_TEST_SUITE_P(InplaceCompareValTest, InplaceCompareValSuite, InplaceCompareValTtypes);
 

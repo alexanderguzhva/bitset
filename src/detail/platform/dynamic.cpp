@@ -40,7 +40,12 @@ using OpCompareColumnPtr = bool(*)(uint8_t* const __restrict output, const T* co
 #define DECLARE_OP_COMPARE_COLUMN(TTYPE, UTYPE, OP) \
     OpCompareColumnPtr<TTYPE, UTYPE, CompareType::OP> op_compare_column_##TTYPE##_##UTYPE##_##OP = VectorizedRef::template op_compare_column<TTYPE, UTYPE, CompareType::OP>;
 
+ALL_OPS(DECLARE_OP_COMPARE_COLUMN, int8_t, int8_t)
+ALL_OPS(DECLARE_OP_COMPARE_COLUMN, int16_t, int16_t)
+ALL_OPS(DECLARE_OP_COMPARE_COLUMN, int32_t, int32_t)
+ALL_OPS(DECLARE_OP_COMPARE_COLUMN, int64_t, int64_t)
 ALL_OPS(DECLARE_OP_COMPARE_COLUMN, float, float)
+ALL_OPS(DECLARE_OP_COMPARE_COLUMN, double, double)
 
 #undef DECLARE_OP_COMPARE_COLUMN
 
@@ -76,7 +81,12 @@ bool VectorizedDynamic::op_compare_column(
         const size_t size \
     );
 
+ALL_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_COLUMN, int8_t, int8_t)
+ALL_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_COLUMN, int16_t, int16_t)
+ALL_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_COLUMN, int32_t, int32_t)
+ALL_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_COLUMN, int64_t, int64_t)
 ALL_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_COLUMN, float, float)
+ALL_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_COLUMN, double, double)
 
 #undef INSTANTIATE_TEMPLATE_OP_COMPARE_COLUMN
 
@@ -187,13 +197,19 @@ static void init_dynamic_hook() {
         // assign AVX2-related pointers
         ALL_OPS(SET_OP_COMPARE_COLUMN_AVX2, float, float)
 
+        ALL_OPS(SET_OP_COMPARE_VAL_AVX2, int8_t)
+        ALL_OPS(SET_OP_COMPARE_VAL_AVX2, int16_t)
+        ALL_OPS(SET_OP_COMPARE_VAL_AVX2, int32_t)
+        ALL_OPS(SET_OP_COMPARE_VAL_AVX2, int64_t)
         ALL_OPS(SET_OP_COMPARE_VAL_AVX2, float)
+        ALL_OPS(SET_OP_COMPARE_VAL_AVX2, double)
 
 #undef SET_OP_COMPARE_COLUMN_AVX2
 #undef SET_OP_COMPARE_VAL_AVX2
 
         return;
     }
+
 #endif
 }
 

@@ -10,8 +10,6 @@ namespace bitset {
 namespace detail {
 namespace x86 {
 
-// all values for 'size' are counted in bytes.
-
 void
 AndAVX2(void* const left, const void* const right, const size_t size);
 

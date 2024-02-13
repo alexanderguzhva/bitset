@@ -76,5 +76,52 @@ struct CompareOperator<CompareType::NEQ> {
     }
 };
 
+//
+enum class RangeType {
+    // [a, b]
+    IncInc,
+    // [a, b)
+    IncExc,
+    // (a, b]
+    ExcInc,
+    // (a, b)
+    ExcExc
+};
+
+template<RangeType Op>
+struct RangeOperator {};
+
+template<>
+struct RangeOperator<RangeType::IncInc> {
+    template<typename T>
+    static inline bool within_range(const T lower, const T upper, const T value) {
+        return (lower <= value && value <= upper);
+    }
+};
+
+template<>
+struct RangeOperator<RangeType::IncExc> {
+    template<typename T>
+    static inline bool within_range(const T lower, const T upper, const T value) {
+        return (lower <= value && value < upper);
+    }
+};
+
+template<>
+struct RangeOperator<RangeType::ExcInc> {
+    template<typename T>
+    static inline bool within_range(const T lower, const T upper, const T value) {
+        return (lower < value && value <= upper);
+    }
+};
+
+template<>
+struct RangeOperator<RangeType::ExcExc> {
+    template<typename T>
+    static inline bool within_range(const T lower, const T upper, const T value) {
+        return (lower < value && value < upper);
+    }
+};
+
 }
 }

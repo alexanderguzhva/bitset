@@ -367,6 +367,177 @@ template <typename T, CompareType Op>
 struct CompareColumnAVX512Impl {};
 
 template <CompareType Op>
+struct CompareColumnAVX512Impl<int8_t, Op> {
+    static inline void Compare(
+        const int8_t* const __restrict left, 
+        const int8_t* const __restrict right, 
+        const size_t size,
+        void* const __restrict res
+    ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        
+        //
+        uint64_t* const __restrict res_u64 = reinterpret_cast<uint64_t*>(res); 
+        constexpr auto pred = ComparePredicate<int8_t, Op>::value;
+
+        // todo: aligned reads & writes
+
+        // process big blocks
+        const size_t size64 = (size / 64) * 64;
+        for (size_t i = 0; i < size64; i += 64) {
+            const __m512i vl = _mm512_loadu_si512(left + i);
+            const __m512i vr = _mm512_loadu_si512(right + i);
+            const __mmask64 cmp_mask = _mm512_cmp_epi8_mask(vl, vr, pred);
+
+            res_u64[i / 64] = cmp_mask;
+        }
+
+        // process leftovers
+        if (size64 != size) {
+            const uint64_t mask = get_mask(size - size64);
+            const __m512i vl = _mm512_maskz_loadu_epi8(mask, left + size64);
+            const __m512i vr = _mm512_maskz_loadu_epi8(mask, right + size64);
+            const __mmask64 cmp_mask = _mm512_cmp_epi8_mask(vl, vr, pred);
+
+            const uint16_t store_mask = get_mask((size - size64) / 8);
+            _mm_mask_storeu_epi8(
+                res_u64 + size64 / 64, 
+                store_mask, 
+                _mm_setr_epi64(__m64(cmp_mask), __m64(0ULL))
+            );
+        }
+    }
+};
+
+template <CompareType Op>
+struct CompareColumnAVX512Impl<int16_t, Op> {
+    static inline void Compare(
+        const int16_t* const __restrict left, 
+        const int16_t* const __restrict right, 
+        const size_t size,
+        void* const __restrict res
+    ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        
+        //
+        uint32_t* const __restrict res_u32 = reinterpret_cast<uint32_t*>(res); 
+        constexpr auto pred = ComparePredicate<int16_t, Op>::value;
+
+        // todo: aligned reads & writes
+
+        // process big blocks
+        const size_t size32 = (size / 32) * 32;
+        for (size_t i = 0; i < size32; i += 32) {
+            const __m512i vl = _mm512_loadu_si512(left + i);
+            const __m512i vr = _mm512_loadu_si512(right + i);
+            const __mmask32 cmp_mask = _mm512_cmp_epi16_mask(vl, vr, pred);
+
+            res_u32[i / 32] = cmp_mask;
+        }
+
+        // process leftovers
+        if (size32 != size) {
+            const uint32_t mask = get_mask(size - size32);
+            const __m512i vl = _mm512_maskz_loadu_epi16(mask, left + size32);
+            const __m512i vr = _mm512_maskz_loadu_epi16(mask, right + size32);
+            const __mmask32 cmp_mask = _mm512_cmp_epi16_mask(vl, vr, pred);
+
+            const uint16_t store_mask = get_mask((size - size32) / 8);
+            _mm_mask_storeu_epi8(
+                res_u32 + size32 / 32, 
+                store_mask, 
+                _mm_setr_epi32(cmp_mask, 0, 0, 0)
+            );
+        }
+    }
+};
+
+template <CompareType Op>
+struct CompareColumnAVX512Impl<int32_t, Op> {
+    static inline void Compare(
+        const int32_t* const __restrict left, 
+        const int32_t* const __restrict right, 
+        const size_t size,
+        void* const __restrict res
+    ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        
+        //
+        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res); 
+        constexpr auto pred = ComparePredicate<int32_t, Op>::value;
+
+        // todo: aligned reads & writes
+
+        // process big blocks
+        const size_t size16 = (size / 16) * 16;
+        for (size_t i = 0; i < size16; i += 16) {
+            const __m512i vl = _mm512_loadu_si512(left + i);
+            const __m512i vr = _mm512_loadu_si512(right + i);
+            const __mmask16 cmp_mask = _mm512_cmp_epi32_mask(vl, vr, pred);
+
+            res_u16[i / 16] = cmp_mask;
+        }
+
+        // process leftovers
+        if (size16 != size) {
+            const uint16_t mask = get_mask(size - size16);
+            const __m512i vl = _mm512_maskz_loadu_epi32(mask, left + size16);
+            const __m512i vr = _mm512_maskz_loadu_epi32(mask, right + size16);
+            const __mmask16 cmp_mask = _mm512_cmp_epi32_mask(vl, vr, pred);
+
+            const uint16_t store_mask = get_mask((size - size16) / 8);
+            _mm_mask_storeu_epi8(
+                res_u16 + size16 / 16, 
+                store_mask, 
+                _mm_setr_epi16(cmp_mask, 0, 0, 0, 0, 0, 0, 0)
+            );
+        }
+    }
+};
+
+template <CompareType Op>
+struct CompareColumnAVX512Impl<int64_t, Op> {
+    static inline void Compare(
+        const int64_t* const __restrict left, 
+        const int64_t* const __restrict right, 
+        const size_t size,
+        void* const __restrict res
+    ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        
+        //
+        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res); 
+        constexpr auto pred = ComparePredicate<int64_t, Op>::value;
+
+        // todo: aligned reads & writes
+
+        // process big blocks
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const __m512i vl = _mm512_loadu_si512(left + i);
+            const __m512i vr = _mm512_loadu_si512(right + i);
+            const __mmask8 cmp_mask = _mm512_cmp_epi64_mask(vl, vr, pred);
+
+            res_u8[i / 8] = cmp_mask;
+        }
+
+        // process leftovers
+        if (size8 != size) {
+            const uint8_t mask = get_mask(size - size8);
+            const __m512i vl = _mm512_maskz_loadu_epi32(mask, left + size8);
+            const __m512i vr = _mm512_maskz_loadu_epi32(mask, right + size8);
+            const __mmask8 cmp_mask = _mm512_cmp_epi32_mask(vl, vr, pred);
+
+            res_u8[size8 / 8] = cmp_mask;
+        }
+    }
+};
+
+template <CompareType Op>
 struct CompareColumnAVX512Impl<float, Op> {
     static inline void Compare(
         const float* const __restrict left, 
@@ -376,159 +547,118 @@ struct CompareColumnAVX512Impl<float, Op> {
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
-
-        union {
-            uint16_t u16[4];
-            uint64_t u64;
-        } foo;
-
+        
         //
         uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
-        uint64_t* const __restrict res_u64 = reinterpret_cast<uint64_t*>(res);
+        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res); 
         constexpr auto pred = ComparePredicate<float, Op>::value;
 
         // todo: aligned reads & writes
 
-        // todo: process in 64 elements
+        // process big blocks
+        const size_t size16 = (size / 16) * 16;
+        for (size_t i = 0; i < size16; i += 16) {
+            const __m512 vl = _mm512_loadu_ps(left + i);
+            const __m512 vr = _mm512_loadu_ps(right + i);
+            const __mmask16 cmp_mask = _mm512_cmp_ps_mask(vl, vr, pred);
 
-        const size_t size64 = (size / 64) * 64;
-        for (size_t i = 0; i < size64; i += 64) {
-            for (size_t j = 0; j < 64; j += 16) {
-                const __m512 v0 = _mm512_loadu_ps(left + i + j);
-                const __m512 v1 = _mm512_loadu_ps(right + i + j);
-                const __mmask16 mmask = _mm512_cmp_ps_mask(v0, v1, pred);
-                foo.u16[j / 16] = mmask;
-            }
-
-            res_u64[i / 64] = foo.u64;
+            res_u16[i / 16] = cmp_mask;
         }
 
-        // todo: move to AVX512
-        for (size_t i = size64; i < size; i += 8) {
-            const __m256 v0 = _mm256_loadu_ps(left + i);
-            const __m256 v1 = _mm256_loadu_ps(right + i);
-            const __m256 cmp = _mm256_cmp_ps(v0, v1, pred);
-            const uint8_t mmask = _mm256_movemask_ps(cmp);
+        // process leftovers
+        if (size16 != size) {
+            const uint16_t mask = get_mask(size - size16);
+            const __m512 vl = _mm512_maskz_loadu_ps(mask, left + size16);
+            const __m512 vr = _mm512_maskz_loadu_ps(mask, right + size16);
+            const __mmask16 cmp_mask = _mm512_cmp_ps_mask(vl, vr, pred);
 
-            res_u8[i / 8] = mmask;            
-        }        
+            const uint16_t store_mask = get_mask((size - size16) / 8);
+            _mm_mask_storeu_epi8(
+                res_u16 + size16 / 16, 
+                store_mask, 
+                _mm_setr_epi16(cmp_mask, 0, 0, 0, 0, 0, 0, 0)
+            );
+        }
     }
 };
 
+template <CompareType Op>
+struct CompareColumnAVX512Impl<double, Op> {
+    static inline void Compare(
+        const double* const __restrict left, 
+        const double* const __restrict right, 
+        const size_t size,
+        void* const __restrict res
+    ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        
+        //
+        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
+        constexpr auto pred = ComparePredicate<double, Op>::value;
+
+        // todo: aligned reads & writes
+
+        // process big blocks
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const __m512d vl = _mm512_loadu_pd(left + i);
+            const __m512d vr = _mm512_loadu_pd(right + i);
+            const __mmask8 cmp_mask = _mm512_cmp_pd_mask(vl, vr, pred);
+
+            res_u8[i / 8] = cmp_mask;
+        }
+
+        // process leftovers
+        if (size8 != size) {
+            const uint8_t mask = get_mask(size - size8);
+            const __m512d vl = _mm512_maskz_loadu_pd(mask, left + size8);
+            const __m512d vr = _mm512_maskz_loadu_pd(mask, right + size8);
+            const __mmask8 cmp_mask = _mm512_cmp_pd_mask(vl, vr, pred);
+
+            res_u8[size8 / 8] = cmp_mask;
+        }
+    }
+};
 
 //
-template <typename T>
-void EqualColumnAVX512(
-    const T* const __restrict left, 
-    const T* const __restrict right, 
-    const size_t size, 
-    void* const __restrict res
-) {
-    CompareColumnAVX512Impl<T, CompareType::EQ>::Compare(left, right, size, res);   
-}
+#define DECLARE_COLUMN_AVX512(NAME, OP) \
+    template<typename T> \
+    void NAME##ColumnAVX512( \
+        const T* const __restrict left, \
+        const T* const __restrict right, \
+        const size_t size, \
+        void* const __restrict res \
+    ) { \
+        CompareColumnAVX512Impl<T, CompareType::OP>::Compare(left, right, size, res); \
+    }
 
-template
-void EqualColumnAVX512(
-    const float* const __restrict left, 
-    const float* const __restrict right, 
-    const size_t size, 
-    void* const __restrict res
-);
+DECLARE_COLUMN_AVX512(Equal, EQ);
+DECLARE_COLUMN_AVX512(GreaterEqual, GE);
+DECLARE_COLUMN_AVX512(Greater, GT);
+DECLARE_COLUMN_AVX512(LessEqual, LE);
+DECLARE_COLUMN_AVX512(Less, LT);
+DECLARE_COLUMN_AVX512(NotEqual, NEQ);
 
-//
-template <typename T>
-void GreaterEqualColumnAVX512(
-    const T* const __restrict left, 
-    const T* const __restrict right, 
-    const size_t size, 
-    void* const __restrict res
-) {
-    CompareColumnAVX512Impl<T, CompareType::GE>::Compare(left, right, size, res);   
-}
-
-template
-void GreaterEqualColumnAVX512(
-    const float* const __restrict left, 
-    const float* const __restrict right, 
-    const size_t size, 
-    void* const __restrict res
-);
+#undef DECLARE_COLUMN_AVX512
 
 //
-template <typename T>
-void GreaterColumnAVX512(
-    const T* const __restrict left, 
-    const T* const __restrict right, 
-    const size_t size, 
-    void* const __restrict res
-) {
-    CompareColumnAVX512Impl<T, CompareType::GT>::Compare(left, right, size, res);   
-}
+#define INSTANTIATE_COLUMN_AVX512(NAME, TTYPE) \
+    template void NAME##ColumnAVX512( \
+        const TTYPE* const __restrict left, \
+        const TTYPE* const __restrict right, \
+        const size_t size, \
+        void* const __restrict res \
+    );
 
-template
-void GreaterColumnAVX512(
-    const float* const __restrict left, 
-    const float* const __restrict right, 
-    const size_t size, 
-    void* const __restrict res
-);
+ALL_OPS(INSTANTIATE_COLUMN_AVX512, int8_t)
+ALL_OPS(INSTANTIATE_COLUMN_AVX512, int16_t)
+ALL_OPS(INSTANTIATE_COLUMN_AVX512, int32_t)
+ALL_OPS(INSTANTIATE_COLUMN_AVX512, int64_t)
+ALL_OPS(INSTANTIATE_COLUMN_AVX512, float)
+ALL_OPS(INSTANTIATE_COLUMN_AVX512, double)
 
-//
-template <typename T>
-void LessEqualColumnAVX512(
-    const T* const __restrict left, 
-    const T* const __restrict right, 
-    const size_t size, 
-    void* const __restrict res
-) {
-    CompareColumnAVX512Impl<T, CompareType::LE>::Compare(left, right, size, res);   
-}
-
-template
-void LessEqualColumnAVX512(
-    const float* const __restrict left, 
-    const float* const __restrict right, 
-    const size_t size, 
-    void* const __restrict res
-);
-
-//
-template <typename T>
-void LessColumnAVX512(
-    const T* const __restrict left, 
-    const T* const __restrict right, 
-    const size_t size, 
-    void* const __restrict res
-) {
-    CompareColumnAVX512Impl<T, CompareType::LT>::Compare(left, right, size, res);   
-}
-
-template
-void LessColumnAVX512(
-    const float* const __restrict left, 
-    const float* const __restrict right, 
-    const size_t size, 
-    void* const __restrict res
-);
-
-//
-template <typename T>
-void NotEqualColumnAVX512(
-    const T* const __restrict left, 
-    const T* const __restrict right, 
-    const size_t size, 
-    void* const __restrict res
-) {
-    CompareColumnAVX512Impl<T, CompareType::NEQ>::Compare(left, right, size, res);   
-}
-
-template
-void NotEqualColumnAVX512(
-    const float* const __restrict left, 
-    const float* const __restrict right, 
-    const size_t size, 
-    void* const __restrict res
-);
+#undef INSTANTIATE_COLUMN_AVX512
 
 #undef ALL_OPS
 

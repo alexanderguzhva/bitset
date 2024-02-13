@@ -362,7 +362,6 @@ struct CompareValAVX2Impl<int32_t, Op> {
     }
 };
 
-
 template<CompareType Op>
 struct CompareValAVX2Impl<int64_t, Op> {
     static void Compare(
@@ -499,7 +498,6 @@ ALL_OPS(INSTANTIATE_VAL_AVX2, double)
 template <typename T, CompareType Op>
 struct CompareColumnAVX2Impl {};
 
-
 template <CompareType Op>
 struct CompareColumnAVX2Impl<int8_t, Op> {
     static inline void Compare(
@@ -624,7 +622,6 @@ struct CompareColumnAVX2Impl<int32_t, Op> {
     }
 };
 
-
 template <CompareType Op>
 struct CompareColumnAVX2Impl<int64_t, Op> {
     static inline void Compare(
@@ -685,7 +682,6 @@ struct CompareColumnAVX2Impl<float, Op> {
         }
     }
 };
-
 
 template <CompareType Op>
 struct CompareColumnAVX2Impl<double, Op> {

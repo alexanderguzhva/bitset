@@ -11,7 +11,6 @@ add_executable(tests ${BITSET_TEST_SRCS})
 
 target_link_libraries(tests 
     GTest::gtest_main 
-    gtest_main 
     pthread 
     bitset
 )

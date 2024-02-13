@@ -20,6 +20,10 @@
 #include <detail/platform/x86/instruction_set.h>
 #endif
 
+#if defined(__aarch64__)
+#include <detail/platform/arm/neon.h>
+#endif
+
 #include "utils.h"
 
 using namespace milvus::bitset;
@@ -45,6 +49,7 @@ using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 }
 
 //
+#if defined(__x86_64__)
 namespace avx2_u64_u8 {
 
 using vectorized_type = milvus::bitset::detail::x86::VectorizedAvx2;
@@ -54,8 +59,10 @@ using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_ty
 using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 
 }
+#endif
 
 //
+#if defined(__x86_64__)
 namespace avx512_u64_u8 {
 
 using vectorized_type = milvus::bitset::detail::x86::VectorizedAvx512;
@@ -65,6 +72,20 @@ using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_ty
 using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 
 }
+#endif
+
+//
+#if defined(__aarch64__)
+namespace neon_u64_u8 {
+
+using vectorized_type = milvus::bitset::detail::arm::VectorizedNeon;
+using policy_type = milvus::bitset::detail::CustomBitsetVectorizedPolicy<uint8_t, vectorized_type>;
+using container_type = std::vector<uint8_t>;
+using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_type, false>;
+using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
+
+}
+#endif
 
 //
 namespace dynamic_u64_u8 {
@@ -317,6 +338,17 @@ TYPED_TEST_P(InplaceCompareColumnSuite, Avx512) {
 #endif
 }
 
+TYPED_TEST_P(InplaceCompareColumnSuite, Neon) {
+#if defined(__aarch64__)
+    using namespace milvus::bitset::detail::arm;
+
+    TestInplaceCompareColumnImpl<
+        neon_u64_u8::bitset_type, 
+        std::tuple_element_t<0, TypeParam>,
+        std::tuple_element_t<1, TypeParam>>();
+#endif
+}
+
 TYPED_TEST_P(InplaceCompareColumnSuite, Dynamic) {
     TestInplaceCompareColumnImpl<
         dynamic_u64_u8::bitset_type, 
@@ -333,7 +365,7 @@ using InplaceCompareColumnTtypes = ::testing::Types<
     std::tuple<double, double>
 >;
 
-REGISTER_TYPED_TEST_SUITE_P(InplaceCompareColumnSuite, BitWise, ElementWise, Avx2, Avx512, Dynamic);
+REGISTER_TYPED_TEST_SUITE_P(InplaceCompareColumnSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Dynamic);
 
 INSTANTIATE_TYPED_TEST_SUITE_P(InplaceCompareColumnTest, InplaceCompareColumnSuite, InplaceCompareColumnTtypes);
 
@@ -452,6 +484,16 @@ TYPED_TEST_P(InplaceCompareValSuite, Avx512) {
 #endif
 }
 
+TYPED_TEST_P(InplaceCompareValSuite, Neon) {
+#if defined(__aarch64__)
+    using namespace milvus::bitset::detail::arm;
+
+    TestInplaceCompareValImpl<
+        neon_u64_u8::bitset_type, 
+        TypeParam>();
+#endif
+}
+
 TYPED_TEST_P(InplaceCompareValSuite, Dynamic) {
     TestInplaceCompareValImpl<
         dynamic_u64_u8::bitset_type, 
@@ -460,8 +502,7 @@ TYPED_TEST_P(InplaceCompareValSuite, Dynamic) {
 
 using InplaceCompareValTtypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t, float, double>;
 
-REGISTER_TYPED_TEST_SUITE_P(InplaceCompareValSuite, BitWise, ElementWise, Avx2, Avx512, Dynamic);
-//REGISTER_TYPED_TEST_SUITE_P(InplaceCompareValSuite, Avx2);
+REGISTER_TYPED_TEST_SUITE_P(InplaceCompareValSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Dynamic);
 
 INSTANTIATE_TYPED_TEST_SUITE_P(InplaceCompareValTest, InplaceCompareValSuite, InplaceCompareValTtypes);
 

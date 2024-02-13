@@ -12,6 +12,12 @@
 using namespace milvus::bitset::detail::x86;
 #endif
 
+#if defined(__aarch64__)
+#include "arm/neon.h"
+
+using namespace milvus::bitset::detail::arm;
+#endif
+
 #include "vectorized_ref.h"
 
 
@@ -224,8 +230,37 @@ static void init_dynamic_hook() {
 
         return;
     }
-
 #endif
+
+#if defined(__aarch64__)
+    // neon ?
+    {
+#define SET_OP_COMPARE_COLUMN_NEON(TTYPE, UTYPE, OP) \
+    op_compare_column_##TTYPE##_##UTYPE##_##OP = VectorizedNeon::template op_compare_column<TTYPE, UTYPE, CompareType::OP>;
+#define SET_OP_COMPARE_VAL_NEON(TTYPE, OP) \
+    op_compare_val_##TTYPE##_##OP = VectorizedNeon::template op_compare_val<TTYPE, CompareType::OP>;
+
+        // assign AVX2-related pointers
+        ALL_OPS(SET_OP_COMPARE_COLUMN_NEON, int8_t, int8_t)
+        ALL_OPS(SET_OP_COMPARE_COLUMN_NEON, int16_t, int16_t)
+        ALL_OPS(SET_OP_COMPARE_COLUMN_NEON, int32_t, int32_t)
+        ALL_OPS(SET_OP_COMPARE_COLUMN_NEON, int64_t, int64_t)
+        ALL_OPS(SET_OP_COMPARE_COLUMN_NEON, float, float)
+        ALL_OPS(SET_OP_COMPARE_COLUMN_NEON, double, double)
+
+        ALL_OPS(SET_OP_COMPARE_VAL_NEON, int8_t)
+        ALL_OPS(SET_OP_COMPARE_VAL_NEON, int16_t)
+        ALL_OPS(SET_OP_COMPARE_VAL_NEON, int32_t)
+        ALL_OPS(SET_OP_COMPARE_VAL_NEON, int64_t)
+        ALL_OPS(SET_OP_COMPARE_VAL_NEON, float)
+        ALL_OPS(SET_OP_COMPARE_VAL_NEON, double)
+
+#undef SET_OP_COMPARE_COLUMN_NEON
+#undef SET_OP_COMPARE_VAL_NEON
+
+    }
+#endif
+
 }
 
 // no longer needed

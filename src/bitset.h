@@ -323,8 +323,8 @@ public:
     // Inplace xor.
     template<typename I, bool R>
     inline void inplace_xor(const CustomBitsetBase<PolicyT, I, R>& other, const size_type size) {
-        range_checker::le(offset, this->size());
-        range_checker::le(offset + size, this->size());
+        range_checker::le(size, this->size());
+        range_checker::le(size, other->size());
     
         policy_type::op_xor(
             this->data(),
@@ -347,8 +347,8 @@ public:
     // Inplace sub.
     template<typename I, bool R>
     inline void inplace_sub(const CustomBitsetBase<PolicyT, I, R>& other, const size_type size) {
-        range_checker::le(offset, this->size());
-        range_checker::le(offset + size, this->size());
+        range_checker::le(size, this->size());
+        range_checker::le(size, other->size());
     
         policy_type::op_sub(
             this->data(),

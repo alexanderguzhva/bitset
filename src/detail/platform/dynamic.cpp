@@ -64,7 +64,12 @@ bool VectorizedDynamic::op_compare_column(
     }
 
     // find the appropriate function pointer
+    ALL_OPS(DISPATCH_OP_COMPARE_COLUMN, int8_t, int8_t)
+    ALL_OPS(DISPATCH_OP_COMPARE_COLUMN, int16_t, int16_t)
+    ALL_OPS(DISPATCH_OP_COMPARE_COLUMN, int32_t, int32_t)
+    ALL_OPS(DISPATCH_OP_COMPARE_COLUMN, int64_t, int64_t)
     ALL_OPS(DISPATCH_OP_COMPARE_COLUMN, float, float)
+    ALL_OPS(DISPATCH_OP_COMPARE_COLUMN, double, double)
 
 #undef DISPATCH_OP_COMPARE_COLUMN
 
@@ -171,8 +176,13 @@ static void init_dynamic_hook() {
 #define SET_OP_COMPARE_VAL_AVX512(TTYPE, OP) \
     op_compare_val_##TTYPE##_##OP = VectorizedAvx512::template op_compare_val<TTYPE, CompareType::OP>;
 
-        // assign AVX2-related pointers
+        // assign AVX512-related pointers
+        ALL_OPS(SET_OP_COMPARE_COLUMN_AVX512, int8_t, int8_t)
+        ALL_OPS(SET_OP_COMPARE_COLUMN_AVX512, int16_t, int16_t)
+        ALL_OPS(SET_OP_COMPARE_COLUMN_AVX512, int32_t, int32_t)
+        ALL_OPS(SET_OP_COMPARE_COLUMN_AVX512, int64_t, int64_t)
         ALL_OPS(SET_OP_COMPARE_COLUMN_AVX512, float, float)
+        ALL_OPS(SET_OP_COMPARE_COLUMN_AVX512, double, double)
 
         ALL_OPS(SET_OP_COMPARE_VAL_AVX512, int8_t)
         ALL_OPS(SET_OP_COMPARE_VAL_AVX512, int16_t)
@@ -195,7 +205,12 @@ static void init_dynamic_hook() {
     op_compare_val_##TTYPE##_##OP = VectorizedAvx2::template op_compare_val<TTYPE, CompareType::OP>;
 
         // assign AVX2-related pointers
+        ALL_OPS(SET_OP_COMPARE_COLUMN_AVX2, int8_t, int8_t)
+        ALL_OPS(SET_OP_COMPARE_COLUMN_AVX2, int16_t, int16_t)
+        ALL_OPS(SET_OP_COMPARE_COLUMN_AVX2, int32_t, int32_t)
+        ALL_OPS(SET_OP_COMPARE_COLUMN_AVX2, int64_t, int64_t)
         ALL_OPS(SET_OP_COMPARE_COLUMN_AVX2, float, float)
+        ALL_OPS(SET_OP_COMPARE_COLUMN_AVX2, double, double)
 
         ALL_OPS(SET_OP_COMPARE_VAL_AVX2, int8_t)
         ALL_OPS(SET_OP_COMPARE_VAL_AVX2, int16_t)

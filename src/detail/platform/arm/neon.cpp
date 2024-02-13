@@ -140,6 +140,10 @@ struct CmpHelper<CompareType::EQ> {
         return {vceqq_f32(a.val[0], b.val[0]), vceqq_f32(a.val[1], b.val[1])};
     }
 
+    static inline uint64x2x4_t compare(const float64x2x4_t a, const float64x2x4_t b) {
+        return {vceqq_f64(a.val[0], b.val[0]), vceqq_f64(a.val[1], b.val[1]),
+                vceqq_f64(a.val[2], b.val[2]), vceqq_f64(a.val[3], b.val[3])};
+    }
 };
 
 template<>
@@ -171,6 +175,11 @@ struct CmpHelper<CompareType::GE> {
 
     static inline uint32x4x2_t compare(const float32x4x2_t a, const float32x4x2_t b) {
         return {vcgeq_f32(a.val[0], b.val[0]), vcgeq_f32(a.val[1], b.val[1])};
+    }
+
+    static inline uint64x2x4_t compare(const float64x2x4_t a, const float64x2x4_t b) {
+        return {vcgeq_f64(a.val[0], b.val[0]), vcgeq_f64(a.val[1], b.val[1]),
+                vcgeq_f64(a.val[2], b.val[2]), vcgeq_f64(a.val[3], b.val[3])};
     }
 };
 
@@ -204,6 +213,11 @@ struct CmpHelper<CompareType::GT> {
     static inline uint32x4x2_t compare(const float32x4x2_t a, const float32x4x2_t b) {
         return {vcgtq_f32(a.val[0], b.val[0]), vcgtq_f32(a.val[1], b.val[1])};
     }
+
+    static inline uint64x2x4_t compare(const float64x2x4_t a, const float64x2x4_t b) {
+        return {vcgtq_f64(a.val[0], b.val[0]), vcgtq_f64(a.val[1], b.val[1]),
+                vcgtq_f64(a.val[2], b.val[2]), vcgtq_f64(a.val[3], b.val[3])};
+    }
 };
 
 template<>
@@ -235,6 +249,11 @@ struct CmpHelper<CompareType::LE> {
 
     static inline uint32x4x2_t compare(const float32x4x2_t a, const float32x4x2_t b) {
         return {vcleq_f32(a.val[0], b.val[0]), vcleq_f32(a.val[1], b.val[1])};
+    }
+
+    static inline uint64x2x4_t compare(const float64x2x4_t a, const float64x2x4_t b) {
+        return {vcleq_f64(a.val[0], b.val[0]), vcleq_f64(a.val[1], b.val[1]),
+                vcleq_f64(a.val[2], b.val[2]), vcleq_f64(a.val[3], b.val[3])};
     }
 };
 
@@ -268,6 +287,11 @@ struct CmpHelper<CompareType::LT> {
     static inline uint32x4x2_t compare(const float32x4x2_t a, const float32x4x2_t b) {
         return {vcltq_f32(a.val[0], b.val[0]), vcltq_f32(a.val[1], b.val[1])};
     }
+
+    static inline uint64x2x4_t compare(const float64x2x4_t a, const float64x2x4_t b) {
+        return {vcltq_f64(a.val[0], b.val[0]), vcltq_f64(a.val[1], b.val[1]),
+                vcltq_f64(a.val[2], b.val[2]), vcltq_f64(a.val[3], b.val[3])};
+    }
 };
 
 template<>
@@ -299,6 +323,11 @@ struct CmpHelper<CompareType::NEQ> {
 
     static inline uint32x4x2_t compare(const float32x4x2_t a, const float32x4x2_t b) {
         return {vmvnq_u32(vceqq_f32(a.val[0], b.val[0])), vmvnq_u32(vceqq_f32(a.val[1], b.val[1]))};
+    }
+
+    static inline uint64x2x4_t compare(const float64x2x4_t a, const float64x2x4_t b) {
+        return {vmvnq_u64(vceqq_f64(a.val[0], b.val[0])), vmvnq_u64(vceqq_f64(a.val[1], b.val[1])),
+                vmvnq_u64(vceqq_f64(a.val[2], b.val[2])), vmvnq_u64(vceqq_f64(a.val[3], b.val[3]))};
     }
 };
 
@@ -475,6 +504,21 @@ struct CompareValNeonImpl<double, Op> {
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
+
+        //
+        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
+        const float64x2x4_t target = {vdupq_n_f64(val), vdupq_n_f64(val), vdupq_n_f64(val), vdupq_n_f64(val)};
+
+        // todo: aligned reads & writes
+
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const float64x2x4_t v0 = {vld1q_f64(src + i), vld1q_f64(src + i + 2), vld1q_f64(src + i + 4), vld1q_f64(src + i + 6)};
+            const uint64x2x4_t cmp = CmpHelper<Op>::compare(v0, target);
+            const uint8_t mmask = movemask(cmp);
+
+            res_u8[i / 8] = mmask;
+        }
     }
 };
 
@@ -528,6 +572,33 @@ struct CompareColumnNeonImpl<int8_t, Op> {
         const size_t size,
         void* const __restrict res
     ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+
+        //
+        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
+        uint32_t* const __restrict res_u32 = reinterpret_cast<uint32_t*>(res);
+
+        // todo: aligned reads & writes
+
+        const size_t size32 = (size / 32) * 32;
+        for (size_t i = 0; i < size32; i += 32) {
+            const int8x16x2_t v0l = {vld1q_s8(left + i), vld1q_s8(left + i + 16)};
+            const int8x16x2_t v0r = {vld1q_s8(right + i), vld1q_s8(right + i + 16)};
+            const uint8x16x2_t cmp = CmpHelper<Op>::compare(v0l, v0r);
+            const uint32_t mmask = movemask(cmp);
+
+            res_u32[i / 32] = mmask;
+        }
+
+        for (size_t i = size32; i < size; i += 8) {
+            const int8x8_t v0l = vld1_s8(left + i);
+            const int8x8_t v0r = vld1_s8(right + i);
+            const uint8x8_t cmp = CmpHelper<Op>::compare(v0l, v0r);
+            const uint8_t mmask = movemask(cmp);
+
+            res_u8[i / 8] = mmask;
+        }    
     }
 };
 
@@ -539,6 +610,34 @@ struct CompareColumnNeonImpl<int16_t, Op> {
         const size_t size,
         void* const __restrict res
     ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+
+        //
+        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
+        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res);
+
+        // todo: aligned reads & writes
+
+        const size_t size16 = (size / 16) * 16;
+        for (size_t i = 0; i < size16; i += 16) {
+            const int16x8x2_t v0l = {vld1q_s16(left + i), vld1q_s16(left + i + 8)};
+            const int16x8x2_t v0r = {vld1q_s16(right + i), vld1q_s16(right + i + 8)};
+            const uint16x8x2_t cmp = CmpHelper<Op>::compare(v0l, v0r);
+            const uint16_t mmask = movemask(cmp);
+
+            res_u16[i / 16] = mmask;
+        }
+
+        if (size16 != size) {
+            // 8 elements to process
+            const int16x8_t v0l = vld1q_s16(left + size16);
+            const int16x8_t v0r = vld1q_s16(right + size16);
+            const uint16x8_t cmp = CmpHelper<Op>::compare(v0l, v0r);
+            const uint8_t mmask = movemask(cmp);
+
+            res_u8[size16 / 8] = mmask;
+        }
     }
 };
 
@@ -550,6 +649,23 @@ struct CompareColumnNeonImpl<int32_t, Op> {
         const size_t size,
         void* const __restrict res
     ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+
+        //
+        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
+
+        // todo: aligned reads & writes
+
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const int32x4x2_t v0l = {vld1q_s32(left + i), vld1q_s32(left + i + 4)};
+            const int32x4x2_t v0r = {vld1q_s32(right + i), vld1q_s32(right + i + 4)};
+            const uint32x4x2_t cmp = CmpHelper<Op>::compare(v0l, v0r);
+            const uint8_t mmask = movemask(cmp);
+
+            res_u8[i / 8] = mmask;
+        }
     }
 };
 
@@ -561,6 +677,23 @@ struct CompareColumnNeonImpl<int64_t, Op> {
         const size_t size,
         void* const __restrict res
     ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+
+        //
+        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
+
+        // todo: aligned reads & writes
+
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const int64x2x4_t v0l = {vld1q_s64(left + i), vld1q_s64(left + i + 2), vld1q_s64(left + i + 4), vld1q_s64(left + i + 6)};
+            const int64x2x4_t v0r = {vld1q_s64(right + i), vld1q_s64(right + i + 2), vld1q_s64(right + i + 4), vld1q_s64(right + i + 6)};
+            const uint64x2x4_t cmp = CmpHelper<Op>::compare(v0l, v0r);
+            const uint8_t mmask = movemask(cmp);
+
+            res_u8[i / 8] = mmask;
+        }
     }
 };
 
@@ -572,6 +705,23 @@ struct CompareColumnNeonImpl<float, Op> {
         const size_t size,
         void* const __restrict res
     ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+
+        //
+        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
+
+        // todo: aligned reads & writes
+
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const float32x4x2_t v0l = {vld1q_f32(left + i), vld1q_f32(left + i + 4)};
+            const float32x4x2_t v0r = {vld1q_f32(right + i), vld1q_f32(right + i + 4)};
+            const uint32x4x2_t cmp = CmpHelper<Op>::compare(v0l, v0r);
+            const uint8_t mmask = movemask(cmp);
+
+            res_u8[i / 8] = mmask;
+        }
     }
 };
 
@@ -583,6 +733,23 @@ struct CompareColumnNeonImpl<double, Op> {
         const size_t size,
         void* const __restrict res
     ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+
+        //
+        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
+
+        // todo: aligned reads & writes
+
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const float64x2x4_t v0l = {vld1q_f64(left + i), vld1q_f64(left + i + 2), vld1q_f64(left + i + 4), vld1q_f64(left + i + 6)};
+            const float64x2x4_t v0r = {vld1q_f64(right + i), vld1q_f64(right + i + 2), vld1q_f64(right + i + 4), vld1q_f64(right + i + 6)};
+            const uint64x2x4_t cmp = CmpHelper<Op>::compare(v0l, v0r);
+            const uint8_t mmask = movemask(cmp);
+
+            res_u8[i / 8] = mmask;
+        }
     }
 };
 

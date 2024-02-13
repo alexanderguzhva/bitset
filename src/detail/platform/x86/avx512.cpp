@@ -382,7 +382,7 @@ struct CompareColumnAVX512Impl<float, Op> {
             uint64_t u64;
         } foo;
 
-//
+        //
         uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
         uint64_t* const __restrict res_u64 = reinterpret_cast<uint64_t*>(res);
         constexpr auto pred = ComparePredicate<float, Op>::value;

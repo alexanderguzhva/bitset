@@ -14,12 +14,19 @@ namespace arm {
 
 // a facility to run through all possible compare operations
 #define ALL_COMPARE_OPS(FUNC,...) \
-    FUNC(Equal,__VA_ARGS__); \
-    FUNC(GreaterEqual,__VA_ARGS__); \
-    FUNC(Greater,__VA_ARGS__); \
-    FUNC(LessEqual,__VA_ARGS__); \
-    FUNC(Less,__VA_ARGS__); \
-    FUNC(NotEqual,__VA_ARGS__);
+    FUNC(__VA_ARGS__,EQ); \
+    FUNC(__VA_ARGS__,GE); \
+    FUNC(__VA_ARGS__,GT); \
+    FUNC(__VA_ARGS__,LE); \
+    FUNC(__VA_ARGS__,LT); \
+    FUNC(__VA_ARGS__,NEQ);
+
+// a facility to run through all possible range operations
+#define ALL_RANGE_OPS(FUNC,...) \
+    FUNC(__VA_ARGS__,IncInc); \
+    FUNC(__VA_ARGS__,IncExc); \
+    FUNC(__VA_ARGS__,ExcInc); \
+    FUNC(__VA_ARGS__,ExcExc);
 
 // this function is missing somewhy
 inline uint64x2_t vmvnq_u64(const uint64x2_t value) {
@@ -339,18 +346,17 @@ struct CompareValNeonImpl {};
 
 template<CompareType Op>
 struct CompareValNeonImpl<int8_t, Op> {
-    static void Compare(
+    static void compare(
         const int8_t* const __restrict src, 
         const size_t size, 
         const int8_t val, 
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
-        uint32_t* const __restrict res_u32 = reinterpret_cast<uint32_t*>(res);
+        uint32_t* const __restrict res_u32 = reinterpret_cast<uint32_t*>(res_u8);
         const int8x16x2_t target = {vdupq_n_s8(val), vdupq_n_s8(val)};
 
         // todo: aligned reads & writes
@@ -376,18 +382,17 @@ struct CompareValNeonImpl<int8_t, Op> {
 
 template<CompareType Op>
 struct CompareValNeonImpl<int16_t, Op> {
-    static void Compare(
+    static void compare(
         const int16_t* const __restrict src, 
         const size_t size, 
         const int16_t val, 
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
-        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res);
+        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res_u8);
         const int16x8x2_t target = {vdupq_n_s16(val), vdupq_n_s16(val)};
 
         // todo: aligned reads & writes
@@ -414,17 +419,16 @@ struct CompareValNeonImpl<int16_t, Op> {
 
 template<CompareType Op>
 struct CompareValNeonImpl<int32_t, Op> {
-    static void Compare(
+    static void compare(
         const int32_t* const __restrict src, 
         const size_t size, 
         const int32_t val, 
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
         const int32x4x2_t target = {vdupq_n_s32(val), vdupq_n_s32(val)};
 
         // todo: aligned reads & writes
@@ -442,17 +446,16 @@ struct CompareValNeonImpl<int32_t, Op> {
 
 template<CompareType Op>
 struct CompareValNeonImpl<int64_t, Op> {
-    static void Compare(
+    static void compare(
         const int64_t* const __restrict src, 
         const size_t size, 
         const int64_t val, 
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
         const int64x2x4_t target = {vdupq_n_s64(val), vdupq_n_s64(val), vdupq_n_s64(val), vdupq_n_s64(val)};
 
         // todo: aligned reads & writes
@@ -470,17 +473,16 @@ struct CompareValNeonImpl<int64_t, Op> {
 
 template<CompareType Op>
 struct CompareValNeonImpl<float, Op> {
-    static void Compare(
+    static void compare(
         const float* const __restrict src, 
         const size_t size, 
         const float val, 
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
         const float32x4x2_t target = {vdupq_n_f32(val), vdupq_n_f32(val)};
 
         // todo: aligned reads & writes
@@ -498,17 +500,16 @@ struct CompareValNeonImpl<float, Op> {
 
 template<CompareType Op>
 struct CompareValNeonImpl<double, Op> {
-    static void Compare(
+    static void compare(
         const double* const __restrict src, 
         const size_t size, 
         const double val, 
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
         const float64x2x4_t target = {vdupq_n_f64(val), vdupq_n_f64(val), vdupq_n_f64(val), vdupq_n_f64(val)};
 
         // todo: aligned reads & writes
@@ -525,42 +526,27 @@ struct CompareValNeonImpl<double, Op> {
 };
 
 //
-#define DECLARE_VAL_NEON(NAME, OP) \
-    template<typename T> \
-    void NAME##ValNeon( \
-        const T* const __restrict src, \
-        const size_t size, \
-        const T val, \
-        void* const __restrict res \
-    ) { \
-        CompareValNeonImpl<T, CompareType::OP>::Compare(src, size, val, res); \
-    }
+template<typename T, CompareType Op>
+void CompareValNeon(const T* const __restrict src, const size_t size, const T val, uint8_t* const __restrict res) {
+    CompareValNeonImpl<T, Op>::compare(src, size, val, res);
+}
 
-DECLARE_VAL_NEON(Equal, EQ);    
-DECLARE_VAL_NEON(GreaterEqual, GE);
-DECLARE_VAL_NEON(Greater, GT);
-DECLARE_VAL_NEON(LessEqual, LE);
-DECLARE_VAL_NEON(Less, LT);
-DECLARE_VAL_NEON(NotEqual, NEQ);
-
-#undef DECLARE_VAL_NEON
-
-#define INSTANTIATE_VAL_NEON(NAME, TTYPE) \
-    template void NAME##ValNeon( \
+#define INSTANTIATE_COMPARE_VAL_NEON(TTYPE,OP) \
+    template void CompareValNeon<TTYPE, CompareType::OP>( \
         const TTYPE* const __restrict src, \
         const size_t size, \
         const TTYPE val, \
-        void* const __restrict res \
+        uint8_t* const __restrict res \
     );
 
-ALL_COMPARE_OPS(INSTANTIATE_VAL_NEON, int8_t)
-ALL_COMPARE_OPS(INSTANTIATE_VAL_NEON, int16_t)
-ALL_COMPARE_OPS(INSTANTIATE_VAL_NEON, int32_t)
-ALL_COMPARE_OPS(INSTANTIATE_VAL_NEON, int64_t)
-ALL_COMPARE_OPS(INSTANTIATE_VAL_NEON, float)
-ALL_COMPARE_OPS(INSTANTIATE_VAL_NEON, double)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_NEON, int8_t)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_NEON, int16_t)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_NEON, int32_t)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_NEON, int64_t)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_NEON, float)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_NEON, double)
 
-#undef INSTANTIATE_VAL_NEON
+#undef INSTANTIATE_COMPARE_VAL_NEON
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -570,18 +556,17 @@ struct CompareColumnNeonImpl {};
 
 template <CompareType Op>
 struct CompareColumnNeonImpl<int8_t, Op> {
-    static inline void Compare(
+    static inline void compare(
         const int8_t* const __restrict left, 
         const int8_t* const __restrict right, 
         const size_t size,
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
-        uint32_t* const __restrict res_u32 = reinterpret_cast<uint32_t*>(res);
+        uint32_t* const __restrict res_u32 = reinterpret_cast<uint32_t*>(res_u8);
 
         // todo: aligned reads & writes
 
@@ -608,18 +593,17 @@ struct CompareColumnNeonImpl<int8_t, Op> {
 
 template <CompareType Op>
 struct CompareColumnNeonImpl<int16_t, Op> {
-    static inline void Compare(
+    static inline void compare(
         const int16_t* const __restrict left, 
         const int16_t* const __restrict right, 
         const size_t size,
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
-        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res);
+        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res_u8);
 
         // todo: aligned reads & writes
 
@@ -647,17 +631,14 @@ struct CompareColumnNeonImpl<int16_t, Op> {
 
 template <CompareType Op>
 struct CompareColumnNeonImpl<int32_t, Op> {
-    static inline void Compare(
+    static inline void compare(
         const int32_t* const __restrict left, 
         const int32_t* const __restrict right, 
         const size_t size,
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
-
-        //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
 
         // todo: aligned reads & writes
 
@@ -675,17 +656,14 @@ struct CompareColumnNeonImpl<int32_t, Op> {
 
 template <CompareType Op>
 struct CompareColumnNeonImpl<int64_t, Op> {
-    static inline void Compare(
+    static inline void compare(
         const int64_t* const __restrict left, 
         const int64_t* const __restrict right, 
         const size_t size,
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
-
-        //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
 
         // todo: aligned reads & writes
 
@@ -703,17 +681,14 @@ struct CompareColumnNeonImpl<int64_t, Op> {
 
 template <CompareType Op>
 struct CompareColumnNeonImpl<float, Op> {
-    static inline void Compare(
+    static inline void compare(
         const float* const __restrict left, 
         const float* const __restrict right, 
         const size_t size,
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
-
-        //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
 
         // todo: aligned reads & writes
 
@@ -731,17 +706,14 @@ struct CompareColumnNeonImpl<float, Op> {
 
 template <CompareType Op>
 struct CompareColumnNeonImpl<double, Op> {
-    static inline void Compare(
+    static inline void compare(
         const double* const __restrict left, 
         const double* const __restrict right, 
         const size_t size,
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
-
-        //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
 
         // todo: aligned reads & writes
 
@@ -757,48 +729,135 @@ struct CompareColumnNeonImpl<double, Op> {
     }
 };
 
-#define DECLARE_COLUMN_NEON(NAME, OP) \
-    template<typename T> \
-    void NAME##ColumnNeon( \
-        const T* const __restrict left, \
-        const T* const __restrict right, \
-        const size_t size, \
-        void* const __restrict res \
-    ) { \
-        CompareColumnNeonImpl<T, CompareType::OP>::Compare(left, right, size, res); \
-    }
-
-DECLARE_COLUMN_NEON(Equal, EQ);
-DECLARE_COLUMN_NEON(GreaterEqual, GE);
-DECLARE_COLUMN_NEON(Greater, GT);
-DECLARE_COLUMN_NEON(LessEqual, LE);
-DECLARE_COLUMN_NEON(Less, LT);
-DECLARE_COLUMN_NEON(NotEqual, NEQ);
-
-#undef DECLARE_COLUMN_NEON
-
 //
-#define INSTANTIATE_COLUMN_NEON(NAME, TTYPE) \
-    template void NAME##ColumnNeon( \
+template<typename T, CompareType Op>
+void CompareColumnNeon(const T* const __restrict left, const T* const __restrict right, const size_t size, uint8_t* const __restrict res) {
+    CompareColumnNeonImpl<T, Op>::compare(left, right, size, res);
+}
+
+#define INSTANTIATE_COMPARE_COLUMN_NEON(TTYPE,OP) \
+    template void CompareColumnNeon<TTYPE, CompareType::OP>( \
         const TTYPE* const __restrict left, \
         const TTYPE* const __restrict right, \
         const size_t size, \
-        void* const __restrict res \
+        uint8_t* const __restrict res \
     );
 
-ALL_COMPARE_OPS(INSTANTIATE_COLUMN_NEON, int8_t)
-ALL_COMPARE_OPS(INSTANTIATE_COLUMN_NEON, int16_t)
-ALL_COMPARE_OPS(INSTANTIATE_COLUMN_NEON, int32_t)
-ALL_COMPARE_OPS(INSTANTIATE_COLUMN_NEON, int64_t)
-ALL_COMPARE_OPS(INSTANTIATE_COLUMN_NEON, float)
-ALL_COMPARE_OPS(INSTANTIATE_COLUMN_NEON, double)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_NEON, int8_t)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_NEON, int16_t)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_NEON, int32_t)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_NEON, int64_t)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_NEON, float)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_NEON, double)
 
-#undef INSTANTIATE_COLUMN_NEON
+#undef INSTANTIATE_COMPARE_COLUMN_NEON
+
+///////////////////////////////////////////////////////////////////////////
+
+//
+template <typename T, RangeType Op>
+struct WithinRangeNeonImpl {};
+
+template<RangeType Op>
+struct WithinRangeNeonImpl<int8_t, Op> {
+    static inline void within_range(
+        const int8_t* const __restrict lower,
+        const int8_t* const __restrict upper,
+        const int8_t* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict res_u8
+    ) {
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeNeonImpl<int16_t, Op> {
+    static inline void within_range(
+        const int16_t* const __restrict lower,
+        const int16_t* const __restrict upper,
+        const int16_t* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict res_u8
+    ) {
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeNeonImpl<int32_t, Op> {
+    static inline void within_range(
+        const int32_t* const __restrict lower,
+        const int32_t* const __restrict upper,
+        const int32_t* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict res_u8
+    ) {
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeNeonImpl<int64_t, Op> {
+    static inline void within_range(
+        const int64_t* const __restrict lower,
+        const int64_t* const __restrict upper,
+        const int64_t* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict res_u8
+    ) {
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeNeonImpl<float, Op> {
+    static inline void within_range(
+        const float* const __restrict lower,
+        const float* const __restrict upper,
+        const float* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict res_u8
+    ) {
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeNeonImpl<double, Op> {
+    static inline void within_range(
+        const double* const __restrict lower,
+        const double* const __restrict upper,
+        const double* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict res_u8
+    ) {
+    }
+};
+
+template<typename T, RangeType Op>
+void WithinRangeNeon(const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size, uint8_t* const __restrict res) {
+    WithinRangeNeonImpl<T, Op>::within_range(lower, upper, values, size, res);
+}
+
+#define INSTANTIATE_WITHIN_RANGE_NEON(TTYPE,OP) \
+    template void WithinRangeNeon<TTYPE, RangeType::OP>( \
+        const TTYPE* const __restrict lower, \
+        const TTYPE* const __restrict upper, \
+        const TTYPE* const __restrict values, \
+        const size_t size, \
+        uint8_t* const __restrict res \
+    );
+
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_NEON, int8_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_NEON, int16_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_NEON, int32_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_NEON, int64_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_NEON, float)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_NEON, double)
+
+#undef INSTANTIATE_WITHIN_RANGE_NEON
 
 ///////////////////////////////////////////////////////////////////////////
 
 //
 #undef ALL_COMPARE_OPS
+#undef ALL_RANGE_OPS
 
 }
 }

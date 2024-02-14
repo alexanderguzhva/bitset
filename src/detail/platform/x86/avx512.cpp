@@ -771,6 +771,7 @@ ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX512, double)
 ///////////////////////////////////////////////////////////////////////////
 
 #undef ALL_COMPARE_OPS
+#undef ALL_RANGE_OPS
 
 }
 }

@@ -12,14 +12,21 @@ namespace bitset {
 namespace detail {
 namespace x86 {
 
-// a facility to run through all possible operations
-#define ALL_OPS(FUNC,...) \
+// a facility to run through all possible compare operations
+#define ALL_COMPARE_OPS(FUNC,...) \
     FUNC(Equal,__VA_ARGS__); \
     FUNC(GreaterEqual,__VA_ARGS__); \
     FUNC(Greater,__VA_ARGS__); \
     FUNC(LessEqual,__VA_ARGS__); \
     FUNC(Less,__VA_ARGS__); \
     FUNC(NotEqual,__VA_ARGS__);
+
+// a facility to run through all possible range operations
+#define ALL_RANGE_OPS(FUNC,...) \
+    FUNC(__VA_ARGS__,IncInc); \
+    FUNC(__VA_ARGS__,IncExc); \
+    FUNC(__VA_ARGS__,ExcInc); \
+    FUNC(__VA_ARGS__,ExcExc);
 
 // count is expected to be in range [0, 32)
 inline uint32_t get_mask(const size_t count) {
@@ -234,6 +241,8 @@ struct CmpHelperI64<CompareType::NEQ> {
         return _mm256_xor_si256(_mm256_cmpeq_epi64(a, b), _mm256_set1_epi32(-1));
     }
 };
+
+///////////////////////////////////////////////////////////////////////////
 
 //
 template <typename T, CompareType Op>
@@ -485,14 +494,16 @@ DECLARE_VAL_AVX2(NotEqual, NEQ);
         void* const __restrict res \
     );
 
-ALL_OPS(INSTANTIATE_VAL_AVX2, int8_t)
-ALL_OPS(INSTANTIATE_VAL_AVX2, int16_t)
-ALL_OPS(INSTANTIATE_VAL_AVX2, int32_t)
-ALL_OPS(INSTANTIATE_VAL_AVX2, int64_t)
-ALL_OPS(INSTANTIATE_VAL_AVX2, float)
-ALL_OPS(INSTANTIATE_VAL_AVX2, double)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX2, int8_t)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX2, int16_t)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX2, int32_t)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX2, int64_t)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX2, float)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX2, double)
 
 #undef INSTANTIATE_VAL_AVX2
+
+///////////////////////////////////////////////////////////////////////////
 
 //
 template <typename T, CompareType Op>
@@ -744,17 +755,28 @@ DECLARE_COLUMN_AVX2(NotEqual, NEQ);
         void* const __restrict res \
     );
 
-ALL_OPS(INSTANTIATE_COLUMN_AVX2, int8_t)
-ALL_OPS(INSTANTIATE_COLUMN_AVX2, int16_t)
-ALL_OPS(INSTANTIATE_COLUMN_AVX2, int32_t)
-ALL_OPS(INSTANTIATE_COLUMN_AVX2, int64_t)
-ALL_OPS(INSTANTIATE_COLUMN_AVX2, float)
-ALL_OPS(INSTANTIATE_COLUMN_AVX2, double)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX2, int8_t)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX2, int16_t)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX2, int32_t)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX2, int64_t)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX2, float)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX2, double)
 
 #undef INSTANTIATE_COLUMN_AVX2
 
+///////////////////////////////////////////////////////////////////////////
+
 //
-#undef ALL_OPS
+template <typename T, RangeType Op>
+struct WithinRangeAVX2Impl {
+    
+};
+
+///////////////////////////////////////////////////////////////////////////
+
+//
+#undef ALL_COMPARE_OPS
+#undef ALL_RANGE_OPS
 
 }
 }

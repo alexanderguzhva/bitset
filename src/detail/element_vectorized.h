@@ -123,20 +123,18 @@ struct CustomBitsetVectorizedPolicy {
         }
 
         //
-        const T* __restrict current_t = t;
-        const U* __restrict current_u = u;
+        uintptr_t ptr_offset = 0;
 
         // process the first element
         if (start_shift != 0) [[unlikely]] {
             // it is possible to do vectorized masking here, but it is not worth it
             CustomBitsetPolicy2<ElementT>::template op_compare_column<T, U, Op>(
-                data, start, current_t, current_u, data_bits - start_shift
+                data, start, t, u, data_bits - start_shift
             );
 
             //
             start_element += 1;
-            current_t += data_bits - start_shift;
-            current_u += data_bits - start_shift;
+            ptr_offset += data_bits - start_shift;
         }
 
         // process the middle
@@ -146,23 +144,22 @@ struct CustomBitsetVectorizedPolicy {
 
             if (!VectorizedT::template op_compare_column<T, U, Op>(
                     reinterpret_cast<uint8_t*>(data + start_element),
-                    current_t,
-                    current_u,
+                    t + ptr_offset,
+                    u + ptr_offset,
                     nbits)
             ) {
                 // vectorized implementation is not available, invoke the default one
                 CustomBitsetPolicy2<ElementT>::template op_compare_column<T, U, Op>(
                     data, 
                     start_element * data_bits, 
-                    current_t,
-                    current_u,
+                    t + ptr_offset,
+                    u + ptr_offset,
                     nbits 
                 );
             }
         
             //
-            current_t += nbits;
-            current_u += nbits;
+            ptr_offset += nbits;
         }
 
         // process the last element
@@ -173,14 +170,14 @@ struct CustomBitsetVectorizedPolicy {
             CustomBitsetPolicy2<ElementT>::template op_compare_column<T, U, Op>(
                 data, 
                 starting_bit_idx, 
-                current_t, 
-                current_u, 
+                t + ptr_offset, 
+                u + ptr_offset, 
                 end_shift
             );
         }
     }
 
-//
+    //
     template<typename T, CompareType Op>
     static inline void op_compare_val(
         data_type* const __restrict data, 
@@ -209,18 +206,18 @@ struct CustomBitsetVectorizedPolicy {
         }
 
         //
-        const T* __restrict current_t = t;
+        uintptr_t ptr_offset = 0;
 
         // process the first element
         if (start_shift != 0) [[unlikely]] {
             // it is possible to do vectorized masking here, but it is not worth it
             CustomBitsetPolicy2<ElementT>::template op_compare_val<T, Op>(
-                data, start, current_t, data_bits - start_shift, value
+                data, start, t, data_bits - start_shift, value
             );
 
             //
             start_element += 1;
-            current_t += data_bits - start_shift;
+            ptr_offset += data_bits - start_shift;
         }
 
         // process the middle
@@ -230,7 +227,7 @@ struct CustomBitsetVectorizedPolicy {
 
             if (!VectorizedT::template op_compare_val<T, Op>(
                     reinterpret_cast<uint8_t*>(data + start_element),
-                    current_t,
+                    t + ptr_offset,
                     nbits,
                     value)
             ) {
@@ -238,14 +235,14 @@ struct CustomBitsetVectorizedPolicy {
                 CustomBitsetPolicy2<ElementT>::template op_compare_val<T, Op>(
                     data, 
                     start_element * data_bits, 
-                    current_t,
+                    t + ptr_offset,
                     nbits,
                     value
                 );
             }
         
             //
-            current_t += nbits;
+            ptr_offset += nbits;
         }
 
         // process the last element
@@ -256,9 +253,96 @@ struct CustomBitsetVectorizedPolicy {
             CustomBitsetPolicy2<ElementT>::template op_compare_val<T, Op>(
                 data, 
                 starting_bit_idx, 
-                current_t,
+                t + ptr_offset,
                 end_shift,
                 value
+            );
+        }
+    }
+
+    //
+    template<typename T, RangeType Op>
+    static inline void op_within_range(
+        data_type* const __restrict data, 
+        const size_type start,
+        const T* const __restrict lower,
+        const T* const __restrict upper,
+        const T* const __restrict values,
+        const size_type size
+    ) {
+        if (size == 0) {
+            return;
+        }
+
+        auto start_element = get_element(start);
+        const auto end_element = get_element(start + size);
+
+        const auto start_shift = get_shift(start);
+        const auto end_shift = get_shift(start + size);
+
+        // same element?
+        if (start_element == end_element) {
+            CustomBitsetPolicy2<ElementT>::template op_within_range<T, Op>(
+                data, start, lower, upper, values, size
+            );
+
+            return;
+        }
+
+        //
+        uintptr_t ptr_offset = 0;
+
+        // process the first element
+        if (start_shift != 0) [[unlikely]] {
+            // it is possible to do vectorized masking here, but it is not worth it
+            CustomBitsetPolicy2<ElementT>::template op_within_range<T, Op>(
+                data, start, lower, upper, values, size
+            );
+
+            //
+            start_element += 1;
+            ptr_offset += data_bits - start_shift;
+        }
+
+        // process the middle
+        {
+            const size_t starting_bit_idx = start_element * data_bits;
+            const size_t nbits = (end_element - start_element) * data_bits;
+
+            if (!VectorizedT::template op_within_range<T, Op>(
+                    reinterpret_cast<uint8_t*>(data + start_element),
+                    lower + ptr_offset,
+                    upper + ptr_offset,
+                    values + ptr_offset,
+                    nbits)
+            ) {
+                // vectorized implementation is not available, invoke the default one
+                CustomBitsetPolicy2<ElementT>::template op_within_range<T, Op>(
+                    data, 
+                    start,
+                    lower + ptr_offset,
+                    upper + ptr_offset,
+                    values + ptr_offset,
+                    nbits
+                );
+            }
+        
+            //
+            ptr_offset += nbits;
+        }
+
+        // process the last element
+        if (end_shift != 0) [[likely]] {
+            // it is possible to do vectorized masking here, but it is not worth it
+            const size_t starting_bit_idx = end_element * data_bits; 
+
+            CustomBitsetPolicy2<ElementT>::template op_within_range<T, Op>(
+                data, 
+                start,
+                lower + ptr_offset,
+                upper + ptr_offset,
+                values + ptr_offset,
+                end_shift
             );
         }
     }

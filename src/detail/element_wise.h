@@ -769,6 +769,21 @@ struct CustomBitsetPolicy2 {
             get_proxy(data, start + i) = CompareOperator<Op>::compare(t[i], value);
         }
     }
+
+    //
+    template<typename T, RangeType Op>
+    static inline void op_within_range(
+        data_type* const __restrict data, 
+        const size_type start,
+        const T* const __restrict lower,
+        const T* const __restrict upper,
+        const T* const __restrict values,
+        const size_type size
+    ) {
+        for (size_type i = 0; i < size; i++) {
+            get_proxy(data, start + i) = RangeOperator<Op>::within_range(lower[i], upper[i], values[i]);
+        }
+    }
 };
 
 }

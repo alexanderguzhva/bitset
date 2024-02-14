@@ -12,8 +12,8 @@ namespace bitset {
 namespace detail {
 namespace arm {
 
-// a facility to run through all possible operations
-#define ALL_OPS(FUNC,...) \
+// a facility to run through all possible compare operations
+#define ALL_COMPARE_OPS(FUNC,...) \
     FUNC(Equal,__VA_ARGS__); \
     FUNC(GreaterEqual,__VA_ARGS__); \
     FUNC(Greater,__VA_ARGS__); \
@@ -331,6 +331,8 @@ struct CmpHelper<CompareType::NEQ> {
     }
 };
 
+///////////////////////////////////////////////////////////////////////////
+
 //
 template <typename T, CompareType Op>
 struct CompareValNeonImpl {};
@@ -551,14 +553,16 @@ DECLARE_VAL_NEON(NotEqual, NEQ);
         void* const __restrict res \
     );
 
-ALL_OPS(INSTANTIATE_VAL_NEON, int8_t)
-ALL_OPS(INSTANTIATE_VAL_NEON, int16_t)
-ALL_OPS(INSTANTIATE_VAL_NEON, int32_t)
-ALL_OPS(INSTANTIATE_VAL_NEON, int64_t)
-ALL_OPS(INSTANTIATE_VAL_NEON, float)
-ALL_OPS(INSTANTIATE_VAL_NEON, double)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_NEON, int8_t)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_NEON, int16_t)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_NEON, int32_t)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_NEON, int64_t)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_NEON, float)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_NEON, double)
 
 #undef INSTANTIATE_VAL_NEON
+
+///////////////////////////////////////////////////////////////////////////
 
 //
 template <typename T, CompareType Op>
@@ -782,17 +786,19 @@ DECLARE_COLUMN_NEON(NotEqual, NEQ);
         void* const __restrict res \
     );
 
-ALL_OPS(INSTANTIATE_COLUMN_NEON, int8_t)
-ALL_OPS(INSTANTIATE_COLUMN_NEON, int16_t)
-ALL_OPS(INSTANTIATE_COLUMN_NEON, int32_t)
-ALL_OPS(INSTANTIATE_COLUMN_NEON, int64_t)
-ALL_OPS(INSTANTIATE_COLUMN_NEON, float)
-ALL_OPS(INSTANTIATE_COLUMN_NEON, double)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_NEON, int8_t)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_NEON, int16_t)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_NEON, int32_t)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_NEON, int64_t)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_NEON, float)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_NEON, double)
 
 #undef INSTANTIATE_COLUMN_NEON
 
+///////////////////////////////////////////////////////////////////////////
+
 //
-#undef ALL_OPS
+#undef ALL_COMPARE_OPS
 
 }
 }

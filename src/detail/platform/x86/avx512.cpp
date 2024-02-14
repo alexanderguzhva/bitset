@@ -12,8 +12,8 @@ namespace bitset {
 namespace detail {
 namespace x86 {
 
-// a facility to run through all possible operations
-#define ALL_OPS(FUNC,...) \
+// a facility to run through all possible compare operations
+#define ALL_COMPARE_OPS(FUNC,...) \
     FUNC(Equal,__VA_ARGS__); \
     FUNC(GreaterEqual,__VA_ARGS__); \
     FUNC(Greater,__VA_ARGS__); \
@@ -69,6 +69,8 @@ OrAVX512(void* const left, const void* const right, const size_t size) {
         _mm512_mask_storeu_epi8(left_u8 + size64, mask, res);
     }
 }
+
+///////////////////////////////////////////////////////////////////////////
 
 //
 template <typename T, CompareType Op>
@@ -353,14 +355,16 @@ DECLARE_VAL_AVX512(NotEqual, NEQ);
         void* const __restrict res \
     );
 
-ALL_OPS(INSTANTIATE_VAL_AVX512, int8_t)
-ALL_OPS(INSTANTIATE_VAL_AVX512, int16_t)
-ALL_OPS(INSTANTIATE_VAL_AVX512, int32_t)
-ALL_OPS(INSTANTIATE_VAL_AVX512, int64_t)
-ALL_OPS(INSTANTIATE_VAL_AVX512, float)
-ALL_OPS(INSTANTIATE_VAL_AVX512, double)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX512, int8_t)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX512, int16_t)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX512, int32_t)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX512, int64_t)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX512, float)
+ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX512, double)
 
 #undef INSTANTIATE_VAL_AVX512
+
+///////////////////////////////////////////////////////////////////////////
 
 //
 template <typename T, CompareType Op>
@@ -651,16 +655,18 @@ DECLARE_COLUMN_AVX512(NotEqual, NEQ);
         void* const __restrict res \
     );
 
-ALL_OPS(INSTANTIATE_COLUMN_AVX512, int8_t)
-ALL_OPS(INSTANTIATE_COLUMN_AVX512, int16_t)
-ALL_OPS(INSTANTIATE_COLUMN_AVX512, int32_t)
-ALL_OPS(INSTANTIATE_COLUMN_AVX512, int64_t)
-ALL_OPS(INSTANTIATE_COLUMN_AVX512, float)
-ALL_OPS(INSTANTIATE_COLUMN_AVX512, double)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX512, int8_t)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX512, int16_t)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX512, int32_t)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX512, int64_t)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX512, float)
+ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX512, double)
 
 #undef INSTANTIATE_COLUMN_AVX512
 
-#undef ALL_OPS
+///////////////////////////////////////////////////////////////////////////
+
+#undef ALL_COMPARE_OPS
 
 }
 }

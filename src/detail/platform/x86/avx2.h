@@ -65,6 +65,23 @@ void
 NotEqualColumnAVX2(const T* const __restrict left, const T* const __restrict right, const size_t size, void* const __restrict res);
 
 //
+template<typename T>
+void
+WithinRangeIncIncAVX2(const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size, void* const __restrict res);
+
+template<typename T>
+void
+WithinRangeIncExcAVX2(const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size, void* const __restrict res);
+
+template<typename T>
+void
+WithinRangeExcIncAVX2(const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size, void* const __restrict res);
+
+template<typename T>
+void
+WithinRangeExcExcAVX2(const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size, void* const __restrict res);
+
+//
 struct VectorizedAvx2 {
     // API requirement: size % 8 == 0
     template<typename T, typename U, CompareType Op>
@@ -110,6 +127,33 @@ struct VectorizedAvx2 {
             return true;
         } else if constexpr(Op == CompareType::NEQ) {
             NotEqualValAVX2(t, size, value, output);
+            return true;
+        } else {
+            // unimplemented
+            return false;
+        }
+    }
+
+    // API requirement: size % 8 == 0
+    template<typename T, RangeType Op>
+    static bool op_within_range(
+        uint8_t* const __restrict data, 
+        const T* const __restrict lower,
+        const T* const __restrict upper,
+        const T* const __restrict values,
+        const size_t size
+    ) {
+        if constexpr(Op == RangeType::IncInc) {
+            WithinRangeIncIncAVX2(lower, upper, values, size, data);
+            return true;
+        } else if constexpr(Op == RangeType::IncExc) {
+            WithinRangeIncExcAVX2(lower, upper, values, size, data);
+            return true;
+        } else if constexpr(Op == RangeType::ExcInc) {
+            WithinRangeExcIncAVX2(lower, upper, values, size, data);
+            return true;
+        } else if constexpr(Op == RangeType::ExcExc) {
+            WithinRangeExcExcAVX2(lower, upper, values, size, data);
             return true;
         } else {
             // unimplemented

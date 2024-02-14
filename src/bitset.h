@@ -514,17 +514,18 @@ public:
     void inplace_within_range(
         const T* const __restrict lower,
         const T* const __restrict upper,
+        const T* const __restrict values,
         const size_type size,
         const RangeType op
     ) {
         if (op == RangeType::IncInc) {
-            this->inplace_within_range<T, RangeType::IncInc>(lower, upper, size);
+            this->inplace_within_range<T, RangeType::IncInc>(lower, upper, values, size);
         } else if (op == RangeType::IncExc) {
-            this->inplace_within_range<T, RangeType::IncExc>(lower, upper, size);            
+            this->inplace_within_range<T, RangeType::IncExc>(lower, upper, values, size);            
         } else if (op == RangeType::ExcInc) {
-            this->inplace_within_range<T, RangeType::ExcInc>(lower, upper, size);
+            this->inplace_within_range<T, RangeType::ExcInc>(lower, upper, values, size);
         } else if (op == RangeType::ExcExc) {
-            this->inplace_within_range<T, RangeType::ExcExc>(lower, upper, size);
+            this->inplace_within_range<T, RangeType::ExcExc>(lower, upper, values, size);
         } else {
             // unimplemented
         }            
@@ -534,6 +535,7 @@ public:
     void inplace_within_range(
         const T* const __restrict lower,
         const T* const __restrict upper,
+        const T* const __restrict values,
         const size_type size
     ) {
         range_checker::le(size, this->size());
@@ -543,10 +545,10 @@ public:
             this->offset(),
             lower,
             upper,
+            values,
             size
         );
     }
-
 
 private:
     // Return the starting bit offset in our container.

@@ -31,6 +31,16 @@ struct VectorizedDynamic {
         const size_t size,
         const T value
     );
+
+    // API requirement: size % 8 == 0
+    template<typename T, RangeType Op>
+    static bool op_within_range(
+        uint8_t* const __restrict data, 
+        const T* const __restrict lower,
+        const T* const __restrict upper,
+        const T* const __restrict values,
+        const size_t size
+    );
 };
 
 }

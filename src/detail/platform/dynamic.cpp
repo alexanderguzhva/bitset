@@ -367,7 +367,8 @@ static void init_dynamic_hook() {
 }
 
 // no longer needed
-#undef ALL_OPS
+#undef ALL_COMPARE_OPS
+#undef ALL_RANGE_OPS
 
 //
 static int init_dynamic_ = []() {

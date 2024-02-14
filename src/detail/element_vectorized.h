@@ -338,7 +338,7 @@ struct CustomBitsetVectorizedPolicy {
 
             CustomBitsetPolicy2<ElementT>::template op_within_range<T, Op>(
                 data, 
-                start,
+                starting_bit_idx,
                 lower + ptr_offset,
                 upper + ptr_offset,
                 values + ptr_offset,

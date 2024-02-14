@@ -20,7 +20,7 @@ struct VectorizedRef {
     // Fills a bitmask by comparing two arrays element-wise.
     // API requirement: size % 8 == 0
     template<typename T, typename U, CompareType Op>
-    static bool op_compare_column(
+    static inline bool op_compare_column(
         uint8_t* const __restrict output, 
         const T* const __restrict t,
         const U* const __restrict u,
@@ -33,7 +33,7 @@ struct VectorizedRef {
     //   given value.
     // API requirement: size % 8 == 0
     template<typename T, CompareType Op>
-    static bool op_compare_val(
+    static inline bool op_compare_val(
         uint8_t* const __restrict output,
         const T* const __restrict t,
         const size_t size,

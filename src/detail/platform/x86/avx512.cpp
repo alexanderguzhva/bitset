@@ -14,12 +14,12 @@ namespace x86 {
 
 // a facility to run through all possible compare operations
 #define ALL_COMPARE_OPS(FUNC,...) \
-    FUNC(Equal,__VA_ARGS__); \
-    FUNC(GreaterEqual,__VA_ARGS__); \
-    FUNC(Greater,__VA_ARGS__); \
-    FUNC(LessEqual,__VA_ARGS__); \
-    FUNC(Less,__VA_ARGS__); \
-    FUNC(NotEqual,__VA_ARGS__);
+    FUNC(__VA_ARGS__,EQ); \
+    FUNC(__VA_ARGS__,GE); \
+    FUNC(__VA_ARGS__,GT); \
+    FUNC(__VA_ARGS__,LE); \
+    FUNC(__VA_ARGS__,LT); \
+    FUNC(__VA_ARGS__,NEQ);
 
 // a facility to run through all possible range operations
 #define ALL_RANGE_OPS(FUNC,...) \
@@ -85,7 +85,7 @@ struct CompareValAVX512Impl {};
 
 template <CompareType Op>
 struct CompareValAVX512Impl<int8_t, Op> {
-    static void Compare(
+    static void compare(
         const int8_t* const __restrict src, 
         const size_t size, 
         const int8_t val, 
@@ -128,7 +128,7 @@ struct CompareValAVX512Impl<int8_t, Op> {
 
 template <CompareType Op>
 struct CompareValAVX512Impl<int16_t, Op> {
-    static void Compare(
+    static void compare(
         const int16_t* const __restrict src, 
         const size_t size, 
         const int16_t val, 
@@ -171,7 +171,7 @@ struct CompareValAVX512Impl<int16_t, Op> {
 
 template <CompareType Op>
 struct CompareValAVX512Impl<int32_t, Op> {
-    static void Compare(
+    static void compare(
         const int32_t* const __restrict src, 
         const size_t size, 
         const int32_t val, 
@@ -214,7 +214,7 @@ struct CompareValAVX512Impl<int32_t, Op> {
 
 template <CompareType Op>
 struct CompareValAVX512Impl<int64_t, Op> {
-    static void Compare(
+    static void compare(
         const int64_t* const __restrict src, 
         const size_t size, 
         const int64_t val, 
@@ -252,7 +252,7 @@ struct CompareValAVX512Impl<int64_t, Op> {
 
 template <CompareType Op>
 struct CompareValAVX512Impl<float, Op> {
-    static void Compare(
+    static void compare(
         const float* const __restrict src, 
         const size_t size, 
         const float val, 
@@ -297,7 +297,7 @@ struct CompareValAVX512Impl<float, Op> {
 
 template <CompareType Op>
 struct CompareValAVX512Impl<double, Op> {
-    static void Compare(
+    static void compare(
         const double* const __restrict src, 
         const size_t size, 
         const double val, 
@@ -334,42 +334,28 @@ struct CompareValAVX512Impl<double, Op> {
     }
 };
 
-#define DECLARE_VAL_AVX512(NAME, OP) \
-    template<typename T> \
-    void NAME##ValAVX512( \
-        const T* const __restrict src, \
-        const size_t size, \
-        const T val, \
-        void* const __restrict res \
-    ) { \
-        CompareValAVX512Impl<T, CompareType::OP>::Compare(src, size, val, res); \
-    }
+//
+template<typename T, CompareType Op>
+void CompareValAVX512(const T* const __restrict src, const size_t size, const T val, uint8_t* const __restrict res) {
+    CompareValAVX512Impl<T, Op>::compare(src, size, val, res);
+}
 
-DECLARE_VAL_AVX512(Equal, EQ);
-DECLARE_VAL_AVX512(GreaterEqual, GE);
-DECLARE_VAL_AVX512(Greater, GT);
-DECLARE_VAL_AVX512(LessEqual, LE);
-DECLARE_VAL_AVX512(Less, LT);
-DECLARE_VAL_AVX512(NotEqual, NEQ);
-
-#undef DECLARE_VAL_AVX512
-
-#define INSTANTIATE_VAL_AVX512(NAME, TTYPE) \
-    template void NAME##ValAVX512( \
+#define INSTANTIATE_COMPARE_VAL_AVX512(TTYPE,OP) \
+    template void CompareValAVX512<TTYPE, CompareType::OP>( \
         const TTYPE* const __restrict src, \
         const size_t size, \
         const TTYPE val, \
-        void* const __restrict res \
+        uint8_t* const __restrict res \
     );
 
-ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX512, int8_t)
-ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX512, int16_t)
-ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX512, int32_t)
-ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX512, int64_t)
-ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX512, float)
-ALL_COMPARE_OPS(INSTANTIATE_VAL_AVX512, double)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_AVX512, int8_t)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_AVX512, int16_t)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_AVX512, int32_t)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_AVX512, int64_t)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_AVX512, float)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_AVX512, double)
 
-#undef INSTANTIATE_VAL_AVX512
+#undef INSTANTIATE_COMPARE_VAL_AVX512
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -379,7 +365,7 @@ struct CompareColumnAVX512Impl {};
 
 template <CompareType Op>
 struct CompareColumnAVX512Impl<int8_t, Op> {
-    static inline void Compare(
+    static inline void compare(
         const int8_t* const __restrict left, 
         const int8_t* const __restrict right, 
         const size_t size,
@@ -423,7 +409,7 @@ struct CompareColumnAVX512Impl<int8_t, Op> {
 
 template <CompareType Op>
 struct CompareColumnAVX512Impl<int16_t, Op> {
-    static inline void Compare(
+    static inline void compare(
         const int16_t* const __restrict left, 
         const int16_t* const __restrict right, 
         const size_t size,
@@ -467,7 +453,7 @@ struct CompareColumnAVX512Impl<int16_t, Op> {
 
 template <CompareType Op>
 struct CompareColumnAVX512Impl<int32_t, Op> {
-    static inline void Compare(
+    static inline void compare(
         const int32_t* const __restrict left, 
         const int32_t* const __restrict right, 
         const size_t size,
@@ -511,7 +497,7 @@ struct CompareColumnAVX512Impl<int32_t, Op> {
 
 template <CompareType Op>
 struct CompareColumnAVX512Impl<int64_t, Op> {
-    static inline void Compare(
+    static inline void compare(
         const int64_t* const __restrict left, 
         const int64_t* const __restrict right, 
         const size_t size,
@@ -550,7 +536,7 @@ struct CompareColumnAVX512Impl<int64_t, Op> {
 
 template <CompareType Op>
 struct CompareColumnAVX512Impl<float, Op> {
-    static inline void Compare(
+    static inline void compare(
         const float* const __restrict left, 
         const float* const __restrict right, 
         const size_t size,
@@ -595,7 +581,7 @@ struct CompareColumnAVX512Impl<float, Op> {
 
 template <CompareType Op>
 struct CompareColumnAVX512Impl<double, Op> {
-    static inline void Compare(
+    static inline void compare(
         const double* const __restrict left, 
         const double* const __restrict right, 
         const size_t size,
@@ -633,43 +619,27 @@ struct CompareColumnAVX512Impl<double, Op> {
 };
 
 //
-#define DECLARE_COLUMN_AVX512(NAME, OP) \
-    template<typename T> \
-    void NAME##ColumnAVX512( \
-        const T* const __restrict left, \
-        const T* const __restrict right, \
-        const size_t size, \
-        void* const __restrict res \
-    ) { \
-        CompareColumnAVX512Impl<T, CompareType::OP>::Compare(left, right, size, res); \
-    }
+template<typename T, CompareType Op>
+void CompareColumnAVX512(const T* const __restrict left, const T* const __restrict right, const size_t size, uint8_t* const __restrict res) {
+    CompareColumnAVX512Impl<T, Op>::compare(left, right, size, res);
+}
 
-DECLARE_COLUMN_AVX512(Equal, EQ);
-DECLARE_COLUMN_AVX512(GreaterEqual, GE);
-DECLARE_COLUMN_AVX512(Greater, GT);
-DECLARE_COLUMN_AVX512(LessEqual, LE);
-DECLARE_COLUMN_AVX512(Less, LT);
-DECLARE_COLUMN_AVX512(NotEqual, NEQ);
-
-#undef DECLARE_COLUMN_AVX512
-
-//
-#define INSTANTIATE_COLUMN_AVX512(NAME, TTYPE) \
-    template void NAME##ColumnAVX512( \
+#define INSTANTIATE_COMPARE_COLUMN_AVX512(TTYPE,OP) \
+    template void CompareColumnAVX512<TTYPE, CompareType::OP>( \
         const TTYPE* const __restrict left, \
         const TTYPE* const __restrict right, \
         const size_t size, \
-        void* const __restrict res \
+        uint8_t* const __restrict res \
     );
 
-ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX512, int8_t)
-ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX512, int16_t)
-ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX512, int32_t)
-ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX512, int64_t)
-ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX512, float)
-ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX512, double)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_AVX512, int8_t)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_AVX512, int16_t)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_AVX512, int32_t)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_AVX512, int64_t)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_AVX512, float)
+ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_AVX512, double)
 
-#undef INSTANTIATE_COLUMN_AVX512
+#undef INSTANTIATE_COMPARE_COLUMN_AVX512
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -684,7 +654,7 @@ struct WithinRangeAVX512Impl<int8_t, Op> {
         const int8_t* const __restrict upper,
         const int8_t* const __restrict values,
         const size_t size,
-        uint8_t* const __restrict output
+        uint8_t* const __restrict res
     ) {
     }
 };
@@ -696,7 +666,7 @@ struct WithinRangeAVX512Impl<int16_t, Op> {
         const int16_t* const __restrict upper,
         const int16_t* const __restrict values,
         const size_t size,
-        uint8_t* const __restrict output
+        uint8_t* const __restrict res
     ) {
     }
 };
@@ -708,7 +678,7 @@ struct WithinRangeAVX512Impl<int32_t, Op> {
         const int32_t* const __restrict upper,
         const int32_t* const __restrict values,
         const size_t size,
-        uint8_t* const __restrict output
+        uint8_t* const __restrict res
     ) {
     }
 };
@@ -720,7 +690,7 @@ struct WithinRangeAVX512Impl<int64_t, Op> {
         const int64_t* const __restrict upper,
         const int64_t* const __restrict values,
         const size_t size,
-        uint8_t* const __restrict output
+        uint8_t* const __restrict res
     ) {
     }
 };
@@ -732,7 +702,7 @@ struct WithinRangeAVX512Impl<float, Op> {
         const float* const __restrict upper,
         const float* const __restrict values,
         const size_t size,
-        uint8_t* const __restrict output
+        uint8_t* const __restrict res
     ) {
     }
 };
@@ -744,8 +714,41 @@ struct WithinRangeAVX512Impl<double, Op> {
         const double* const __restrict upper,
         const double* const __restrict values,
         const size_t size,
-        uint8_t* const __restrict output
+        uint8_t* const __restrict res
     ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        
+        //
+        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
+        constexpr auto pred_lower = ComparePredicate<double, Range2Compare<Op>::lower>::value;
+        constexpr auto pred_upper = ComparePredicate<double, Range2Compare<Op>::upper>::value;
+
+        // todo: aligned reads & writes
+
+        // process big blocks
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const __m512d vl = _mm512_loadu_pd(lower + i);
+            const __m512d vu = _mm512_loadu_pd(upper + i);
+            const __m512d vv = _mm512_loadu_pd(values + i);
+            const __mmask8 cmpl_mask = _mm512_cmp_pd_mask(vl, vv, pred_lower);
+            const __mmask8 cmp_mask = _mm512_mask_cmp_pd_mask(cmpl_mask, vv, vu, pred_upper);
+
+            res_u8[i / 8] = cmp_mask;
+        }
+
+        // process leftovers
+        if (size8 != size) {
+            const uint8_t mask = get_mask(size - size8);
+            const __m512d vl = _mm512_maskz_loadu_pd(mask, lower + size8);
+            const __m512d vu = _mm512_maskz_loadu_pd(mask, upper + size8);
+            const __m512d vv = _mm512_maskz_loadu_pd(mask, values + size8);
+            const __mmask8 cmpl_mask = _mm512_cmp_pd_mask(vl, vv, pred_lower);
+            const __mmask8 cmp_mask = _mm512_mask_cmp_pd_mask(cmpl_mask, vv, vu, pred_upper);
+
+            res_u8[size8 / 8] = cmp_mask;
+        }
     }
 };
 

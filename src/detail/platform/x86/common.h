@@ -11,6 +11,7 @@ namespace bitset {
 namespace detail {
 namespace x86 {
 
+//
 template<typename T, CompareType type>
 struct ComparePredicate {};
 
@@ -50,6 +51,33 @@ struct ComparePredicate<T, CompareType::NEQ> {
         std::is_floating_point_v<T> ? _CMP_NEQ_OQ : _MM_CMPINT_NE; 
 };
 
+//
+template<RangeType Op>
+struct Range2Compare {};
+
+template<>
+struct Range2Compare<RangeType::IncInc> {
+    static constexpr inline CompareType lower = CompareType::LE;  
+    static constexpr inline CompareType upper = CompareType::LE;  
+};
+
+template<>
+struct Range2Compare<RangeType::IncExc> {
+    static constexpr inline CompareType lower = CompareType::LE;  
+    static constexpr inline CompareType upper = CompareType::LT;  
+};
+
+template<>
+struct Range2Compare<RangeType::ExcInc> {
+    static constexpr inline CompareType lower = CompareType::LT;  
+    static constexpr inline CompareType upper = CompareType::LE;  
+};
+
+template<>
+struct Range2Compare<RangeType::ExcExc> {
+    static constexpr inline CompareType lower = CompareType::LT;  
+    static constexpr inline CompareType upper = CompareType::LT;  
+};
 
 }
 }

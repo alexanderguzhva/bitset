@@ -144,11 +144,6 @@ public:
         policy_type::set(this->data(), this->offset(), this->size());
     }
 
-    // Set a given bit to true.
-    inline void set(const size_type bit_idx) {
-        this->operator[](bit_idx) = true;
-    }
-
     // Set a given bit to a given value.
     inline void set(const size_type bit_idx, const bool value = true) {
         this->operator[](bit_idx) = value;
@@ -324,7 +319,7 @@ public:
     template<typename I, bool R>
     inline void inplace_xor(const CustomBitsetBase<PolicyT, I, R>& other, const size_type size) {
         range_checker::le(size, this->size());
-        range_checker::le(size, other->size());
+        range_checker::le(size, other.size());
     
         policy_type::op_xor(
             this->data(),
@@ -348,7 +343,7 @@ public:
     template<typename I, bool R>
     inline void inplace_sub(const CustomBitsetBase<PolicyT, I, R>& other, const size_type size) {
         range_checker::le(size, this->size());
-        range_checker::le(size, other->size());
+        range_checker::le(size, other.size());
     
         policy_type::op_sub(
             this->data(),

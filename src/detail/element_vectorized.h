@@ -20,7 +20,7 @@ struct CustomBitsetVectorizedPolicy {
 
     using size_type = size_t;
 
-    using self_type = CustomBitsetPolicy<ElementT>;
+    using self_type = CustomBitsetVectorizedPolicy<ElementT, VectorizedT>;
 
     using proxy_type = Proxy<self_type>;
     using const_proxy_type = ConstProxy<self_type>;
@@ -144,7 +144,7 @@ struct CustomBitsetVectorizedPolicy {
         const size_type start_right, 
         const size_type size
     ) {
-        CustomBitsetPolicy2<ElementT>::op_eq(left, right, start_left, start_right, size);
+        return CustomBitsetPolicy2<ElementT>::op_eq(left, right, start_left, start_right, size);
     }
 
     static inline void op_xor(

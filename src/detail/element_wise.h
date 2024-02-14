@@ -21,7 +21,7 @@ struct CustomBitsetPolicy2 {
 
     using size_type = size_t;
 
-    using self_type = CustomBitsetPolicy<ElementT>;
+    using self_type = CustomBitsetPolicy2<ElementT>;
 
     using proxy_type = Proxy<self_type>;
     using const_proxy_type = ConstProxy<self_type>;

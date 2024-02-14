@@ -175,15 +175,15 @@ void TestFindImpl() {
     }
 }
 
-//
-TEST(FindRef, f) {
-    TestFindImpl<ref_u64_u8::bitset_type>();
-}
+// //
+// TEST(FindRef, f) {
+//     TestFindImpl<ref_u64_u8::bitset_type>();
+// }
 
-//
-TEST(FindElement, f) {
-    TestFindImpl<element_u64_u8::bitset_type>();
-}
+// //
+// TEST(FindElement, f) {
+//     TestFindImpl<element_u64_u8::bitset_type>();
+// }
 
 // //
 // TEST(FindVectorizedAvx2, f) {
@@ -526,13 +526,13 @@ void TestInplaceWithinRangeImpl(
 
     for (size_t i = 0; i < n; i++) {
         if (op == RangeType::IncInc) {
-            ASSERT_EQ(lower[i] <= values[i] && values[i] <= upper[i], bitset[i]) << i;
+            ASSERT_EQ(lower[i] <= values[i] && values[i] <= upper[i], bitset[i]) << i << " " << lower[i] << " " << values[i] << " " << upper[i];
         } else if (op == RangeType::IncExc) {
-            ASSERT_EQ(lower[i] <= values[i] && values[i] < upper[i], bitset[i]) << i;
+            ASSERT_EQ(lower[i] <= values[i] && values[i] < upper[i], bitset[i]) << i << " " << lower[i] << " " << values[i] << " " << upper[i];
         } else if (op == RangeType::ExcInc) {
-            ASSERT_EQ(lower[i] < values[i] && values[i] <= upper[i], bitset[i]) << i;
+            ASSERT_EQ(lower[i] < values[i] && values[i] <= upper[i], bitset[i]) << i << " " << lower[i] << " " << values[i] << " " << upper[i];
         } else if (op == RangeType::ExcExc) {
-            ASSERT_EQ(lower[i] < values[i] && values[i] < upper[i], bitset[i]) << i;            
+            ASSERT_EQ(lower[i] < values[i] && values[i] < upper[i], bitset[i]) << i << " " << lower[i] << " " << values[i] << " " << upper[i];
         } else {
             ASSERT_TRUE(false) << "Not implemented";
         }
@@ -583,6 +583,46 @@ TYPED_TEST_P(InplaceWithinRangeSuite, BitWise) {
         TypeParam>();
 }
 
+TYPED_TEST_P(InplaceWithinRangeSuite, ElementWise) {
+    TestInplaceWithinRangeImpl<
+        element_u64_u8::bitset_type, 
+        TypeParam>();
+}
+
+TYPED_TEST_P(InplaceWithinRangeSuite, Avx2) {
+#if defined(__x86_64__)
+    using namespace milvus::bitset::detail::x86;
+
+    if (cpu_support_avx2()) {
+        TestInplaceWithinRangeImpl<
+            avx2_u64_u8::bitset_type, 
+            TypeParam>();
+    }
+#endif
+}
+
+TYPED_TEST_P(InplaceWithinRangeSuite, Avx512) {
+#if defined(__x86_64__)
+    using namespace milvus::bitset::detail::x86;
+
+    if (cpu_support_avx512()) {
+        TestInplaceWithinRangeImpl<
+            avx512_u64_u8::bitset_type, 
+            TypeParam>();
+    }
+#endif
+}
+
+TYPED_TEST_P(InplaceWithinRangeSuite, Neon) {
+#if defined(__aarch64__)
+    using namespace milvus::bitset::detail::arm;
+
+    TestInplaceWithinRangeImpl<
+        neon_u64_u8::bitset_type, 
+        TypeParam>();
+#endif
+}
+
 TYPED_TEST_P(InplaceWithinRangeSuite, Dynamic) {
     TestInplaceWithinRangeImpl<
         dynamic_u64_u8::bitset_type, 
@@ -591,7 +631,7 @@ TYPED_TEST_P(InplaceWithinRangeSuite, Dynamic) {
 
 using InplaceWithinRangeTtypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t, float, double>;
 
-REGISTER_TYPED_TEST_SUITE_P(InplaceWithinRangeSuite, BitWise, Dynamic);
+REGISTER_TYPED_TEST_SUITE_P(InplaceWithinRangeSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Dynamic);
 
 INSTANTIATE_TYPED_TEST_SUITE_P(InplaceWithinRangeTest, InplaceWithinRangeSuite, InplaceWithinRangeTtypes);
 

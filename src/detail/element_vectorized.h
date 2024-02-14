@@ -59,6 +59,34 @@ struct CustomBitsetVectorizedPolicy {
         return const_proxy_type{element, shift};
     }
 
+    static inline void op_flip(
+        data_type* const data, 
+        const size_type start, 
+        const size_type size
+    ) {
+        CustomBitsetPolicy2<ElementT>::op_flip(data, start, size);
+    }
+
+    static inline void op_and(
+        data_type* left, 
+        const data_type* right, 
+        const size_t start_left,
+        const size_t start_right, 
+        const size_t size
+    ) {
+        CustomBitsetPolicy2<ElementT>::op_and(left, right, start_left, start_right, size);
+    }
+
+    static inline void op_or(
+        data_type* left, 
+        const data_type* right, 
+        const size_t start_left,
+        const size_t start_right, 
+        const size_t size
+    ) {
+        CustomBitsetPolicy2<ElementT>::op_or(left, right, start_left, start_right, size);
+    }
+
     static inline void set(
         data_type* const data, 
         const size_type start, 
@@ -73,6 +101,70 @@ struct CustomBitsetVectorizedPolicy {
         const size_type size
     ) {
         CustomBitsetPolicy2<ElementT>::reset(data, start, size);
+    }
+
+    static inline bool all(
+        const data_type* const data, 
+        const size_type start, 
+        const size_type size
+    ) {
+        return CustomBitsetPolicy2<ElementT>::all(data, start, size);
+    }
+
+    static inline bool none(
+        const data_type* const data, 
+        const size_type start, 
+        const size_type size
+    ) {
+        return CustomBitsetPolicy2<ElementT>::none(data, start, size);
+    }
+
+    static void copy(
+        const data_type* const src,
+        const size_type start_src,
+        data_type* const dst,
+        const size_type start_dst,
+        const size_type size
+    ) {
+        CustomBitsetPolicy2<ElementT>::copy(src, start_src, dst, start_dst, size);
+    }
+
+    static inline size_type op_count(
+        const data_type* const data, 
+        const size_type start, 
+        const size_type size
+    ) {
+        return CustomBitsetPolicy2<ElementT>::op_count(data, start, size);
+    }
+
+    static inline bool op_eq(
+        const data_type* left, 
+        const data_type* right, 
+        const size_type start_left,
+        const size_type start_right, 
+        const size_type size
+    ) {
+        CustomBitsetPolicy2<ElementT>::op_eq(left, right, start_left, start_right, size);
+    }
+
+    static inline void op_xor(
+        data_type* left, 
+        const data_type* right, 
+        const size_t start_left,
+        const size_t start_right, 
+        const size_t size
+    ) {
+        CustomBitsetPolicy2<ElementT>::op_xor(left, right, start_left, start_right, size);
+    }
+
+    static inline void op_sub(
+        data_type* left, 
+        const data_type* right, 
+        const size_t start_left,
+        const size_t start_right, 
+        const size_t size
+    ) {
+        CustomBitsetPolicy2<ElementT>::op_sub(left, right, start_left, start_right, size);
     }
 
     static void fill(

@@ -254,14 +254,13 @@ struct CompareValAVX2Impl<int8_t, Op> {
         const int8_t* const __restrict src, 
         const size_t size, 
         const int8_t val, 
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
-        uint32_t* const __restrict res_u32 = reinterpret_cast<uint32_t*>(res);
+        uint32_t* const __restrict res_u32 = reinterpret_cast<uint32_t*>(res_u8);
         const __m256i target = _mm256_set1_epi8(val);
 
         // todo: aligned reads & writes
@@ -307,14 +306,13 @@ struct CompareValAVX2Impl<int16_t, Op> {
         const int16_t* const __restrict src, 
         const size_t size, 
         const int16_t val, 
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
-        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res);
+        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res_u8);
         const __m256i target = _mm256_set1_epi16(val);
 
         // todo: aligned reads & writes
@@ -349,13 +347,12 @@ struct CompareValAVX2Impl<int32_t, Op> {
         const int32_t* const __restrict src, 
         const size_t size, 
         const int32_t val, 
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
         const __m256i target = _mm256_set1_epi32(val);
 
         // todo: aligned reads & writes
@@ -377,13 +374,12 @@ struct CompareValAVX2Impl<int64_t, Op> {
         const int64_t* const __restrict src, 
         const size_t size, 
         const int64_t val, 
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
         const __m256i target = _mm256_set1_epi64x(val);
 
         // todo: aligned reads & writes
@@ -408,13 +404,12 @@ struct CompareValAVX2Impl<float, Op> {
         const float* const __restrict src, 
         const size_t size, 
         const float val, 
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
         constexpr auto pred = ComparePredicate<float, Op>::value;
 
         const __m256 target = _mm256_set1_ps(val);
@@ -439,13 +434,12 @@ struct CompareValAVX2Impl<double, Op> {
         const double* const __restrict src, 
         const size_t size, 
         const double val, 
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
         constexpr auto pred = ComparePredicate<float, Op>::value;
 
         const __m256d target = _mm256_set1_pd(val);
@@ -501,14 +495,13 @@ struct CompareColumnAVX2Impl<int8_t, Op> {
         const int8_t* const __restrict left, 
         const int8_t* const __restrict right, 
         const size_t size,
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
-        uint32_t* const __restrict res_u32 = reinterpret_cast<uint32_t*>(res);
+        uint32_t* const __restrict res_u32 = reinterpret_cast<uint32_t*>(res_u8);
 
         // todo: aligned reads & writes
 
@@ -555,14 +548,13 @@ struct CompareColumnAVX2Impl<int16_t, Op> {
         const int16_t* const __restrict left, 
         const int16_t* const __restrict right, 
         const size_t size,
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
-        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res);
+        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res_u8);
 
         // todo: aligned reads & writes
 
@@ -597,13 +589,10 @@ struct CompareColumnAVX2Impl<int32_t, Op> {
         const int32_t* const __restrict left, 
         const int32_t* const __restrict right, 
         const size_t size,
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
-
-        //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
 
         // todo: aligned reads & writes
 
@@ -625,13 +614,10 @@ struct CompareColumnAVX2Impl<int64_t, Op> {
         const int64_t* const __restrict left, 
         const int64_t* const __restrict right, 
         const size_t size,
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
-
-        //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
 
         // todo: aligned reads & writes
 
@@ -657,13 +643,12 @@ struct CompareColumnAVX2Impl<float, Op> {
         const float* const __restrict left, 
         const float* const __restrict right, 
         const size_t size,
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
         constexpr auto pred = ComparePredicate<float, Op>::value;
 
         // todo: aligned reads & writes
@@ -686,13 +671,12 @@ struct CompareColumnAVX2Impl<double, Op> {
         const double* const __restrict left, 
         const double* const __restrict right, 
         const size_t size,
-        void* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
         constexpr auto pred = ComparePredicate<double, Op>::value;
 
         // todo: aligned reads & writes
@@ -748,14 +732,13 @@ struct WithinRangeAVX2Impl<int8_t, Op> {
         const int8_t* const __restrict upper,
         const int8_t* const __restrict values,
         const size_t size,
-        uint8_t* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
-        uint32_t* const __restrict res_u32 = reinterpret_cast<uint32_t*>(res);
+        uint32_t* const __restrict res_u32 = reinterpret_cast<uint32_t*>(res_u8);
 
         // todo: aligned reads & writes
 
@@ -809,14 +792,13 @@ struct WithinRangeAVX2Impl<int16_t, Op> {
         const int16_t* const __restrict upper,
         const int16_t* const __restrict values,
         const size_t size,
-        uint8_t* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
-        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res);
+        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res_u8);
 
         // todo: aligned reads & writes
 
@@ -858,13 +840,10 @@ struct WithinRangeAVX2Impl<int32_t, Op> {
         const int32_t* const __restrict upper,
         const int32_t* const __restrict values,
         const size_t size,
-        uint8_t* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
-
-        //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
 
         // todo: aligned reads & writes
 
@@ -890,13 +869,10 @@ struct WithinRangeAVX2Impl<int64_t, Op> {
         const int64_t* const __restrict upper,
         const int64_t* const __restrict values,
         const size_t size,
-        uint8_t* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
-
-        //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
 
         // todo: aligned reads & writes
 
@@ -929,13 +905,12 @@ struct WithinRangeAVX2Impl<float, Op> {
         const float* const __restrict upper,
         const float* const __restrict values,
         const size_t size,
-        uint8_t* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
         constexpr auto pred_lower = ComparePredicate<float, Range2Compare<Op>::lower>::value;
         constexpr auto pred_upper = ComparePredicate<float, Range2Compare<Op>::upper>::value;
 
@@ -963,13 +938,12 @@ struct WithinRangeAVX2Impl<double, Op> {
         const double* const __restrict upper,
         const double* const __restrict values,
         const size_t size,
-        uint8_t* const __restrict res
+        uint8_t* const __restrict res_u8
     ) {
         // the restriction of the API
         assert((size % 8) == 0);
 
         //
-        uint8_t* const __restrict res_u8 = reinterpret_cast<uint8_t*>(res);
         constexpr auto pred_lower = ComparePredicate<double, Range2Compare<Op>::lower>::value;
         constexpr auto pred_upper = ComparePredicate<double, Range2Compare<Op>::upper>::value;
 

@@ -64,22 +64,8 @@ template <typename T>
 void
 NotEqualColumnAVX512(const T* const __restrict left, const T* const __restrict right, const size_t size, void* const __restrict res);
 
-//
-template<typename T>
-void
-WithinRangeIncIncAVX512(const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size, void* const __restrict res);
-
-template<typename T>
-void
-WithinRangeIncExcAVX512(const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size, void* const __restrict res);
-
-template<typename T>
-void
-WithinRangeExcIncAVX512(const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size, void* const __restrict res);
-
-template<typename T>
-void
-WithinRangeExcExcAVX512(const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size, void* const __restrict res);
+template<typename T, RangeType Op>
+void WithinRangeAVX512(const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size, uint8_t* const __restrict res);
 
 //
 struct VectorizedAvx512 {
@@ -143,22 +129,8 @@ struct VectorizedAvx512 {
         const T* const __restrict values,
         const size_t size
     ) {
-        if constexpr(Op == RangeType::IncInc) {
-            WithinRangeIncIncAVX512(lower, upper, values, size, data);
-            return true;
-        } else if constexpr(Op == RangeType::IncExc) {
-            WithinRangeIncExcAVX512(lower, upper, values, size, data);
-            return true;
-        } else if constexpr(Op == RangeType::ExcInc) {
-            WithinRangeExcIncAVX512(lower, upper, values, size, data);
-            return true;
-        } else if constexpr(Op == RangeType::ExcExc) {
-            WithinRangeExcExcAVX512(lower, upper, values, size, data);
-            return true;
-        } else {
-            // unimplemented
-            return false;
-        }
+        WithinRangeAVX512<T, Op>(lower, upper, values, size, data);
+        return true;
     }
 
 private:

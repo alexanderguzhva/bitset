@@ -768,9 +768,102 @@ ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX2, double)
 
 //
 template <typename T, RangeType Op>
-struct WithinRangeAVX2Impl {
-    
+struct WithinRangeAVX2Impl {};
+
+template<RangeType Op>
+struct WithinRangeAVX2Impl<int8_t, Op> {
+    static inline void within_range(
+        const int8_t* const __restrict lower,
+        const int8_t* const __restrict upper,
+        const int8_t* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict output
+    ) {
+    }
 };
+
+template<RangeType Op>
+struct WithinRangeAVX2Impl<int16_t, Op> {
+    static inline void within_range(
+        const int16_t* const __restrict lower,
+        const int16_t* const __restrict upper,
+        const int16_t* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict output
+    ) {
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeAVX2Impl<int32_t, Op> {
+    static inline void within_range(
+        const int32_t* const __restrict lower,
+        const int32_t* const __restrict upper,
+        const int32_t* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict output
+    ) {
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeAVX2Impl<int64_t, Op> {
+    static inline void within_range(
+        const int64_t* const __restrict lower,
+        const int64_t* const __restrict upper,
+        const int64_t* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict output
+    ) {
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeAVX2Impl<float, Op> {
+    static inline void within_range(
+        const float* const __restrict lower,
+        const float* const __restrict upper,
+        const float* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict output
+    ) {
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeAVX2Impl<double, Op> {
+    static inline void within_range(
+        const double* const __restrict lower,
+        const double* const __restrict upper,
+        const double* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict output
+    ) {
+    }
+};
+
+template<typename T, RangeType Op>
+void WithinRangeAVX2(const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size, uint8_t* const __restrict res) {
+    WithinRangeAVX2Impl<T, Op>::within_range(lower, upper, values, size, res);
+}
+
+#define INSTANTIATE_WITHIN_RANGE_AVX2(TTYPE,OP) \
+    template void WithinRangeAVX2<TTYPE, RangeType::OP>( \
+        const TTYPE* const __restrict lower, \
+        const TTYPE* const __restrict upper, \
+        const TTYPE* const __restrict values, \
+        const size_t size, \
+        uint8_t* const __restrict res \
+    );
+
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX2, int8_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX2, int16_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX2, int32_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX2, int64_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX2, float)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX2, double)
+
+#undef INSTANTIATE_WITHIN_RANGE_AVX2
 
 ///////////////////////////////////////////////////////////////////////////
 

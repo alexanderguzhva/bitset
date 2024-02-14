@@ -21,6 +21,13 @@ namespace x86 {
     FUNC(Less,__VA_ARGS__); \
     FUNC(NotEqual,__VA_ARGS__);
 
+// a facility to run through all possible range operations
+#define ALL_RANGE_OPS(FUNC,...) \
+    FUNC(__VA_ARGS__,IncInc); \
+    FUNC(__VA_ARGS__,IncExc); \
+    FUNC(__VA_ARGS__,ExcInc); \
+    FUNC(__VA_ARGS__,ExcExc);
+
 // count is expected to be in range [0, 64)
 inline uint64_t get_mask(const size_t count) {
     return (uint64_t(1) << count) - uint64_t(1);
@@ -663,6 +670,107 @@ ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX512, float)
 ALL_COMPARE_OPS(INSTANTIATE_COLUMN_AVX512, double)
 
 #undef INSTANTIATE_COLUMN_AVX512
+
+///////////////////////////////////////////////////////////////////////////
+
+//
+template <typename T, RangeType Op>
+struct WithinRangeAVX512Impl {};
+
+template<RangeType Op>
+struct WithinRangeAVX512Impl<int8_t, Op> {
+    static inline void within_range(
+        const int8_t* const __restrict lower,
+        const int8_t* const __restrict upper,
+        const int8_t* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict output
+    ) {
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeAVX512Impl<int16_t, Op> {
+    static inline void within_range(
+        const int16_t* const __restrict lower,
+        const int16_t* const __restrict upper,
+        const int16_t* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict output
+    ) {
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeAVX512Impl<int32_t, Op> {
+    static inline void within_range(
+        const int32_t* const __restrict lower,
+        const int32_t* const __restrict upper,
+        const int32_t* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict output
+    ) {
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeAVX512Impl<int64_t, Op> {
+    static inline void within_range(
+        const int64_t* const __restrict lower,
+        const int64_t* const __restrict upper,
+        const int64_t* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict output
+    ) {
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeAVX512Impl<float, Op> {
+    static inline void within_range(
+        const float* const __restrict lower,
+        const float* const __restrict upper,
+        const float* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict output
+    ) {
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeAVX512Impl<double, Op> {
+    static inline void within_range(
+        const double* const __restrict lower,
+        const double* const __restrict upper,
+        const double* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict output
+    ) {
+    }
+};
+
+template<typename T, RangeType Op>
+void WithinRangeAVX512(const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size, uint8_t* const __restrict res) {
+    WithinRangeAVX512Impl<T, Op>::within_range(lower, upper, values, size, res);
+}
+
+#define INSTANTIATE_WITHIN_RANGE_AVX512(TTYPE,OP) \
+    template void WithinRangeAVX512<TTYPE, RangeType::OP>( \
+        const TTYPE* const __restrict lower, \
+        const TTYPE* const __restrict upper, \
+        const TTYPE* const __restrict values, \
+        const size_t size, \
+        uint8_t* const __restrict res \
+    );
+
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX512, int8_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX512, int16_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX512, int32_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX512, int64_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX512, float)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX512, double)
+
+#undef INSTANTIATE_WITHIN_RANGE_AVX512
 
 ///////////////////////////////////////////////////////////////////////////
 

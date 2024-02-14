@@ -438,7 +438,7 @@ struct CompareColumnAVX512Impl<int32_t, Op> {
         assert((size % 8) == 0);
         
         //
-        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res_u16); 
+        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res_u8); 
         constexpr auto pred = ComparePredicate<int32_t, Op>::value;
 
         // todo: aligned reads & writes
@@ -707,7 +707,7 @@ struct WithinRangeAVX512Impl<int32_t, Op> {
         assert((size % 8) == 0);
         
         //
-        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res_u16); 
+        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res_u8); 
         constexpr auto pred_lower = ComparePredicate<int32_t, Range2Compare<Op>::lower>::value;
         constexpr auto pred_upper = ComparePredicate<int32_t, Range2Compare<Op>::upper>::value;
 

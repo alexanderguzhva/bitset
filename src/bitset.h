@@ -461,7 +461,7 @@ public:
     void inplace_compare_val(
         const T* const __restrict t,
         const size_type size,
-        const T value,
+        const T& value,
         CompareType op
     ) {
         if (op == CompareType::EQ) {
@@ -491,7 +491,7 @@ public:
     void inplace_compare_val(
         const T* const __restrict t,
         const size_type size,
-        const T value
+        const T& value
     ) {
         range_checker::le(size, this->size());
 
@@ -548,8 +548,8 @@ public:
     //
     template<typename T>
     void inplace_within_range_val(
-        const T lower,
-        const T upper,
+        const T& lower,
+        const T& upper,
         const T* const __restrict values,
         const size_type size,
         const RangeType op
@@ -569,8 +569,8 @@ public:
 
     template<typename T, RangeType Op>
     void inplace_within_range_val(
-        const T lower,
-        const T upper,
+        const T& lower,
+        const T& upper,
         const T* const __restrict values,
         const size_type size
     ) {

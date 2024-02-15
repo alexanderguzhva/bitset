@@ -31,7 +31,7 @@ struct CompareOperator {};
 template<>
 struct CompareOperator<CompareType::EQ> {
     template<typename T, typename U>
-    static inline bool compare(const T t, const U u) {
+    static inline bool compare(const T& t, const U& u) {
         return (t == u);
     }
 };
@@ -39,7 +39,7 @@ struct CompareOperator<CompareType::EQ> {
 template<>
 struct CompareOperator<CompareType::GE> {
     template<typename T, typename U>
-    static inline bool compare(const T t, const U u) {
+    static inline bool compare(const T& t, const U& u) {
         return (t >= u);
     }
 };
@@ -47,7 +47,7 @@ struct CompareOperator<CompareType::GE> {
 template<>
 struct CompareOperator<CompareType::GT> {
     template<typename T, typename U>
-    static inline bool compare(const T t, const U u) {
+    static inline bool compare(const T& t, const U& u) {
         return (t > u);
     }
 };
@@ -55,7 +55,7 @@ struct CompareOperator<CompareType::GT> {
 template<>
 struct CompareOperator<CompareType::LE> {
     template<typename T, typename U>
-    static inline bool compare(const T t, const U u) {
+    static inline bool compare(const T& t, const U& u) {
         return (t <= u);
     }
 };
@@ -63,7 +63,7 @@ struct CompareOperator<CompareType::LE> {
 template<>
 struct CompareOperator<CompareType::LT> {
     template<typename T, typename U>
-    static inline bool compare(const T t, const U u) {
+    static inline bool compare(const T& t, const U& u) {
         return (t < u);
     }
 };
@@ -71,7 +71,7 @@ struct CompareOperator<CompareType::LT> {
 template<>
 struct CompareOperator<CompareType::NEQ> {
     template<typename T, typename U>
-    static inline bool compare(const T t, const U u) {
+    static inline bool compare(const T& t, const U& u) {
         return (t != u);
     }
 };
@@ -94,7 +94,7 @@ struct RangeOperator {};
 template<>
 struct RangeOperator<RangeType::IncInc> {
     template<typename T>
-    static inline bool within_range(const T lower, const T upper, const T value) {
+    static inline bool within_range(const T& lower, const T& upper, const T& value) {
         return (lower <= value && value <= upper);
     }
 };
@@ -102,7 +102,7 @@ struct RangeOperator<RangeType::IncInc> {
 template<>
 struct RangeOperator<RangeType::IncExc> {
     template<typename T>
-    static inline bool within_range(const T lower, const T upper, const T value) {
+    static inline bool within_range(const T& lower, const T& upper, const T& value) {
         return (lower <= value && value < upper);
     }
 };
@@ -110,7 +110,7 @@ struct RangeOperator<RangeType::IncExc> {
 template<>
 struct RangeOperator<RangeType::ExcInc> {
     template<typename T>
-    static inline bool within_range(const T lower, const T upper, const T value) {
+    static inline bool within_range(const T& lower, const T& upper, const T& value) {
         return (lower < value && value <= upper);
     }
 };
@@ -118,7 +118,7 @@ struct RangeOperator<RangeType::ExcInc> {
 template<>
 struct RangeOperator<RangeType::ExcExc> {
     template<typename T>
-    static inline bool within_range(const T lower, const T upper, const T value) {
+    static inline bool within_range(const T& lower, const T& upper, const T& value) {
         return (lower < value && value < upper);
     }
 };

@@ -763,7 +763,7 @@ struct CustomBitsetPolicy2 {
         const size_type start,
         const T* const __restrict t,
         const size_type size,
-        const T value
+        const T& value
     ) {
         for (size_type i = 0; i < size; i++) {
             get_proxy(data, start + i) = CompareOperator<Op>::compare(t[i], value);
@@ -790,8 +790,8 @@ struct CustomBitsetPolicy2 {
     static inline void op_within_range_val(
         data_type* const __restrict data, 
         const size_type start,
-        const T lower,
-        const T upper,
+        const T& lower,
+        const T& upper,
         const T* const __restrict values,
         const size_type size
     ) {

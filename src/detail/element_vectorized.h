@@ -276,7 +276,7 @@ struct CustomBitsetVectorizedPolicy {
         const size_type start,
         const T* const __restrict t,
         const size_type size,
-        const T value
+        const T& value
     ) {
         if (size == 0) {
             return;
@@ -411,7 +411,7 @@ struct CustomBitsetVectorizedPolicy {
                 // vectorized implementation is not available, invoke the default one
                 CustomBitsetPolicy2<ElementT>::template op_within_range_column<T, Op>(
                     data, 
-                    start,
+                    starting_bit_idx,
                     lower + ptr_offset,
                     upper + ptr_offset,
                     values + ptr_offset,
@@ -444,8 +444,8 @@ struct CustomBitsetVectorizedPolicy {
     static inline void op_within_range_val(
         data_type* const __restrict data, 
         const size_type start,
-        const T lower,
-        const T upper,
+        const T& lower,
+        const T& upper,
         const T* const __restrict values,
         const size_type size
     ) {
@@ -498,7 +498,7 @@ struct CustomBitsetVectorizedPolicy {
                 // vectorized implementation is not available, invoke the default one
                 CustomBitsetPolicy2<ElementT>::template op_within_range_val<T, Op>(
                     data, 
-                    start,
+                    starting_bit_idx,
                     lower,
                     upper,
                     values + ptr_offset,

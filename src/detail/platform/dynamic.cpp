@@ -173,25 +173,25 @@ ALL_COMPARE_OPS(INSTANTIATE_TEMPLATE_OP_COMPARE_VAL, double)
 
 
 /////////////////////////////////////////////////////////////////////////////
-// op_within_range
+// op_within_range column
 template<typename T, RangeType Op>
-using OpWithinRangePtr = bool(*)(uint8_t* const __restrict output, const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size);
+using OpWithinRangeColumnPtr = bool(*)(uint8_t* const __restrict output, const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size);
 
-#define DECLARE_OP_WITHIN_RANGE(TTYPE, OP) \
-    OpWithinRangePtr<TTYPE, RangeType::OP> op_within_range_##TTYPE##_##OP = VectorizedRef::template op_within_range<TTYPE, RangeType::OP>;
+#define DECLARE_OP_WITHIN_RANGE_COLUMN(TTYPE, OP) \
+    OpWithinRangeColumnPtr<TTYPE, RangeType::OP> op_within_range_column_##TTYPE##_##OP = VectorizedRef::template op_within_range_column<TTYPE, RangeType::OP>;
 
-ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE, int8_t)
-ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE, int16_t)
-ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE, int32_t)
-ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE, int64_t)
-ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE, float)
-ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE, double)
+ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE_COLUMN, int8_t)
+ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE_COLUMN, int16_t)
+ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE_COLUMN, int32_t)
+ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE_COLUMN, int64_t)
+ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE_COLUMN, float)
+ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE_COLUMN, double)
 
-#undef DECLARE_OP_WITHIN_RANGE
+#undef DECLARE_OP_WITHIN_RANGE_COLUMN
 
 // 
 template<typename T, RangeType Op>
-bool VectorizedDynamic::op_within_range(
+bool VectorizedDynamic::op_within_range_column(
     uint8_t* const __restrict output, 
     const T* const __restrict lower,
     const T* const __restrict upper,
@@ -199,28 +199,28 @@ bool VectorizedDynamic::op_within_range(
     const size_t size
 ) {
 // define the comparator
-#define DISPATCH_OP_WITHIN_RANGE(TTYPE, OP) \
+#define DISPATCH_OP_WITHIN_RANGE_COLUMN(TTYPE, OP) \
     if constexpr(std::is_same_v<T, TTYPE> && Op == RangeType::OP) { \
-        return op_within_range_##TTYPE##_##OP(output, lower, upper, values, size); \
+        return op_within_range_column_##TTYPE##_##OP(output, lower, upper, values, size); \
     }
 
     // find the appropriate function pointer
-    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE, int8_t)
-    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE, int16_t)
-    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE, int32_t)
-    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE, int64_t)
-    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE, float)
-    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE, double)
+    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_COLUMN, int8_t)
+    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_COLUMN, int16_t)
+    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_COLUMN, int32_t)
+    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_COLUMN, int64_t)
+    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_COLUMN, float)
+    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_COLUMN, double)
 
-#undef DISPATCH_OP_WITHIN_RANGE
+#undef DISPATCH_OP_WITHIN_RANGE_COLUMN
 
     // no vectorized implementation is available
     return false;
 }
 
 // Instantiate template methods.
-#define INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE(TTYPE, OP) \
-    template bool VectorizedDynamic::op_within_range<TTYPE, RangeType::OP>( \
+#define INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE_COLUMN(TTYPE, OP) \
+    template bool VectorizedDynamic::op_within_range_column<TTYPE, RangeType::OP>( \
         uint8_t* const __restrict output, \
         const TTYPE* const __restrict lower, \
         const TTYPE* const __restrict upper, \
@@ -228,15 +228,80 @@ bool VectorizedDynamic::op_within_range(
         const size_t size \
     );
 
-ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE, int8_t)
-ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE, int16_t)
-ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE, int32_t)
-ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE, int64_t)
-ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE, float)
-ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE, double)
+ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE_COLUMN, int8_t)
+ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE_COLUMN, int16_t)
+ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE_COLUMN, int32_t)
+ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE_COLUMN, int64_t)
+ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE_COLUMN, float)
+ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE_COLUMN, double)
 
-#undef INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE
+#undef INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE_COLUMN
 
+
+/////////////////////////////////////////////////////////////////////////////
+// op_within_range val
+template<typename T, RangeType Op>
+using OpWithinRangeValPtr = bool(*)(uint8_t* const __restrict output, const T lower, const T upper, const T* const __restrict values, const size_t size);
+
+#define DECLARE_OP_WITHIN_RANGE_VAL(TTYPE, OP) \
+    OpWithinRangeValPtr<TTYPE, RangeType::OP> op_within_range_val_##TTYPE##_##OP = VectorizedRef::template op_within_range_val<TTYPE, RangeType::OP>;
+
+ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE_VAL, int8_t)
+ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE_VAL, int16_t)
+ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE_VAL, int32_t)
+ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE_VAL, int64_t)
+ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE_VAL, float)
+ALL_RANGE_OPS(DECLARE_OP_WITHIN_RANGE_VAL, double)
+
+#undef DECLARE_OP_WITHIN_RANGE_VAL
+
+// 
+template<typename T, RangeType Op>
+bool VectorizedDynamic::op_within_range_val(
+    uint8_t* const __restrict output, 
+    const T lower,
+    const T upper,
+    const T* const __restrict values,
+    const size_t size
+) {
+// define the comparator
+#define DISPATCH_OP_WITHIN_RANGE_VAL(TTYPE, OP) \
+    if constexpr(std::is_same_v<T, TTYPE> && Op == RangeType::OP) { \
+        return op_within_range_val_##TTYPE##_##OP(output, lower, upper, values, size); \
+    }
+
+    // find the appropriate function pointer
+    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_VAL, int8_t)
+    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_VAL, int16_t)
+    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_VAL, int32_t)
+    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_VAL, int64_t)
+    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_VAL, float)
+    ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_VAL, double)
+
+#undef DISPATCH_OP_WITHIN_RANGE_VAL
+
+    // no vectorized implementation is available
+    return false;
+}
+
+// Instantiate template methods.
+#define INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE_VAL(TTYPE, OP) \
+    template bool VectorizedDynamic::op_within_range_val<TTYPE, RangeType::OP>( \
+        uint8_t* const __restrict output, \
+        const TTYPE lower, \
+        const TTYPE upper, \
+        const TTYPE* const __restrict values, \
+        const size_t size \
+    );
+
+ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE_VAL, int8_t)
+ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE_VAL, int16_t)
+ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE_VAL, int32_t)
+ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE_VAL, int64_t)
+ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE_VAL, float)
+ALL_RANGE_OPS(INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE_VAL, double)
+
+#undef INSTANTIATE_TEMPLATE_OP_WITHIN_RANGE_VAL
 
 }
 }
@@ -254,8 +319,10 @@ static void init_dynamic_hook() {
     op_compare_column_##TTYPE##_##UTYPE##_##OP = VectorizedAvx512::template op_compare_column<TTYPE, UTYPE, CompareType::OP>;
 #define SET_OP_COMPARE_VAL_AVX512(TTYPE, OP) \
     op_compare_val_##TTYPE##_##OP = VectorizedAvx512::template op_compare_val<TTYPE, CompareType::OP>;
-#define SET_OP_WITHIN_RANGE_AVX512(TTYPE, OP) \
-    op_within_range_##TTYPE##_##OP = VectorizedAvx512::template op_within_range<TTYPE, RangeType::OP>;
+#define SET_OP_WITHIN_RANGE_COLUMN_AVX512(TTYPE, OP) \
+    op_within_range_column_##TTYPE##_##OP = VectorizedAvx512::template op_within_range_column<TTYPE, RangeType::OP>;
+#define SET_OP_WITHIN_RANGE_VAL_AVX512(TTYPE, OP) \
+    op_within_range_val_##TTYPE##_##OP = VectorizedAvx512::template op_within_range_val<TTYPE, RangeType::OP>;
 
         // assign AVX512-related pointers
         ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_AVX512, int8_t, int8_t)
@@ -272,16 +339,24 @@ static void init_dynamic_hook() {
         ALL_COMPARE_OPS(SET_OP_COMPARE_VAL_AVX512, float)
         ALL_COMPARE_OPS(SET_OP_COMPARE_VAL_AVX512, double)
 
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_AVX512, int8_t)
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_AVX512, int16_t)
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_AVX512, int32_t)
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_AVX512, int64_t)
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_AVX512, float)
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_AVX512, double)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_AVX512, int8_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_AVX512, int16_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_AVX512, int32_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_AVX512, int64_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_AVX512, float)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_AVX512, double)
+
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_AVX512, int8_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_AVX512, int16_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_AVX512, int32_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_AVX512, int64_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_AVX512, float)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_AVX512, double)
 
 #undef SET_OP_COMPARE_COLUMN_AVX512
 #undef SET_OP_COMPARE_VAL_AVX512
-#undef SET_OP_WITHIN_RANGE_AVX512
+#undef SET_OP_WITHIN_RANGE_COLUMN_AVX512
+#undef SET_OP_WITHIN_RANGE_VAL_AVX512
 
         return;
     }
@@ -292,8 +367,10 @@ static void init_dynamic_hook() {
     op_compare_column_##TTYPE##_##UTYPE##_##OP = VectorizedAvx2::template op_compare_column<TTYPE, UTYPE, CompareType::OP>;
 #define SET_OP_COMPARE_VAL_AVX2(TTYPE, OP) \
     op_compare_val_##TTYPE##_##OP = VectorizedAvx2::template op_compare_val<TTYPE, CompareType::OP>;
-#define SET_OP_WITHIN_RANGE_AVX2(TTYPE, OP) \
-    op_within_range_##TTYPE##_##OP = VectorizedAvx2::template op_within_range<TTYPE, RangeType::OP>;
+#define SET_OP_WITHIN_RANGE_COLUMN_AVX2(TTYPE, OP) \
+    op_within_range_column_##TTYPE##_##OP = VectorizedAvx2::template op_within_range_column<TTYPE, RangeType::OP>;
+#define SET_OP_WITHIN_RANGE_VAL_AVX2(TTYPE, OP) \
+    op_within_range_val_##TTYPE##_##OP = VectorizedAvx2::template op_within_range_val<TTYPE, RangeType::OP>;
 
         // assign AVX2-related pointers
         ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_AVX2, int8_t, int8_t)
@@ -310,16 +387,24 @@ static void init_dynamic_hook() {
         ALL_COMPARE_OPS(SET_OP_COMPARE_VAL_AVX2, float)
         ALL_COMPARE_OPS(SET_OP_COMPARE_VAL_AVX2, double)
 
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_AVX2, int8_t)
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_AVX2, int16_t)
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_AVX2, int32_t)
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_AVX2, int64_t)
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_AVX2, float)
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_AVX2, double)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_AVX2, int8_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_AVX2, int16_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_AVX2, int32_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_AVX2, int64_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_AVX2, float)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_AVX2, double)
+
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_AVX2, int8_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_AVX2, int16_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_AVX2, int32_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_AVX2, int64_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_AVX2, float)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_AVX2, double)
 
 #undef SET_OP_COMPARE_COLUMN_AVX2
 #undef SET_OP_COMPARE_VAL_AVX2
-#undef SET_OP_WITHIN_RANGE_AVX2
+#undef SET_OP_WITHIN_RANGE_COLUMN_AVX2
+#undef SET_OP_WITHIN_RANGE_VAL_AVX2
 
         return;
     }
@@ -332,8 +417,10 @@ static void init_dynamic_hook() {
     op_compare_column_##TTYPE##_##UTYPE##_##OP = VectorizedNeon::template op_compare_column<TTYPE, UTYPE, CompareType::OP>;
 #define SET_OP_COMPARE_VAL_NEON(TTYPE, OP) \
     op_compare_val_##TTYPE##_##OP = VectorizedNeon::template op_compare_val<TTYPE, CompareType::OP>;
-#define SET_OP_WITHIN_RANGE_NEON(TTYPE, OP) \
-    op_within_range_##TTYPE##_##OP = VectorizedNeon::template op_within_range<TTYPE, RangeType::OP>;
+#define SET_OP_WITHIN_RANGE_COLUMN_NEON(TTYPE, OP) \
+    op_within_range_column_##TTYPE##_##OP = VectorizedNeon::template op_within_range_column<TTYPE, RangeType::OP>;
+#define SET_OP_WITHIN_RANGE_VAL_NEON(TTYPE, OP) \
+    op_within_range_val_##TTYPE##_##OP = VectorizedNeon::template op_within_range_val<TTYPE, RangeType::OP>;
 
         // assign AVX2-related pointers
         ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_NEON, int8_t, int8_t)
@@ -350,16 +437,24 @@ static void init_dynamic_hook() {
         ALL_COMPARE_OPS(SET_OP_COMPARE_VAL_NEON, float)
         ALL_COMPARE_OPS(SET_OP_COMPARE_VAL_NEON, double)
 
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_NEON, int8_t)
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_NEON, int16_t)
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_NEON, int32_t)
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_NEON, int64_t)
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_NEON, float)
-        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_NEON, double)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_NEON, int8_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_NEON, int16_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_NEON, int32_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_NEON, int64_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_NEON, float)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_NEON, double)
+
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_NEON, int8_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_NEON, int16_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_NEON, int32_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_NEON, int64_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_NEON, float)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_NEON, double)
 
 #undef SET_OP_COMPARE_COLUMN_NEON
 #undef SET_OP_COMPARE_VAL_NEON
-#undef SET_OP_WITHIN_RANGE_NEON
+#undef SET_OP_WITHIN_RANGE_COLUMN_NEON
+#undef SET_OP_WITHIN_RANGE_VAL_NEON
 
     }
 #endif

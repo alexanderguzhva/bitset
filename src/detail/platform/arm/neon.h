@@ -36,9 +36,19 @@ void CompareColumnNeon(
 
 //
 template<typename T, RangeType Op>
-void WithinRangeNeon(
+void WithinRangeColumnNeon(
     const T* const __restrict lower, 
     const T* const __restrict upper, 
+    const T* const __restrict values, 
+    const size_t size, 
+    uint8_t* const __restrict res
+);
+
+//
+template<typename T, RangeType Op>
+void WithinRangeValNeon(
+    const T lower, 
+    const T upper, 
     const T* const __restrict values, 
     const size_t size, 
     uint8_t* const __restrict res
@@ -79,17 +89,29 @@ struct VectorizedNeon {
 
     // API requirement: size % 8 == 0
     template<typename T, RangeType Op>
-    static bool op_within_range(
+    static bool op_within_range_column(
         uint8_t* const __restrict data, 
         const T* const __restrict lower,
         const T* const __restrict upper,
         const T* const __restrict values,
         const size_t size
     ) {
-        WithinRangeNeon<T, Op>(lower, upper, values, size, data);
+        WithinRangeColumnNeon<T, Op>(lower, upper, values, size, data);
         return true;
     }
 
+    // API requirement: size % 8 == 0
+    template<typename T, RangeType Op>
+    static bool op_within_range_val(
+        uint8_t* const __restrict data, 
+        const T lower,
+        const T upper,
+        const T* const __restrict values,
+        const size_t size
+    ) {
+        WithinRangeValNeon<T, Op>(lower, upper, values, size, data);
+        return true;
+    }
 };
 
 }

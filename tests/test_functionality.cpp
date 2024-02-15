@@ -490,17 +490,16 @@ REGISTER_TYPED_TEST_SUITE_P(InplaceCompareValSuite, BitWise, ElementWise, Avx2, 
 
 INSTANTIATE_TYPED_TEST_SUITE_P(InplaceCompareValTest, InplaceCompareValSuite, InplaceCompareValTtypes);
 
-//////////////////////////////////////////////////////////////////////////////////////////
 
+//////////////////////////////////////////////////////////////////////////////////////////
 
 //
 template<typename BitsetT, typename T>
-void TestInplaceWithinRangeImpl(
+void TestInplaceWithinRangeColumnImpl(
     BitsetT& bitset, RangeType op
 ) {
     const size_t n = bitset.size();
     constexpr size_t max_v = 3;
-    constexpr T value = 1;
 
     std::vector<T> range(n, 0);
     std::vector<T> values(n, 0);
@@ -518,7 +517,7 @@ void TestInplaceWithinRangeImpl(
     }
 
     StopWatch sw;
-    bitset.inplace_within_range(lower.data(), upper.data(), values.data(), n, op);
+    bitset.inplace_within_range_column(lower.data(), upper.data(), values.data(), n, op);
     
     if (print_timing) {
         printf("elapsed %f\n", sw.elapsed());
@@ -540,7 +539,7 @@ void TestInplaceWithinRangeImpl(
 }
 
 template<typename BitsetT, typename T>
-void TestInplaceWithinRangeImpl() {
+void TestInplaceWithinRangeColumnImpl() {
     for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
         for (const auto op : {RangeType::IncInc, RangeType::IncExc, RangeType::ExcInc, RangeType::ExcExc}) {
             BitsetT bitset(n);
@@ -550,7 +549,7 @@ void TestInplaceWithinRangeImpl() {
                 printf("Testing bitset, n=%zd, op=%zd\n", n, (size_t)op);
             }
             
-           TestInplaceWithinRangeImpl<BitsetT, T>(bitset, op);
+           TestInplaceWithinRangeColumnImpl<BitsetT, T>(bitset, op);
 
             for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
                 if (offset >= n) {
@@ -564,7 +563,7 @@ void TestInplaceWithinRangeImpl() {
                     printf("Testing bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
                 }
                 
-                TestInplaceWithinRangeImpl<decltype(view), T>(view, op);
+                TestInplaceWithinRangeColumnImpl<decltype(view), T>(view, op);
             }
         }
     }
@@ -573,65 +572,202 @@ void TestInplaceWithinRangeImpl() {
 
 //
 template<typename T>
-class InplaceWithinRangeSuite : public ::testing::Test {};
+class InplaceWithinRangeColumnSuite : public ::testing::Test {};
 
-TYPED_TEST_SUITE_P(InplaceWithinRangeSuite);
+TYPED_TEST_SUITE_P(InplaceWithinRangeColumnSuite);
 
-TYPED_TEST_P(InplaceWithinRangeSuite, BitWise) {
-    TestInplaceWithinRangeImpl<
+TYPED_TEST_P(InplaceWithinRangeColumnSuite, BitWise) {
+    TestInplaceWithinRangeColumnImpl<
         ref_u64_u8::bitset_type, 
         TypeParam>();
 }
 
-TYPED_TEST_P(InplaceWithinRangeSuite, ElementWise) {
-    TestInplaceWithinRangeImpl<
+TYPED_TEST_P(InplaceWithinRangeColumnSuite, ElementWise) {
+    TestInplaceWithinRangeColumnImpl<
         element_u64_u8::bitset_type, 
         TypeParam>();
 }
 
-TYPED_TEST_P(InplaceWithinRangeSuite, Avx2) {
+TYPED_TEST_P(InplaceWithinRangeColumnSuite, Avx2) {
 #if defined(__x86_64__)
     using namespace milvus::bitset::detail::x86;
 
     if (cpu_support_avx2()) {
-        TestInplaceWithinRangeImpl<
+        TestInplaceWithinRangeColumnImpl<
             avx2_u64_u8::bitset_type, 
             TypeParam>();
     }
 #endif
 }
 
-TYPED_TEST_P(InplaceWithinRangeSuite, Avx512) {
+TYPED_TEST_P(InplaceWithinRangeColumnSuite, Avx512) {
 #if defined(__x86_64__)
     using namespace milvus::bitset::detail::x86;
 
     if (cpu_support_avx512()) {
-        TestInplaceWithinRangeImpl<
+        TestInplaceWithinRangeColumnImpl<
             avx512_u64_u8::bitset_type, 
             TypeParam>();
     }
 #endif
 }
 
-TYPED_TEST_P(InplaceWithinRangeSuite, Neon) {
+TYPED_TEST_P(InplaceWithinRangeColumnSuite, Neon) {
 #if defined(__aarch64__)
     using namespace milvus::bitset::detail::arm;
 
-    TestInplaceWithinRangeImpl<
+    TestInplaceWithinRangeColumnImpl<
         neon_u64_u8::bitset_type, 
         TypeParam>();
 #endif
 }
 
-TYPED_TEST_P(InplaceWithinRangeSuite, Dynamic) {
-    TestInplaceWithinRangeImpl<
+TYPED_TEST_P(InplaceWithinRangeColumnSuite, Dynamic) {
+    TestInplaceWithinRangeColumnImpl<
         dynamic_u64_u8::bitset_type, 
         TypeParam>();
 }
 
-using InplaceWithinRangeTtypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t, float, double>;
+using InplaceWithinRangeColumnTtypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t, float, double>;
 
-REGISTER_TYPED_TEST_SUITE_P(InplaceWithinRangeSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Dynamic);
+REGISTER_TYPED_TEST_SUITE_P(InplaceWithinRangeColumnSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Dynamic);
 
-INSTANTIATE_TYPED_TEST_SUITE_P(InplaceWithinRangeTest, InplaceWithinRangeSuite, InplaceWithinRangeTtypes);
+INSTANTIATE_TYPED_TEST_SUITE_P(InplaceWithinRangeColumnTest, InplaceWithinRangeColumnSuite, InplaceWithinRangeColumnTtypes);
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
+//
+template<typename BitsetT, typename T>
+void TestInplaceWithinRangeValImpl(
+    BitsetT& bitset, RangeType op
+) {
+    const size_t n = bitset.size();
+    constexpr size_t max_v = 10;
+    constexpr T lower_v = 3;
+    constexpr T upper_v = 7;
+
+    std::vector<T> values(n, 0);
+
+    std::default_random_engine rng(123);
+    FillRandom(values, rng, max_v);
+
+
+    StopWatch sw;
+    bitset.inplace_within_range_val(lower_v, upper_v, values.data(), n, op);
+    
+    if (print_timing) {
+        printf("elapsed %f\n", sw.elapsed());
+    }
+
+    for (size_t i = 0; i < n; i++) {
+        if (op == RangeType::IncInc) {
+            ASSERT_EQ(lower_v <= values[i] && values[i] <= upper_v, bitset[i]) << i << " " << lower_v << " " << values[i] << " " << upper_v;
+        } else if (op == RangeType::IncExc) {
+            ASSERT_EQ(lower_v <= values[i] && values[i] < upper_v, bitset[i]) << i << " " << lower_v << " " << values[i] << " " << upper_v;
+        } else if (op == RangeType::ExcInc) {
+            ASSERT_EQ(lower_v < values[i] && values[i] <= upper_v, bitset[i]) << i << " " << lower_v << " " << values[i] << " " << upper_v;
+        } else if (op == RangeType::ExcExc) {
+            ASSERT_EQ(lower_v < values[i] && values[i] < upper_v, bitset[i]) << i << " " << lower_v << " " << values[i] << " " << upper_v;
+        } else {
+            ASSERT_TRUE(false) << "Not implemented";
+        }
+    }
+}
+
+template<typename BitsetT, typename T>
+void TestInplaceWithinRangeValImpl() {
+    for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
+        for (const auto op : {RangeType::IncInc, RangeType::IncExc, RangeType::ExcInc, RangeType::ExcExc}) {
+            BitsetT bitset(n);
+            bitset.reset();
+
+            if (print_log) {
+                printf("Testing bitset, n=%zd, op=%zd\n", n, (size_t)op);
+            }
+            
+           TestInplaceWithinRangeValImpl<BitsetT, T>(bitset, op);
+
+            for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
+                if (offset >= n) {
+                    continue;
+                }
+
+                bitset.reset();
+                auto view = bitset.view(offset);
+
+                if (print_log) {
+                    printf("Testing bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
+                }
+                
+                TestInplaceWithinRangeValImpl<decltype(view), T>(view, op);
+            }
+        }
+    }
+}
+
+
+//
+template<typename T>
+class InplaceWithinRangeValSuite : public ::testing::Test {};
+
+TYPED_TEST_SUITE_P(InplaceWithinRangeValSuite);
+
+TYPED_TEST_P(InplaceWithinRangeValSuite, BitWise) {
+    TestInplaceWithinRangeValImpl<
+        ref_u64_u8::bitset_type, 
+        TypeParam>();
+}
+
+TYPED_TEST_P(InplaceWithinRangeValSuite, ElementWise) {
+    TestInplaceWithinRangeValImpl<
+        element_u64_u8::bitset_type, 
+        TypeParam>();
+}
+
+TYPED_TEST_P(InplaceWithinRangeValSuite, Avx2) {
+#if defined(__x86_64__)
+    using namespace milvus::bitset::detail::x86;
+
+    if (cpu_support_avx2()) {
+        TestInplaceWithinRangeValImpl<
+            avx2_u64_u8::bitset_type, 
+            TypeParam>();
+    }
+#endif
+}
+
+TYPED_TEST_P(InplaceWithinRangeValSuite, Avx512) {
+#if defined(__x86_64__)
+    using namespace milvus::bitset::detail::x86;
+
+    if (cpu_support_avx512()) {
+        TestInplaceWithinRangeValImpl<
+            avx512_u64_u8::bitset_type, 
+            TypeParam>();
+    }
+#endif
+}
+
+TYPED_TEST_P(InplaceWithinRangeValSuite, Neon) {
+#if defined(__aarch64__)
+    using namespace milvus::bitset::detail::arm;
+
+    TestInplaceWithinRangeValImpl<
+        neon_u64_u8::bitset_type, 
+        TypeParam>();
+#endif
+}
+
+TYPED_TEST_P(InplaceWithinRangeValSuite, Dynamic) {
+    TestInplaceWithinRangeValImpl<
+        dynamic_u64_u8::bitset_type, 
+        TypeParam>();
+}
+
+using InplaceWithinRangeValTtypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t, float, double>;
+
+REGISTER_TYPED_TEST_SUITE_P(InplaceWithinRangeValSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Dynamic);
+
+INSTANTIATE_TYPED_TEST_SUITE_P(InplaceWithinRangeValTest, InplaceWithinRangeValSuite, InplaceWithinRangeValTtypes);
 

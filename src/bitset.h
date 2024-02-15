@@ -506,7 +506,7 @@ public:
 
     //
     template<typename T>
-    void inplace_within_range(
+    void inplace_within_range_column(
         const T* const __restrict lower,
         const T* const __restrict upper,
         const T* const __restrict values,
@@ -514,20 +514,20 @@ public:
         const RangeType op
     ) {
         if (op == RangeType::IncInc) {
-            this->inplace_within_range<T, RangeType::IncInc>(lower, upper, values, size);
+            this->inplace_within_range_column<T, RangeType::IncInc>(lower, upper, values, size);
         } else if (op == RangeType::IncExc) {
-            this->inplace_within_range<T, RangeType::IncExc>(lower, upper, values, size);            
+            this->inplace_within_range_column<T, RangeType::IncExc>(lower, upper, values, size);            
         } else if (op == RangeType::ExcInc) {
-            this->inplace_within_range<T, RangeType::ExcInc>(lower, upper, values, size);
+            this->inplace_within_range_column<T, RangeType::ExcInc>(lower, upper, values, size);
         } else if (op == RangeType::ExcExc) {
-            this->inplace_within_range<T, RangeType::ExcExc>(lower, upper, values, size);
+            this->inplace_within_range_column<T, RangeType::ExcExc>(lower, upper, values, size);
         } else {
             // unimplemented
         }            
     }
 
     template<typename T, RangeType Op>
-    void inplace_within_range(
+    void inplace_within_range_column(
         const T* const __restrict lower,
         const T* const __restrict upper,
         const T* const __restrict values,
@@ -535,7 +535,48 @@ public:
     ) {
         range_checker::le(size, this->size());
 
-        policy_type::template op_within_range<T, Op>(
+        policy_type::template op_within_range_column<T, Op>(
+            this->data(),
+            this->offset(),
+            lower,
+            upper,
+            values,
+            size
+        );
+    }
+
+    //
+    template<typename T>
+    void inplace_within_range_val(
+        const T lower,
+        const T upper,
+        const T* const __restrict values,
+        const size_type size,
+        const RangeType op
+    ) {
+        if (op == RangeType::IncInc) {
+            this->inplace_within_range_val<T, RangeType::IncInc>(lower, upper, values, size);
+        } else if (op == RangeType::IncExc) {
+            this->inplace_within_range_val<T, RangeType::IncExc>(lower, upper, values, size);            
+        } else if (op == RangeType::ExcInc) {
+            this->inplace_within_range_val<T, RangeType::ExcInc>(lower, upper, values, size);
+        } else if (op == RangeType::ExcExc) {
+            this->inplace_within_range_val<T, RangeType::ExcExc>(lower, upper, values, size);
+        } else {
+            // unimplemented
+        }            
+    }
+
+    template<typename T, RangeType Op>
+    void inplace_within_range_val(
+        const T lower,
+        const T upper,
+        const T* const __restrict values,
+        const size_type size
+    ) {
+        range_checker::le(size, this->size());
+
+        policy_type::template op_within_range_val<T, Op>(
             this->data(),
             this->offset(),
             lower,

@@ -36,9 +36,19 @@ void CompareColumnAVX512(
 
 //
 template<typename T, RangeType Op>
-void WithinRangeAVX512(
+void WithinRangeColumnAVX512(
     const T* const __restrict lower, 
     const T* const __restrict upper, 
+    const T* const __restrict values, 
+    const size_t size, 
+    uint8_t* const __restrict res
+);
+
+//
+template<typename T, RangeType Op>
+void WithinRangeValAVX512(
+    const T lower, 
+    const T upper, 
     const T* const __restrict values, 
     const size_t size, 
     uint8_t* const __restrict res
@@ -79,14 +89,27 @@ struct VectorizedAvx512 {
 
     // API requirement: size % 8 == 0
     template<typename T, RangeType Op>
-    static bool op_within_range(
+    static bool op_within_range_column(
         uint8_t* const __restrict data, 
         const T* const __restrict lower,
         const T* const __restrict upper,
         const T* const __restrict values,
         const size_t size
     ) {
-        WithinRangeAVX512<T, Op>(lower, upper, values, size, data);
+        WithinRangeColumnAVX512<T, Op>(lower, upper, values, size, data);
+        return true;
+    }
+
+    // API requirement: size % 8 == 0
+    template<typename T, RangeType Op>
+    static bool op_within_range_val(
+        uint8_t* const __restrict data, 
+        const T lower,
+        const T upper,
+        const T* const __restrict values,
+        const size_t size
+    ) {
+        WithinRangeValAVX512<T, Op>(lower, upper, values, size, data);
         return true;
     }
 };

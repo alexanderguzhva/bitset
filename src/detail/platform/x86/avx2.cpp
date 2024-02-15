@@ -723,10 +723,10 @@ ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_AVX2, double)
 
 //
 template <typename T, RangeType Op>
-struct WithinRangeAVX2Impl {};
+struct WithinRangeColumnAVX2Impl {};
 
 template<RangeType Op>
-struct WithinRangeAVX2Impl<int8_t, Op> {
+struct WithinRangeColumnAVX2Impl<int8_t, Op> {
     static inline void within_range(
         const int8_t* const __restrict lower,
         const int8_t* const __restrict upper,
@@ -786,7 +786,7 @@ struct WithinRangeAVX2Impl<int8_t, Op> {
 };
 
 template<RangeType Op>
-struct WithinRangeAVX2Impl<int16_t, Op> {
+struct WithinRangeColumnAVX2Impl<int16_t, Op> {
     static inline void within_range(
         const int16_t* const __restrict lower,
         const int16_t* const __restrict upper,
@@ -834,7 +834,7 @@ struct WithinRangeAVX2Impl<int16_t, Op> {
 };
 
 template<RangeType Op>
-struct WithinRangeAVX2Impl<int32_t, Op> {
+struct WithinRangeColumnAVX2Impl<int32_t, Op> {
     static inline void within_range(
         const int32_t* const __restrict lower,
         const int32_t* const __restrict upper,
@@ -863,7 +863,7 @@ struct WithinRangeAVX2Impl<int32_t, Op> {
 };
 
 template<RangeType Op>
-struct WithinRangeAVX2Impl<int64_t, Op> {
+struct WithinRangeColumnAVX2Impl<int64_t, Op> {
     static inline void within_range(
         const int64_t* const __restrict lower,
         const int64_t* const __restrict upper,
@@ -899,7 +899,7 @@ struct WithinRangeAVX2Impl<int64_t, Op> {
 };
 
 template<RangeType Op>
-struct WithinRangeAVX2Impl<float, Op> {
+struct WithinRangeColumnAVX2Impl<float, Op> {
     static inline void within_range(
         const float* const __restrict lower,
         const float* const __restrict upper,
@@ -932,7 +932,7 @@ struct WithinRangeAVX2Impl<float, Op> {
 };
 
 template<RangeType Op>
-struct WithinRangeAVX2Impl<double, Op> {
+struct WithinRangeColumnAVX2Impl<double, Op> {
     static inline void within_range(
         const double* const __restrict lower,
         const double* const __restrict upper,
@@ -972,12 +972,12 @@ struct WithinRangeAVX2Impl<double, Op> {
 
 //
 template<typename T, RangeType Op>
-void WithinRangeAVX2(const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size, uint8_t* const __restrict res) {
-    WithinRangeAVX2Impl<T, Op>::within_range(lower, upper, values, size, res);
+void WithinRangeColumnAVX2(const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size, uint8_t* const __restrict res) {
+    WithinRangeColumnAVX2Impl<T, Op>::within_range(lower, upper, values, size, res);
 }
 
-#define INSTANTIATE_WITHIN_RANGE_AVX2(TTYPE,OP) \
-    template void WithinRangeAVX2<TTYPE, RangeType::OP>( \
+#define INSTANTIATE_WITHIN_RANGE_COLUMN_AVX2(TTYPE,OP) \
+    template void WithinRangeColumnAVX2<TTYPE, RangeType::OP>( \
         const TTYPE* const __restrict lower, \
         const TTYPE* const __restrict upper, \
         const TTYPE* const __restrict values, \
@@ -985,14 +985,289 @@ void WithinRangeAVX2(const T* const __restrict lower, const T* const __restrict 
         uint8_t* const __restrict res \
     );
 
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX2, int8_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX2, int16_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX2, int32_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX2, int64_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX2, float)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_AVX2, double)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_AVX2, int8_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_AVX2, int16_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_AVX2, int32_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_AVX2, int64_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_AVX2, float)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_AVX2, double)
 
-#undef INSTANTIATE_WITHIN_RANGE_AVX2
+#undef INSTANTIATE_WITHIN_RANGE_COLUMN_AVX2
+
+
+
+///////////////////////////////////////////////////////////////////////////
+
+//
+template <typename T, RangeType Op>
+struct WithinRangeValAVX2Impl {};
+
+template<RangeType Op>
+struct WithinRangeValAVX2Impl<int8_t, Op> {
+    static inline void within_range(
+        const int8_t lower,
+        const int8_t upper,
+        const int8_t* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict res_u8
+    ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+
+        //
+        uint32_t* const __restrict res_u32 = reinterpret_cast<uint32_t*>(res_u8);
+        const __m256i lower_v = _mm256_set1_epi8(lower);
+        const __m256i upper_v = _mm256_set1_epi8(upper);
+
+        // todo: aligned reads & writes
+
+        const size_t size32 = (size / 32) * 32;
+        for (size_t i = 0; i < size32; i += 32) {
+            const __m256i v0v = _mm256_loadu_si256((const __m256i*)(values + i));
+            const __m256i cmpl = CmpHelperI8<Range2Compare<Op>::lower>::compare(lower_v, v0v);
+            const __m256i cmpu = CmpHelperI8<Range2Compare<Op>::upper>::compare(v0v, upper_v);
+            const __m256i cmp = _mm256_and_si256(cmpl, cmpu);
+            const uint32_t mmask = _mm256_movemask_epi8(cmp);
+
+            res_u32[i / 32] = mmask;
+        }
+
+        if (size32 != size) {
+            // 8, 16 or 24 elements to process
+            const __m256i mask = _mm256_setr_epi64x(
+                (size - size32 >= 8) ? (-1) : 0,
+                (size - size32 >= 16) ? (-1) : 0,
+                (size - size32 >= 24) ? (-1) : 0,
+                0
+            );
+
+            const __m256i v0v = _mm256_maskload_epi64((const long long*)(values + size32), mask);
+            const __m256i cmpl = CmpHelperI8<Range2Compare<Op>::lower>::compare(lower_v, v0v);
+            const __m256i cmpu = CmpHelperI8<Range2Compare<Op>::upper>::compare(v0v, upper_v);
+            const __m256i cmp = _mm256_and_si256(cmpl, cmpu);
+            const uint32_t mmask = _mm256_movemask_epi8(cmp);
+
+            if (size - size32 >= 8) {
+                res_u8[size32 / 8 + 0] = (mmask & 0xFF);
+            }
+            if (size - size32 >= 16) {
+                res_u8[size32 / 8 + 1] = ((mmask >> 8) & 0xFF);
+            }
+            if (size - size32 >= 24) {
+                res_u8[size32 / 8 + 2] = ((mmask >> 16) & 0xFF);
+            }
+        }
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeValAVX2Impl<int16_t, Op> {
+    static inline void within_range(
+        const int16_t lower,
+        const int16_t upper,
+        const int16_t* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict res_u8
+    ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+
+        //
+        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res_u8);
+        const __m256i lower_v = _mm256_set1_epi16(lower);
+        const __m256i upper_v = _mm256_set1_epi16(upper);
+
+        // todo: aligned reads & writes
+
+        const size_t size16 = (size / 16) * 16;
+        for (size_t i = 0; i < size16; i += 16) {
+            const __m256i v0v = _mm256_loadu_si256((const __m256i*)(values + i));
+            const __m256i cmpl = CmpHelperI16<Range2Compare<Op>::lower>::compare(lower_v, v0v);
+            const __m256i cmpu = CmpHelperI16<Range2Compare<Op>::upper>::compare(v0v, upper_v);
+            const __m256i cmp = _mm256_and_si256(cmpl, cmpu);
+            const __m256i pcmp = _mm256_packs_epi16(cmp, cmp);
+            const __m256i qcmp = _mm256_permute4x64_epi64(pcmp, _MM_SHUFFLE(3, 1, 2, 0));
+            const uint16_t mmask = _mm256_movemask_epi8(qcmp);
+
+            res_u16[i / 16] = mmask;
+        }
+
+        if (size16 != size) {
+            // 8 elements to process
+            const __m128i lower_v1 = _mm_set1_epi16(lower);
+            const __m128i upper_v1 = _mm_set1_epi16(upper);
+            const __m128i v0v = _mm_loadu_si128((const __m128i*)(values + size16));
+            const __m128i cmpl = CmpHelperI16<Range2Compare<Op>::lower>::compare(lower_v1, v0v);
+            const __m128i cmpu = CmpHelperI16<Range2Compare<Op>::upper>::compare(v0v, upper_v1);
+            const __m128i cmp = _mm_and_si128(cmpl, cmpu);
+            const __m128i pcmp = _mm_packs_epi16(cmp, cmp);
+            const uint32_t mmask = _mm_movemask_epi8(pcmp) & 0xFF;
+
+            res_u8[size16 / 8] = mmask;
+        }
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeValAVX2Impl<int32_t, Op> {
+    static inline void within_range(
+        const int32_t lower,
+        const int32_t upper,
+        const int32_t* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict res_u8
+    ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+
+        //
+        const __m256i lower_v = _mm256_set1_epi32(lower);
+        const __m256i upper_v = _mm256_set1_epi32(upper);
+
+        // todo: aligned reads & writes
+
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const __m256i v0v = _mm256_loadu_si256((const __m256i*)(values + i));
+            const __m256i cmpl = CmpHelperI32<Range2Compare<Op>::lower>::compare(lower_v, v0v);
+            const __m256i cmpu = CmpHelperI32<Range2Compare<Op>::upper>::compare(v0v, upper_v);
+            const __m256i cmp = _mm256_and_si256(cmpl, cmpu);
+            const uint8_t mmask = _mm256_movemask_ps(_mm256_castsi256_ps(cmp));
+
+            res_u8[i / 8] = mmask;
+        }
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeValAVX2Impl<int64_t, Op> {
+    static inline void within_range(
+        const int64_t lower,
+        const int64_t upper,
+        const int64_t* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict res_u8
+    ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+
+        //
+        const __m256i lower_v = _mm256_set1_epi64x(lower);
+        const __m256i upper_v = _mm256_set1_epi64x(upper);
+
+        // todo: aligned reads & writes
+
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const __m256i v0v = _mm256_loadu_si256((const __m256i*)(values + i));
+            const __m256i v1v = _mm256_loadu_si256((const __m256i*)(values + i + 4));
+            const __m256i cmp0l = CmpHelperI64<Range2Compare<Op>::lower>::compare(lower_v, v0v);
+            const __m256i cmp0u = CmpHelperI64<Range2Compare<Op>::upper>::compare(v0v, upper_v);
+            const __m256i cmp1l = CmpHelperI64<Range2Compare<Op>::lower>::compare(lower_v, v1v);
+            const __m256i cmp1u = CmpHelperI64<Range2Compare<Op>::upper>::compare(v1v, upper_v);
+            const __m256i cmp0 = _mm256_and_si256(cmp0l, cmp0u);
+            const __m256i cmp1 = _mm256_and_si256(cmp1l, cmp1u);
+            const uint8_t mmask0 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp0));
+            const uint8_t mmask1 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp1));
+
+            res_u8[i / 8] = mmask0 + mmask1 * 16;
+        }
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeValAVX2Impl<float, Op> {
+    static inline void within_range(
+        const float lower,
+        const float upper,
+        const float* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict res_u8
+    ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+
+        //
+        const __m256 lower_v = _mm256_set1_ps(lower);
+        const __m256 upper_v = _mm256_set1_ps(upper);
+        constexpr auto pred_lower = ComparePredicate<float, Range2Compare<Op>::lower>::value;
+        constexpr auto pred_upper = ComparePredicate<float, Range2Compare<Op>::upper>::value;
+
+        // todo: aligned reads & writes
+
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const __m256 v0v = _mm256_loadu_ps(values + i);
+            const __m256 cmpl = _mm256_cmp_ps(lower_v, v0v, pred_lower);
+            const __m256 cmpu = _mm256_cmp_ps(v0v, upper_v, pred_upper);
+            const __m256 cmp = _mm256_and_ps(cmpl, cmpu);
+            const uint8_t mmask = _mm256_movemask_ps(cmp);
+
+            res_u8[i / 8] = mmask;
+        }
+    }
+};
+
+template<RangeType Op>
+struct WithinRangeValAVX2Impl<double, Op> {
+    static inline void within_range(
+        const double lower,
+        const double upper,
+        const double* const __restrict values,
+        const size_t size,
+        uint8_t* const __restrict res_u8
+    ) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+
+        //
+        const __m256d lower_v = _mm256_set1_pd(lower);
+        const __m256d upper_v = _mm256_set1_pd(upper);
+        constexpr auto pred_lower = ComparePredicate<double, Range2Compare<Op>::lower>::value;
+        constexpr auto pred_upper = ComparePredicate<double, Range2Compare<Op>::upper>::value;
+
+        // todo: aligned reads & writes
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const __m256d v0v = _mm256_loadu_pd(values + i);
+            const __m256d v1v = _mm256_loadu_pd(values + i + 4);
+            const __m256d cmp0l = _mm256_cmp_pd(lower_v, v0v, pred_lower);
+            const __m256d cmp0u = _mm256_cmp_pd(v0v, upper_v, pred_upper);
+            const __m256d cmp1l = _mm256_cmp_pd(lower_v, v1v, pred_lower);
+            const __m256d cmp1u = _mm256_cmp_pd(v1v, upper_v, pred_upper);
+            const __m256d cmp0 = _mm256_and_pd(cmp0l, cmp0u);
+            const __m256d cmp1 = _mm256_and_pd(cmp1l, cmp1u);
+            const uint8_t mmask0 = _mm256_movemask_pd(cmp0);
+            const uint8_t mmask1 = _mm256_movemask_pd(cmp1);
+
+            res_u8[i / 8] = mmask0 + mmask1 * 16;
+        }
+    }
+};
+
+//
+template<typename T, RangeType Op>
+void WithinRangeValAVX2(const T lower, const T upper, const T* const __restrict values, const size_t size, uint8_t* const __restrict res) {
+    WithinRangeValAVX2Impl<T, Op>::within_range(lower, upper, values, size, res);
+}
+
+#define INSTANTIATE_WITHIN_RANGE_VAL_AVX2(TTYPE,OP) \
+    template void WithinRangeValAVX2<TTYPE, RangeType::OP>( \
+        const TTYPE lower, \
+        const TTYPE upper, \
+        const TTYPE* const __restrict values, \
+        const size_t size, \
+        uint8_t* const __restrict res \
+    );
+
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_AVX2, int8_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_AVX2, int16_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_AVX2, int32_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_AVX2, int64_t)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_AVX2, float)
+ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_AVX2, double)
+
+#undef INSTANTIATE_WITHIN_RANGE_VAL_AVX2
 
 ///////////////////////////////////////////////////////////////////////////
 

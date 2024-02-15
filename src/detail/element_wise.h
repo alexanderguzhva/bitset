@@ -772,7 +772,7 @@ struct CustomBitsetPolicy2 {
 
     //
     template<typename T, RangeType Op>
-    static inline void op_within_range(
+    static inline void op_within_range_column(
         data_type* const __restrict data, 
         const size_type start,
         const T* const __restrict lower,
@@ -782,6 +782,21 @@ struct CustomBitsetPolicy2 {
     ) {
         for (size_type i = 0; i < size; i++) {
             get_proxy(data, start + i) = RangeOperator<Op>::within_range(lower[i], upper[i], values[i]);
+        }
+    }
+
+    //
+    template<typename T, RangeType Op>
+    static inline void op_within_range_val(
+        data_type* const __restrict data, 
+        const size_type start,
+        const T lower,
+        const T upper,
+        const T* const __restrict values,
+        const size_type size
+    ) {
+        for (size_type i = 0; i < size; i++) {
+            get_proxy(data, start + i) = RangeOperator<Op>::within_range(lower, upper, values[i]);
         }
     }
 };

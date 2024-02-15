@@ -43,10 +43,21 @@ struct VectorizedRef {
     }
 
     template<typename T, RangeType Op>
-    static inline bool op_within_range(
+    static inline bool op_within_range_column(
         uint8_t* const __restrict data, 
         const T* const __restrict lower,
         const T* const __restrict upper,
+        const T* const __restrict values,
+        const size_t size
+    ) {
+        return false;
+    }
+
+    template<typename T, RangeType Op>
+    static inline bool op_within_range_val(
+        uint8_t* const __restrict data, 
+        const T lower,
+        const T upper,
         const T* const __restrict values,
         const size_t size
     ) {

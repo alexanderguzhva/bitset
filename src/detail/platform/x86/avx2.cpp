@@ -29,6 +29,19 @@ namespace avx2 {
     FUNC(__VA_ARGS__,ExcInc); \
     FUNC(__VA_ARGS__,ExcExc);
 
+// a facility to run through all possible arithmetic compare operations
+#define ALL_ARITH_CMP_OPS(FUNC,...) \
+    FUNC(__VA_ARGS__,Add,EQ); \
+    FUNC(__VA_ARGS__,Add,NEQ); \
+    FUNC(__VA_ARGS__,Sub,EQ); \
+    FUNC(__VA_ARGS__,Sub,NEQ); \
+    FUNC(__VA_ARGS__,Mul,EQ); \
+    FUNC(__VA_ARGS__,Mul,NEQ); \
+    FUNC(__VA_ARGS__,Div,EQ); \
+    FUNC(__VA_ARGS__,Div,NEQ); \
+    FUNC(__VA_ARGS__,Mod,EQ); \
+    FUNC(__VA_ARGS__,Mod,NEQ);
+
 // count is expected to be in range [0, 32)
 inline uint32_t get_mask(const size_t count) {
     return (uint32_t(1) << count) - uint32_t(1);
@@ -1239,9 +1252,433 @@ ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_AVX2, double)
 
 ///////////////////////////////////////////////////////////////////////////
 
+// https://godbolt.org/z/CYipz7
+// https://github.com/ridiculousfish/libdivide
+// https://github.com/lemire/fastmod
+
+//
+//
+template<ArithType Op, CompareType CmpOp>
+struct ArithHelperI64 {};
+
+template<>
+struct ArithHelperI64<ArithType::Add, CompareType::EQ> {
+    static inline __m256i op(const __m256i left, const __m256i right, const __m256i value) {
+        // left + right == value
+        return _mm256_cmpeq_epi64(_mm256_add_epi64(left, right), value);
+    }
+};
+
+template<>
+struct ArithHelperI64<ArithType::Sub, CompareType::EQ> {
+    static inline __m256i op(const __m256i left, const __m256i right, const __m256i value) {
+        // left - right == value
+        return _mm256_cmpeq_epi64(_mm256_sub_epi64(left, right), value);
+    }
+};
+
+template<>
+struct ArithHelperI64<ArithType::Mul, CompareType::EQ> {
+    static inline __m256i op(const __m256i left, const __m256i right, const __m256i value) {
+        // left * right == value
+        
+        // draft: the code from Agner Fog's vectorclass library
+        const __m256i a = left;
+        const __m256i b = right;
+        const __m256i bswap   = _mm256_shuffle_epi32(b,0xB1);        // swap H<->L
+        const __m256i prodlh  = _mm256_mullo_epi32(a,bswap);         // 32 bit L*H products
+        const __m256i zero    = _mm256_setzero_si256();              // 0
+        const __m256i prodlh2 = _mm256_hadd_epi32(prodlh,zero);      // a0Lb0H+a0Hb0L,a1Lb1H+a1Hb1L,0,0
+        const __m256i prodlh3 = _mm256_shuffle_epi32(prodlh2,0x73);  // 0, a0Lb0H+a0Hb0L, 0, a1Lb1H+a1Hb1L
+        const __m256i prodll  = _mm256_mul_epu32(a,b);               // a0Lb0L,a1Lb1L, 64 bit unsigned products
+        const __m256i prod    = _mm256_add_epi64(prodll,prodlh3);    // a0Lb0L+(a0Lb0H+a0Hb0L)<<32, a1Lb1L+(a1Lb1H+a1Hb1L)<<32
+            
+        return _mm256_cmpeq_epi64(prod, value);
+    }
+};
+
+template<>
+struct ArithHelperI64<ArithType::Add, CompareType::NEQ> {
+    static inline __m256i op(const __m256i left, const __m256i right, const __m256i value) {
+        const __m256i eq_mask = ArithHelperI64<ArithType::Add, CompareType::EQ>::op(left, right, value);
+        return _mm256_xor_si256(eq_mask, _mm256_set1_epi32(0xFFFFFFFF));
+    }
+};
+
+template<>
+struct ArithHelperI64<ArithType::Sub, CompareType::NEQ> {
+    static inline __m256i op(const __m256i left, const __m256i right, const __m256i value) {
+        const __m256i eq_mask = ArithHelperI64<ArithType::Sub, CompareType::EQ>::op(left, right, value);
+        return _mm256_xor_si256(eq_mask, _mm256_set1_epi32(0xFFFFFFFF));
+    }
+};
+
+template<>
+struct ArithHelperI64<ArithType::Mul, CompareType::NEQ> {
+    static inline __m256i op(const __m256i left, const __m256i right, const __m256i value) {
+        const __m256i eq_mask = ArithHelperI64<ArithType::Mul, CompareType::EQ>::op(left, right, value);
+        return _mm256_xor_si256(eq_mask, _mm256_set1_epi32(0xFFFFFFFF));
+    }
+};
+
+
+// todo: Mul, Div, Mod
+
+//
+template<ArithType AOp, CompareType CmpOp>
+struct ArithHelperF32 {};
+
+template<CompareType CmpOp>
+struct ArithHelperF32<ArithType::Add, CmpOp> {
+    static inline __m256 op(const __m256 left, const __m256 right, const __m256 value) {
+        // left + right == value
+        constexpr auto pred = ComparePredicate<float, CmpOp>::value;
+        return _mm256_cmp_ps(_mm256_add_ps(left, right), value, pred);
+    }
+};
+
+template<CompareType CmpOp>
+struct ArithHelperF32<ArithType::Sub, CmpOp> {
+    static inline __m256 op(const __m256 left, const __m256 right, const __m256 value) {
+        // left - right == value
+        constexpr auto pred = ComparePredicate<float, CmpOp>::value;
+        return _mm256_cmp_ps(_mm256_sub_ps(left, right), value, pred);
+    }
+};
+
+template<CompareType CmpOp>
+struct ArithHelperF32<ArithType::Mul, CmpOp> {
+    static inline __m256 op(const __m256 left, const __m256 right, const __m256 value) {
+        // left * right == value
+        constexpr auto pred = ComparePredicate<float, CmpOp>::value;
+        return _mm256_cmp_ps(_mm256_mul_ps(left, right), value, pred);
+    }
+};
+
+template<CompareType CmpOp>
+struct ArithHelperF32<ArithType::Div, CmpOp> {
+    static inline __m256 op(const __m256 left, const __m256 right, const __m256 value) {
+        // left == right * value
+        constexpr auto pred = ComparePredicate<float, CmpOp>::value;
+        return _mm256_cmp_ps(left, _mm256_mul_ps(right, value), pred);
+    }
+};
+
+// todo: Mod
+
+//
+template<ArithType AOp, CompareType CmpOp>
+struct ArithHelperF64 {};
+
+template<CompareType CmpOp>
+struct ArithHelperF64<ArithType::Add, CmpOp> {
+    static inline __m256d op(const __m256d left, const __m256d right, const __m256d value) {
+        // left + right == value
+        constexpr auto pred = ComparePredicate<double, CmpOp>::value;
+        return _mm256_cmp_pd(_mm256_add_pd(left, right), value, pred);
+    }
+};
+
+template<CompareType CmpOp>
+struct ArithHelperF64<ArithType::Sub, CmpOp> {
+    static inline __m256d op(const __m256d left, const __m256d right, const __m256d value) {
+        // left - right == value
+        constexpr auto pred = ComparePredicate<double, CmpOp>::value;
+        return _mm256_cmp_pd(_mm256_sub_pd(left, right), value, pred);
+    }
+};
+
+template<CompareType CmpOp>
+struct ArithHelperF64<ArithType::Mul, CmpOp> {
+    static inline __m256d op(const __m256d left, const __m256d right, const __m256d value) {
+        // left * right == value
+        constexpr auto pred = ComparePredicate<double, CmpOp>::value;
+        return _mm256_cmp_pd(_mm256_mul_pd(left, right), value, pred);
+    }
+};
+
+template<CompareType CmpOp>
+struct ArithHelperF64<ArithType::Div, CmpOp> {
+    static inline __m256d op(const __m256d left, const __m256d right, const __m256d value) {
+        // left == right * value
+        constexpr auto pred = ComparePredicate<double, CmpOp>::value;
+        return _mm256_cmp_pd(left, _mm256_mul_pd(right, value), pred);
+    }
+};
+
+// todo: Mul, Div, Mod
+
+#define NOT_IMPLEMENTED_OP_ARITH_COMPARE(TTYPE, AOP, CMPOP) \
+    template<> \
+    bool OpArithCompareImpl<TTYPE, ArithType::AOP, CompareType::CMPOP>::op_arith_compare( \
+        uint8_t* const __restrict res_u8, \
+        const TTYPE* const __restrict src, \
+        const ArithHighPrecisionType<TTYPE>& right_operand, \
+        const ArithHighPrecisionType<TTYPE>& value, \
+        const size_t size \
+    ) { \
+        return false; \
+    }
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const int8_t* const __restrict src,
+    const ArithHighPrecisionType<int8_t>& right_operand,
+    const ArithHighPrecisionType<int8_t>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+
+    //
+    const __m256i right_v = _mm256_set1_epi64x(right_operand);
+    const __m256i value_v = _mm256_set1_epi64x(value);
+    const uint64_t* const __restrict src_u64 = reinterpret_cast<const uint64_t*>(src);
+
+    // todo: aligned reads & writes
+
+    const size_t size8 = (size / 8) * 8;
+    for (size_t i = 0; i < size8; i += 8) {
+        const uint64_t v = src_u64[i / 8];
+        const __m256i v0s = _mm256_cvtepi8_epi64(_mm_set_epi64x(0, v));
+        const __m256i v1s = _mm256_cvtepi8_epi64(_mm_set_epi64x(0, v >> 32));
+        const __m256i cmp0 = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
+        const __m256i cmp1 = ArithHelperI64<AOp, CmpOp>::op(v1s, right_v, value_v);
+        const uint8_t mmask0 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp0));
+        const uint8_t mmask1 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp1));
+
+        res_u8[i / 8] = mmask0 + mmask1 * 16;
+    }
+
+    return true;
+}
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const int16_t* const __restrict src,
+    const ArithHighPrecisionType<int16_t>& right_operand,
+    const ArithHighPrecisionType<int16_t>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+
+    //
+    const __m256i right_v = _mm256_set1_epi64x(right_operand);
+    const __m256i value_v = _mm256_set1_epi64x(value);
+
+    // todo: aligned reads & writes
+
+    const size_t size8 = (size / 8) * 8;
+    for (size_t i = 0; i < size8; i += 8) {
+        const __m128i vs = _mm_loadu_si128((const __m128i*)(src + i));
+        const __m256i v0s = _mm256_cvtepi16_epi64(vs);
+        const __m128i v1sr = _mm_set_epi64x(0, _mm_extract_epi64(vs, 1));
+        const __m256i v1s = _mm256_cvtepi16_epi64(v1sr);
+        const __m256i cmp0 = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
+        const __m256i cmp1 = ArithHelperI64<AOp, CmpOp>::op(v1s, right_v, value_v);
+        const uint8_t mmask0 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp0));
+        const uint8_t mmask1 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp1));
+
+        res_u8[i / 8] = mmask0 + mmask1 * 16;
+    }
+
+    return true;
+}
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const int32_t* const __restrict src,
+    const ArithHighPrecisionType<int32_t>& right_operand,
+    const ArithHighPrecisionType<int32_t>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+
+    //
+    const __m256i right_v = _mm256_set1_epi64x(right_operand);
+    const __m256i value_v = _mm256_set1_epi64x(value);
+
+    // todo: aligned reads & writes
+
+    const size_t size8 = (size / 8) * 8;
+    for (size_t i = 0; i < size8; i += 8) {
+        const __m256i vs = _mm256_loadu_si256((const __m256i*)(src + i));
+        const __m256i v0s = _mm256_cvtepi32_epi64(_mm256_extracti128_si256(vs, 0));
+        const __m256i v1s = _mm256_cvtepi32_epi64(_mm256_extracti128_si256(vs, 1));
+        const __m256i cmp0 = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
+        const __m256i cmp1 = ArithHelperI64<AOp, CmpOp>::op(v1s, right_v, value_v);
+        const uint8_t mmask0 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp0));
+        const uint8_t mmask1 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp1));
+
+        res_u8[i / 8] = mmask0 + mmask1 * 16;
+    }
+
+    return true;
+}
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const int64_t* const __restrict src,
+    const ArithHighPrecisionType<int64_t>& right_operand,
+    const ArithHighPrecisionType<int64_t>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+
+    //
+    const __m256i right_v = _mm256_set1_epi64x(right_operand);
+    const __m256i value_v = _mm256_set1_epi64x(value);
+
+    // todo: aligned reads & writes
+
+    const size_t size8 = (size / 8) * 8;
+    for (size_t i = 0; i < size8; i += 8) {
+        const __m256i v0s = _mm256_loadu_si256((const __m256i*)(src + i));
+        const __m256i v1s = _mm256_loadu_si256((const __m256i*)(src + i + 4));
+        const __m256i cmp0 = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
+        const __m256i cmp1 = ArithHelperI64<AOp, CmpOp>::op(v1s, right_v, value_v);
+        const uint8_t mmask0 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp0));
+        const uint8_t mmask1 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp1));
+
+        res_u8[i / 8] = mmask0 + mmask1 * 16;
+    }
+
+    return true;
+}
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const float* const __restrict src,
+    const ArithHighPrecisionType<float>& right_operand,
+    const ArithHighPrecisionType<float>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+
+    //
+    const __m256 right_v = _mm256_set1_ps(right_operand);
+    const __m256 value_v = _mm256_set1_ps(value);
+
+    // todo: aligned reads & writes
+
+    const size_t size8 = (size / 8) * 8;
+    for (size_t i = 0; i < size8; i += 8) {
+        const __m256 v0s = _mm256_loadu_ps(src + i);
+        const __m256 cmp = ArithHelperF32<AOp, CmpOp>::op(v0s, right_v, value_v);
+        const uint8_t mmask = _mm256_movemask_ps(cmp);
+
+        res_u8[i / 8] = mmask;
+    }
+
+    return true;
+}
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const double* const __restrict src,
+    const ArithHighPrecisionType<double>& right_operand,
+    const ArithHighPrecisionType<double>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+
+    //
+    const __m256d right_v = _mm256_set1_pd(right_operand);
+    const __m256d value_v = _mm256_set1_pd(value);
+
+    // todo: aligned reads & writes
+
+    const size_t size8 = (size / 8) * 8;
+    for (size_t i = 0; i < size8; i += 8) {
+        const __m256d v0s = _mm256_loadu_pd(src + i);
+        const __m256d v1s = _mm256_loadu_pd(src + i + 4);
+        const __m256d cmp0 = ArithHelperF64<AOp, CmpOp>::op(v0s, right_v, value_v);
+        const __m256d cmp1 = ArithHelperF64<AOp, CmpOp>::op(v1s, right_v, value_v);
+        const uint8_t mmask0 = _mm256_movemask_pd(cmp0);
+        const uint8_t mmask1 = _mm256_movemask_pd(cmp1);
+
+        res_u8[i / 8] = mmask0 + mmask1 * 16;
+    }
+
+    return true;
+}
+
+//
+#undef NOT_IMPLEMENTED_OP_ARITH_COMPARE
+
+//
+#define INSTANTIATE_ARITH_COMPARE_AVX2(TTYPE,OP,CMP) \
+    template bool OpArithCompareImpl<TTYPE, ArithType::OP, CompareType::CMP>::op_arith_compare( \
+        uint8_t* const __restrict res_u8, \
+        const TTYPE* const __restrict src, \
+        const ArithHighPrecisionType<TTYPE>& right_operand, \
+        const ArithHighPrecisionType<TTYPE>& value, \
+        const size_t size \
+    );
+
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX2, int8_t)
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX2, int16_t)
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX2, int32_t)
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX2, int64_t)
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX2, float)
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX2, double)
+
+#undef INSTANTIATE_ARITH_COMPARE_AVX2
+
+
+///////////////////////////////////////////////////////////////////////////
+
 //
 #undef ALL_COMPARE_OPS
 #undef ALL_RANGE_OPS
+#undef ALL_ARITH_CMP_OPS
 
 }
 }

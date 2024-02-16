@@ -68,8 +68,8 @@ struct CustomBitsetVectorizedPolicy {
     }
 
     static inline void op_and(
-        data_type* left, 
-        const data_type* right, 
+        data_type* const left, 
+        const data_type* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
@@ -78,8 +78,8 @@ struct CustomBitsetVectorizedPolicy {
     }
 
     static inline void op_or(
-        data_type* left, 
-        const data_type* right, 
+        data_type* const left, 
+        const data_type* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
@@ -138,8 +138,8 @@ struct CustomBitsetVectorizedPolicy {
     }
 
     static inline bool op_eq(
-        const data_type* left, 
-        const data_type* right, 
+        const data_type* const left, 
+        const data_type* const right, 
         const size_type start_left,
         const size_type start_right, 
         const size_type size
@@ -148,8 +148,8 @@ struct CustomBitsetVectorizedPolicy {
     }
 
     static inline void op_xor(
-        data_type* left, 
-        const data_type* right, 
+        data_type* const left, 
+        const data_type* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
@@ -158,8 +158,8 @@ struct CustomBitsetVectorizedPolicy {
     }
 
     static inline void op_sub(
-        data_type* left, 
-        const data_type* right, 
+        data_type* const left, 
+        const data_type* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
@@ -521,6 +521,93 @@ struct CustomBitsetVectorizedPolicy {
                 lower,
                 upper,
                 values + ptr_offset,
+                end_shift
+            );
+        }
+    }
+
+    //
+    template<typename T, ArithType AOp, CompareType CmpOp>
+    static inline void op_arith_compare(
+        data_type* const __restrict data, 
+        const size_type start,
+        const T* const __restrict src,
+        const ArithHighPrecisionType<T>& right_operand,
+        const ArithHighPrecisionType<T>& value,
+        const size_type size
+    ) {
+        if (size == 0) {
+            return;
+        }
+
+        auto start_element = get_element(start);
+        const auto end_element = get_element(start + size);
+
+        const auto start_shift = get_shift(start);
+        const auto end_shift = get_shift(start + size);
+
+        // same element?
+        if (start_element == end_element) {
+            CustomBitsetPolicy2<ElementT>::template op_arith_compare<T, AOp, CmpOp>(
+                data, start, src, right_operand, value, size
+            );
+
+            return;
+        }
+
+        //
+        uintptr_t ptr_offset = 0;
+
+        // process the first element
+        if (start_shift != 0) [[unlikely]] {
+            // it is possible to do vectorized masking here, but it is not worth it
+            CustomBitsetPolicy2<ElementT>::template op_arith_compare<T, AOp, CmpOp>(
+                data, start, src, right_operand, value, size
+            );
+
+            //
+            start_element += 1;
+            ptr_offset += data_bits - start_shift;
+        }
+
+        // process the middle
+        {
+            const size_t starting_bit_idx = start_element * data_bits;
+            const size_t nbits = (end_element - start_element) * data_bits;
+
+            if (!VectorizedT::template op_arith_compare<T, AOp, CmpOp>(
+                    reinterpret_cast<uint8_t*>(data + start_element),
+                    src + ptr_offset,
+                    right_operand,
+                    value,
+                    nbits)
+            ) {
+                // vectorized implementation is not available, invoke the default one
+                CustomBitsetPolicy2<ElementT>::template op_arith_compare<T, AOp, CmpOp>(
+                    data, 
+                    starting_bit_idx,
+                    src + ptr_offset,
+                    right_operand,
+                    value,
+                    nbits
+                );
+            }
+        
+            //
+            ptr_offset += nbits;
+        }
+
+        // process the last element
+        if (end_shift != 0) [[likely]] {
+            // it is possible to do vectorized masking here, but it is not worth it
+            const size_t starting_bit_idx = end_element * data_bits; 
+
+            CustomBitsetPolicy2<ElementT>::template op_arith_compare<T, AOp, CmpOp>(
+                data, 
+                starting_bit_idx,
+                src + ptr_offset,
+                right_operand,
+                value,
                 end_shift
             );
         }

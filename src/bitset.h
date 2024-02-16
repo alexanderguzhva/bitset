@@ -586,6 +586,60 @@ public:
         );
     }
 
+    //
+    template<typename T>
+    void inplace_arith_compare(
+        const T* const __restrict src,
+        const ArithHighPrecisionType<T>& right_operand,
+        const ArithHighPrecisionType<T>& value,
+        const size_type size,
+        const ArithType a_op,
+        const CompareType cmp_op
+    ) {
+        if (a_op == ArithType::Add && cmp_op == CompareType::EQ) {
+            this->inplace_arith_compare<T, ArithType::Add, CompareType::EQ>(src, right_operand, value, size);
+        } else if (a_op == ArithType::Add && cmp_op == CompareType::NEQ) {
+            this->inplace_arith_compare<T, ArithType::Add, CompareType::NEQ>(src, right_operand, value, size);
+        } else if (a_op == ArithType::Sub && cmp_op == CompareType::EQ) {
+            this->inplace_arith_compare<T, ArithType::Sub, CompareType::EQ>(src, right_operand, value, size);
+        } else if (a_op == ArithType::Sub && cmp_op == CompareType::NEQ) {
+            this->inplace_arith_compare<T, ArithType::Sub, CompareType::NEQ>(src, right_operand, value, size);
+        } else if (a_op == ArithType::Mul && cmp_op == CompareType::EQ) {
+            this->inplace_arith_compare<T, ArithType::Mul, CompareType::EQ>(src, right_operand, value, size);
+        } else if (a_op == ArithType::Mul && cmp_op == CompareType::NEQ) {
+            this->inplace_arith_compare<T, ArithType::Mul, CompareType::NEQ>(src, right_operand, value, size);
+        } else if (a_op == ArithType::Div && cmp_op == CompareType::EQ) {
+            this->inplace_arith_compare<T, ArithType::Div, CompareType::EQ>(src, right_operand, value, size);
+        } else if (a_op == ArithType::Div && cmp_op == CompareType::NEQ) {
+            this->inplace_arith_compare<T, ArithType::Div, CompareType::NEQ>(src, right_operand, value, size);
+        } else if (a_op == ArithType::Mod && cmp_op == CompareType::EQ) {
+            this->inplace_arith_compare<T, ArithType::Mod, CompareType::EQ>(src, right_operand, value, size);
+        } else if (a_op == ArithType::Mod && cmp_op == CompareType::NEQ) {
+            this->inplace_arith_compare<T, ArithType::Mod, CompareType::NEQ>(src, right_operand, value, size);
+        } else {
+            // unimplemented
+        }            
+    }
+
+    template<typename T, ArithType AOp, CompareType CmpOp>
+    void inplace_arith_compare(
+        const T* const __restrict src,
+        const ArithHighPrecisionType<T>& right_operand,
+        const ArithHighPrecisionType<T>& value,
+        const size_type size
+    ) {
+        range_checker::le(size, this->size());
+
+        policy_type::template op_arith_compare<T, AOp, CmpOp>(
+            this->data(),
+            this->offset(),
+            src,
+            right_operand,
+            value,
+            size
+        );
+    }
+
 private:
     // Return the starting bit offset in our container.
     inline size_type offset() const {

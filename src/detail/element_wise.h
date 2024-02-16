@@ -216,8 +216,8 @@ struct CustomBitsetPolicy2 {
     }
 
     static inline void op_and(
-        data_type* left, 
-        const data_type* right, 
+        data_type* const left, 
+        const data_type* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
@@ -249,8 +249,8 @@ struct CustomBitsetPolicy2 {
     }
 
     static inline void op_or(
-        data_type* left, 
-        const data_type* right, 
+        data_type* const left, 
+        const data_type* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
@@ -444,9 +444,35 @@ struct CustomBitsetPolicy2 {
 
         // process big blocks
         const size_type size_b = (size / data_bits) * data_bits;
-        for (size_type i = 0; i < size_b; i += data_bits) {
-            const data_type src_v = read(src, start_src + i, data_bits);
-            write(dst, start_dst + i, data_bits, src_v);
+
+        if ((start_src % data_bits) == 0) {
+            if ((start_dst % data_bits) == 0) {
+                // plain memcpy
+                for (size_type i = 0; i < size_b; i += data_bits) {
+                    const data_type src_v = src[(start_src + i) / data_bits];
+                    dst[(start_dst + i) / data_bits] = src_v;
+                }                
+            } else {
+                // easier read
+                for (size_type i = 0; i < size_b; i += data_bits) {
+                    const data_type src_v = src[(start_src + i) / data_bits];
+                    write(dst, start_dst + i, data_bits, src_v);
+                }
+            }
+        } else {
+            if ((start_dst % data_bits) == 0) {
+                // easier write
+                for (size_type i = 0; i < size_b; i += data_bits) {
+                    const data_type src_v = read(src, start_src + i, data_bits);
+                    dst[(start_dst + i) / data_bits] = src_v;
+                }
+            } else {
+                // general case
+                for (size_type i = 0; i < size_b; i += data_bits) {
+                    const data_type src_v = read(src, start_src + i, data_bits);
+                    write(dst, start_dst + i, data_bits, src_v);
+                }
+            }
         }
 
         // process leftovers
@@ -569,8 +595,8 @@ struct CustomBitsetPolicy2 {
     }
 
     static inline bool op_eq(
-        const data_type* left, 
-        const data_type* right, 
+        const data_type* const left, 
+        const data_type* const right, 
         const size_type start_left,
         const size_type start_right, 
         const size_type size
@@ -579,16 +605,52 @@ struct CustomBitsetPolicy2 {
             return true;
         }
 
-        //
+        // process big chunks
         const size_type size_b = (size / data_bits) * data_bits;
-        for (size_type i = 0; i < size_b; i += data_bits) {
-            const data_type left_v = read(left, start_left + i, data_bits);
-            const data_type right_v = read(right, start_right + i, data_bits);
-            if (left_v != right_v) {
-                return false;
+
+        if ((start_left % data_bits) == 0) {
+            if ((start_right % data_bits) == 0) {
+                // plain memcpy
+                for (size_type i = 0; i < size_b; i += data_bits) {
+                    const data_type left_v = left[(start_left + i) / data_bits];
+                    const data_type right_v = right[(start_right + i) / data_bits];
+                    if (left_v != right_v) {
+                        return false;
+                    }
+                }                
+            } else {
+                // easier left
+                for (size_type i = 0; i < size_b; i += data_bits) {
+                    const data_type left_v = left[(start_left + i) / data_bits];
+                    const data_type right_v = read(right, start_right + i, data_bits);
+                    if (left_v != right_v) {
+                        return false;
+                    }
+                }
+            }
+        } else {
+            if ((start_right % data_bits) == 0) {
+                // easier right
+                for (size_type i = 0; i < size_b; i += data_bits) {
+                    const data_type left_v = read(left, start_left + i, data_bits);
+                    const data_type right_v = right[(start_right + i) / data_bits];
+                    if (left_v != right_v) {
+                        return false;
+                    }
+                }
+            } else {
+                // general case
+                for (size_type i = 0; i < size_b; i += data_bits) {
+                    const data_type left_v = read(left, start_left + i, data_bits);
+                    const data_type right_v = read(right, start_right + i, data_bits);
+                    if (left_v != right_v) {
+                        return false;
+                    }
+                }
             }
         }
 
+        // process leftovers
         if (size_b != size) {
             const data_type left_v = read(left, start_left + size_b, size - size_b);
             const data_type right_v = read(right, start_right + size_b, size - size_b);            
@@ -601,8 +663,8 @@ struct CustomBitsetPolicy2 {
     }
 
     static inline void op_xor(
-        data_type* left, 
-        const data_type* right, 
+        data_type* const left, 
+        const data_type* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
@@ -634,8 +696,8 @@ struct CustomBitsetPolicy2 {
     }
 
     static inline void op_sub(
-        data_type* left, 
-        const data_type* right, 
+        data_type* const left, 
+        const data_type* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
@@ -797,6 +859,21 @@ struct CustomBitsetPolicy2 {
     ) {
         for (size_type i = 0; i < size; i++) {
             get_proxy(data, start + i) = RangeOperator<Op>::within_range(lower, upper, values[i]);
+        }
+    }
+
+    //
+    template<typename T, ArithType AOp, CompareType CmpOp>
+    static inline void op_arith_compare(
+        data_type* const __restrict data, 
+        const size_type start,
+        const T* const __restrict src,
+        const ArithHighPrecisionType<T>& right_operand,
+        const ArithHighPrecisionType<T>& value,
+        const size_type size
+    ) {
+        for (size_type i = 0; i < size; i++) {
+            get_proxy(data, start + i) = ArithCompareOperator<AOp, CmpOp>::compare(src[i], right_operand, value);
         }
     }
 };

@@ -29,6 +29,19 @@ namespace avx512 {
     FUNC(__VA_ARGS__,ExcInc); \
     FUNC(__VA_ARGS__,ExcExc);
 
+// a facility to run through all possible arithmetic compare operations
+#define ALL_ARITH_CMP_OPS(FUNC,...) \
+    FUNC(__VA_ARGS__,Add,EQ); \
+    FUNC(__VA_ARGS__,Add,NEQ); \
+    FUNC(__VA_ARGS__,Sub,EQ); \
+    FUNC(__VA_ARGS__,Sub,NEQ); \
+    FUNC(__VA_ARGS__,Mul,EQ); \
+    FUNC(__VA_ARGS__,Mul,NEQ); \
+    FUNC(__VA_ARGS__,Div,EQ); \
+    FUNC(__VA_ARGS__,Div,NEQ); \
+    FUNC(__VA_ARGS__,Mod,EQ); \
+    FUNC(__VA_ARGS__,Mod,NEQ);
+
 // count is expected to be in range [0, 64)
 inline uint64_t get_mask(const size_t count) {
     return (uint64_t(1) << count) - uint64_t(1);
@@ -198,11 +211,11 @@ bool OpCompareValImpl<int32_t, Op>::op_compare_val(
     // process leftovers
     if (size16 != size) {
         // 8 elements to process
-        const uint16_t mask = get_mask(size - size16);
-        const __m512i v = _mm512_maskz_loadu_epi32(mask, src + size16);
-        const __mmask16 cmp_mask = _mm512_cmp_epi32_mask(v, target, pred);
+        const __m256i v = _mm256_loadu_si256((const __m256i*)(src + size16));
+        const __mmask8 cmp_mask = 
+            _mm256_cmp_epi32_mask(v, _mm512_castsi512_si256(target), pred);
 
-        res_u8[size16 / 8] = uint8_t(cmp_mask);
+        res_u8[size16 / 8] = cmp_mask;
     }
 
     return true;
@@ -266,11 +279,11 @@ bool OpCompareValImpl<float, Op>::op_compare_val(
     // process leftovers
     if (size16 != size) {
         // 8 elements to process
-        const uint8_t mask = get_mask(size - size16);
-        const __m512 v = _mm512_maskz_loadu_ps(mask, src + size16);
-        const __mmask16 cmp_mask = _mm512_cmp_ps_mask(v, target, pred);
+        const __m256 v = _mm256_loadu_ps(src + size16);
+        const __mmask8 cmp_mask = 
+            _mm256_cmp_ps_mask(v, _mm512_castps512_ps256(target), pred);
 
-        res_u8[size16 / 8] = uint8_t(cmp_mask);
+        res_u8[size16 / 8] = cmp_mask;
     }
 
     return true;
@@ -446,12 +459,11 @@ bool OpCompareColumnImpl<int32_t, int32_t, Op>::op_compare_column(
     // process leftovers
     if (size16 != size) {
         // 8 elements to process
-        const uint16_t mask = get_mask(size - size16);
-        const __m512i vl = _mm512_maskz_loadu_epi32(mask, left + size16);
-        const __m512i vr = _mm512_maskz_loadu_epi32(mask, right + size16);
-        const __mmask16 cmp_mask = _mm512_cmp_epi32_mask(vl, vr, pred);
+        const __m256i vl = _mm256_loadu_si256((const __m256i*)(left + size16));
+        const __m256i vr = _mm256_loadu_si256((const __m256i*)(right + size16));
+        const __mmask8 cmp_mask = _mm256_cmp_epi32_mask(vl, vr, pred);
 
-        res_u8[size16 / 8] = uint8_t(cmp_mask);
+        res_u8[size16 / 8] = cmp_mask;
     }
 
     return true;
@@ -514,12 +526,11 @@ bool OpCompareColumnImpl<float, float, Op>::op_compare_column(
     // process leftovers
     if (size16 != size) {
         // process 8 elements
-        const uint16_t mask = get_mask(size - size16);
-        const __m512 vl = _mm512_maskz_loadu_ps(mask, left + size16);
-        const __m512 vr = _mm512_maskz_loadu_ps(mask, right + size16);
-        const __mmask16 cmp_mask = _mm512_cmp_ps_mask(vl, vr, pred);
+        const __m256 vl = _mm256_loadu_ps(left + size16);
+        const __m256 vr = _mm256_loadu_ps(right + size16);
+        const __mmask8 cmp_mask = _mm256_cmp_ps_mask(vl, vr, pred);
 
-        res_u8[size16 / 8] = uint8_t(cmp_mask);
+        res_u8[size16 / 8] = cmp_mask;
     }
 
     return true;
@@ -711,14 +722,13 @@ bool OpWithinRangeColumnImpl<int32_t, Op>::op_within_range_column(
     // process leftovers
     if (size16 != size) {
         // 8 elements to process
-        const uint16_t mask = get_mask(size - size16);
-        const __m512i vl = _mm512_maskz_loadu_epi32(mask, lower + size16);
-        const __m512i vu = _mm512_maskz_loadu_epi32(mask, upper + size16);
-        const __m512i vv = _mm512_maskz_loadu_epi32(mask, values + size16);
-        const __mmask16 cmpl_mask = _mm512_cmp_epi32_mask(vl, vv, pred_lower);
-        const __mmask16 cmp_mask = _mm512_mask_cmp_epi32_mask(cmpl_mask, vv, vu, pred_upper);
+        const __m256i vl = _mm256_loadu_si256((const __m256i*)(lower + size16));
+        const __m256i vu = _mm256_loadu_si256((const __m256i*)(upper + size16));
+        const __m256i vv = _mm256_loadu_si256((const __m256i*)(values + size16));
+        const __mmask8 cmpl_mask = _mm256_cmp_epi32_mask(vl, vv, pred_lower);
+        const __mmask8 cmp_mask = _mm256_mask_cmp_epi32_mask(cmpl_mask, vv, vu, pred_upper);
 
-        res_u8[size16 / 8] = uint8_t(cmp_mask);
+        res_u8[size16 / 8] = cmp_mask;
     }
 
     return true;
@@ -789,14 +799,13 @@ bool OpWithinRangeColumnImpl<float, Op>::op_within_range_column(
     // process leftovers
     if (size16 != size) {
         // process 8 elements
-        const uint16_t mask = get_mask(size - size16);
-        const __m512 vl = _mm512_maskz_loadu_ps(mask, lower + size16);
-        const __m512 vu = _mm512_maskz_loadu_ps(mask, upper + size16);
-        const __m512 vv = _mm512_maskz_loadu_ps(mask, values + size16);
-        const __mmask16 cmpl_mask = _mm512_cmp_ps_mask(vl, vv, pred_lower);
-        const __mmask16 cmp_mask = _mm512_mask_cmp_ps_mask(cmpl_mask, vv, vu, pred_upper);
+        const __m256 vl = _mm256_loadu_ps(lower + size16);
+        const __m256 vu = _mm256_loadu_ps(upper + size16);
+        const __m256 vv = _mm256_loadu_ps(values + size16);
+        const __mmask8 cmpl_mask = _mm256_cmp_ps_mask(vl, vv, pred_lower);
+        const __mmask8 cmp_mask = _mm256_mask_cmp_ps_mask(cmpl_mask, vv, vu, pred_upper);
 
-        res_u8[size16 / 8] = uint8_t(cmp_mask);
+        res_u8[size16 / 8] = cmp_mask;
     }
 
     return true;
@@ -988,12 +997,11 @@ bool OpWithinRangeValImpl<int32_t, Op>::op_within_range_val(
     // process leftovers
     if (size16 != size) {
         // 8 elements to process
-        const uint16_t mask = get_mask(size - size16);
-        const __m512i vv = _mm512_maskz_loadu_epi32(mask, values + size16);
-        const __mmask16 cmpl_mask = _mm512_cmp_epi32_mask(lower_v, vv, pred_lower);
-        const __mmask16 cmp_mask = _mm512_mask_cmp_epi32_mask(cmpl_mask, vv, upper_v, pred_upper);
+        const __m256i vv = _mm256_loadu_si256((const __m256i*)(values + size16));
+        const __mmask8 cmpl_mask = _mm256_cmp_epi32_mask(_mm512_castsi512_si256(lower_v), vv, pred_lower);
+        const __mmask8 cmp_mask = _mm256_mask_cmp_epi32_mask(cmpl_mask, vv, _mm512_castsi512_si256(upper_v), pred_upper);
 
-        res_u8[size16 / 8] = uint8_t(cmp_mask);
+        res_u8[size16 / 8] = cmp_mask;
     }
 
     return true;
@@ -1064,12 +1072,11 @@ bool OpWithinRangeValImpl<float, Op>::op_within_range_val(
     // process leftovers
     if (size16 != size) {
         // process 8 elements
-        const uint16_t mask = get_mask(size - size16);
-        const __m512 vv = _mm512_maskz_loadu_ps(mask, values + size16);
-        const __mmask16 cmpl_mask = _mm512_cmp_ps_mask(lower_v, vv, pred_lower);
-        const __mmask16 cmp_mask = _mm512_mask_cmp_ps_mask(cmpl_mask, vv, upper_v, pred_upper);
+        const __m256 vv = _mm256_loadu_ps(values + size16);
+        const __mmask8 cmpl_mask = _mm256_cmp_ps_mask(_mm512_castps512_ps256(lower_v), vv, pred_lower);
+        const __mmask8 cmp_mask = _mm256_mask_cmp_ps_mask(cmpl_mask, vv, _mm512_castps512_ps256(upper_v), pred_upper);
 
-        res_u8[size16 / 8] = uint8_t(cmp_mask);
+        res_u8[size16 / 8] = cmp_mask;
     }
 
     return true;
@@ -1128,8 +1135,431 @@ ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_AVX512, double)
 
 ///////////////////////////////////////////////////////////////////////////
 
+// https://godbolt.org/z/CYipz7
+// https://github.com/ridiculousfish/libdivide
+// https://github.com/lemire/fastmod
+
+//
+template<ArithType AOp, CompareType CmpOp>
+struct ArithHelperI64 {};
+
+template<CompareType CmpOp>
+struct ArithHelperI64<ArithType::Add, CmpOp> {
+    static inline __mmask8 op(const __m512i left, const __m512i right, const __m512i value) {
+        // left + right == value
+        constexpr auto pred = ComparePredicate<int64_t, CmpOp>::value;
+        return _mm512_cmp_epi64_mask(_mm512_add_epi64(left, right), value, pred);
+    }
+};
+
+template<CompareType CmpOp>
+struct ArithHelperI64<ArithType::Sub, CmpOp> {
+    static inline __mmask8 op(const __m512i left, const __m512i right, const __m512i value) {
+        // left - right == value
+        constexpr auto pred = ComparePredicate<int64_t, CmpOp>::value;
+        return _mm512_cmp_epi64_mask(_mm512_sub_epi64(left, right), value, pred);
+    }
+};
+
+template<CompareType CmpOp>
+struct ArithHelperI64<ArithType::Mul, CmpOp> {
+    static inline __mmask8 op(const __m512i left, const __m512i right, const __m512i value) {
+        // left * right == value
+        constexpr auto pred = ComparePredicate<int64_t, CmpOp>::value;
+        return _mm512_cmp_epi64_mask(_mm512_mullo_epi64(left, right), value, pred);
+    }
+};
+
+//
+template<ArithType AOp, CompareType CmpOp>
+struct ArithHelperF32 {};
+
+template<CompareType CmpOp>
+struct ArithHelperF32<ArithType::Add, CmpOp> {
+    static inline __mmask16 op(const __m512 left, const __m512 right, const __m512 value) {
+        // left + right == value
+        constexpr auto pred = ComparePredicate<float, CmpOp>::value;
+        return _mm512_cmp_ps_mask(_mm512_add_ps(left, right), value, pred);
+    }
+};
+
+template<CompareType CmpOp>
+struct ArithHelperF32<ArithType::Sub, CmpOp> {
+    static inline __mmask16 op(const __m512 left, const __m512 right, const __m512 value) {
+        // left - right == value
+        constexpr auto pred = ComparePredicate<float, CmpOp>::value;
+        return _mm512_cmp_ps_mask(_mm512_sub_ps(left, right), value, pred);
+    }
+};
+
+template<CompareType CmpOp>
+struct ArithHelperF32<ArithType::Mul, CmpOp> {
+    static inline __mmask16 op(const __m512 left, const __m512 right, const __m512 value) {
+        // left * right == value
+        constexpr auto pred = ComparePredicate<float, CmpOp>::value;
+        return _mm512_cmp_ps_mask(_mm512_mul_ps(left, right), value, pred);
+    }
+};
+
+template<CompareType CmpOp>
+struct ArithHelperF32<ArithType::Div, CmpOp> {
+    static inline __mmask16 op(const __m512 left, const __m512 right, const __m512 value) {
+        // left == right * value
+        constexpr auto pred = ComparePredicate<float, CmpOp>::value;
+        return _mm512_cmp_ps_mask(left, _mm512_mul_ps(right, value), pred);
+    }
+};
+
+//
+template<ArithType AOp, CompareType CmpOp>
+struct ArithHelperF64 {};
+
+template<CompareType CmpOp>
+struct ArithHelperF64<ArithType::Add, CmpOp> {
+    static inline __mmask8 op(const __m512d left, const __m512d right, const __m512d value) {
+        // left + right == value
+        constexpr auto pred = ComparePredicate<double, CmpOp>::value;
+        return _mm512_cmp_pd_mask(_mm512_add_pd(left, right), value, pred);
+    }
+};
+
+template<CompareType CmpOp>
+struct ArithHelperF64<ArithType::Sub, CmpOp> {
+    static inline __mmask8 op(const __m512d left, const __m512d right, const __m512d value) {
+        // left - right == value
+        constexpr auto pred = ComparePredicate<double, CmpOp>::value;
+        return _mm512_cmp_pd_mask(_mm512_sub_pd(left, right), value, pred);
+    }
+};
+
+template<CompareType CmpOp>
+struct ArithHelperF64<ArithType::Mul, CmpOp> {
+    static inline __mmask8 op(const __m512d left, const __m512d right, const __m512d value) {
+        // left * right == value
+        constexpr auto pred = ComparePredicate<double, CmpOp>::value;
+        return _mm512_cmp_pd_mask(_mm512_mul_pd(left, right), value, pred);
+    }
+};
+
+template<CompareType CmpOp>
+struct ArithHelperF64<ArithType::Div, CmpOp> {
+    static inline __mmask8 op(const __m512d left, const __m512d right, const __m512d value) {
+        // left == right * value
+        constexpr auto pred = ComparePredicate<double, CmpOp>::value;
+        return _mm512_cmp_pd_mask(left, _mm512_mul_pd(right, value), pred);
+    }
+};
+
+
+// todo: Mul, Div, Mod
+
+#define NOT_IMPLEMENTED_OP_ARITH_COMPARE(TTYPE, AOP, CMPOP) \
+    template<> \
+    bool OpArithCompareImpl<TTYPE, ArithType::AOP, CompareType::CMPOP>::op_arith_compare( \
+        uint8_t* const __restrict res_u8, \
+        const TTYPE* const __restrict src, \
+        const ArithHighPrecisionType<TTYPE>& right_operand, \
+        const ArithHighPrecisionType<TTYPE>& value, \
+        const size_t size \
+    ) { \
+        return false; \
+    }
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const int8_t* const __restrict src,
+    const ArithHighPrecisionType<int8_t>& right_operand,
+    const ArithHighPrecisionType<int8_t>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+
+    //
+    const __m512i right_v = _mm512_set1_epi64(right_operand);
+    const __m512i value_v = _mm512_set1_epi64(value);
+    constexpr auto pred = ComparePredicate<int64_t, CmpOp>::value;
+
+    // process big blocks
+    const size_t size16 = (size / 16) * 16;
+    for (size_t i = 0; i < size16; i += 16) {
+        const __m128i vs = _mm_loadu_si128((const __m128i*)(src + i));
+        const __m512i v0s = _mm512_cvtepi8_epi64(_mm_unpacklo_epi64(vs, _mm_setzero_si128()));
+        const __m512i v1s = _mm512_cvtepi8_epi64(_mm_unpackhi_epi64(vs, _mm_setzero_si128()));
+        const __mmask8 cmp_mask0 = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
+        const __mmask8 cmp_mask1 = ArithHelperI64<AOp, CmpOp>::op(v1s, right_v, value_v);
+
+        res_u8[i / 8 + 0] = cmp_mask0;
+        res_u8[i / 8 + 1] = cmp_mask1;
+    }
+
+    // process leftovers
+    if (size16 != size) {
+        // process 8 elements
+        const int64_t* const __restrict src64 = (const int64_t*)(src + size16);
+        const __m128i vs = _mm_set_epi64x(0, *src64);
+        const __m512i v0s = _mm512_cvtepi16_epi64(vs);
+        const __mmask8 cmp_mask = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
+
+        res_u8[size16 / 8] = cmp_mask;
+    }
+
+    return true;
+}
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const int16_t* const __restrict src,
+    const ArithHighPrecisionType<int16_t>& right_operand,
+    const ArithHighPrecisionType<int16_t>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+
+    //
+    const __m512i right_v = _mm512_set1_epi64(right_operand);
+    const __m512i value_v = _mm512_set1_epi64(value);
+    constexpr auto pred = ComparePredicate<int64_t, CmpOp>::value;
+
+    // todo: aligned reads & writes
+
+    // process big blocks
+    const size_t size16 = (size / 16) * 16;
+    for (size_t i = 0; i < size16; i += 16) {
+        const __m256i vs = _mm256_loadu_si256((const __m256i*)(src + i));
+        const __m512i v0s = _mm512_cvtepi16_epi64(_mm256_extracti128_si256(vs, 0));
+        const __m512i v1s = _mm512_cvtepi16_epi64(_mm256_extracti128_si256(vs, 1));
+        const __mmask8 cmp_mask0 = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
+        const __mmask8 cmp_mask1 = ArithHelperI64<AOp, CmpOp>::op(v1s, right_v, value_v);
+
+        res_u8[i / 8 + 0] = cmp_mask0;
+        res_u8[i / 8 + 1] = cmp_mask1;
+    }
+
+    // process leftovers
+    if (size16 != size) {
+        // process 8 elements
+        const __m128i vs = _mm_loadu_si128((const __m128i*)(src + size16));
+        const __m512i v0s = _mm512_cvtepi16_epi64(vs);
+        const __mmask8 cmp_mask = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
+
+        res_u8[size16 / 8] = cmp_mask;
+    }
+
+    return true;
+}
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const int32_t* const __restrict src,
+    const ArithHighPrecisionType<int32_t>& right_operand,
+    const ArithHighPrecisionType<int32_t>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+
+    //
+    const __m512i right_v = _mm512_set1_epi64(right_operand);
+    const __m512i value_v = _mm512_set1_epi64(value);
+    constexpr auto pred = ComparePredicate<int64_t, CmpOp>::value;
+
+    // todo: aligned reads & writes
+
+    // process big blocks
+    const size_t size16 = (size / 16) * 16;
+    for (size_t i = 0; i < size16; i += 16) {
+        const __m512i vs = _mm512_loadu_si512((const __m512i*)(src + i));
+        const __m512i v0s = _mm512_cvtepi32_epi64(_mm512_extracti64x4_epi64(vs, 0));
+        const __m512i v1s = _mm512_cvtepi32_epi64(_mm512_extracti64x4_epi64(vs, 1));
+        const __mmask8 cmp_mask0 = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
+        const __mmask8 cmp_mask1 = ArithHelperI64<AOp, CmpOp>::op(v1s, right_v, value_v);
+
+        res_u8[i / 8 + 0] = cmp_mask0;
+        res_u8[i / 8 + 1] = cmp_mask1;
+    }
+
+    // process leftovers
+    if (size16 != size) {
+        // process 8 elements
+        const __m256i vs = _mm256_loadu_si256((const __m256i*)(src + size16));
+        const __m512i v0s = _mm512_cvtepi32_epi64(vs);
+        const __mmask8 cmp_mask = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
+
+        res_u8[size16 / 8] = cmp_mask;
+    }
+
+    return true;
+}
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const int64_t* const __restrict src,
+    const ArithHighPrecisionType<int64_t>& right_operand,
+    const ArithHighPrecisionType<int64_t>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+
+    //
+    const __m512i right_v = _mm512_set1_epi64(right_operand);
+    const __m512i value_v = _mm512_set1_epi64(value);
+    constexpr auto pred = ComparePredicate<int64_t, CmpOp>::value;
+
+    // todo: aligned reads & writes
+
+    // process big blocks
+    const size_t size8 = (size / 8) * 8;
+    for (size_t i = 0; i < size8; i += 8) {
+        const __m512i v0s = _mm512_loadu_si512((const __m512i*)(src + i));
+        const __mmask8 cmp_mask = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
+
+        res_u8[i / 8] = cmp_mask;
+    }
+
+    return true;
+}
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const float* const __restrict src,
+    const ArithHighPrecisionType<float>& right_operand,
+    const ArithHighPrecisionType<float>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+
+    //
+    const __m512 right_v = _mm512_set1_ps(right_operand);
+    const __m512 value_v = _mm512_set1_ps(value);
+    uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res_u8);
+    constexpr auto pred = ComparePredicate<float, CmpOp>::value;
+
+    // todo: aligned reads & writes
+
+    // process big blocks
+    const size_t size16 = (size / 16) * 16;
+    for (size_t i = 0; i < size16; i += 16) {
+        const __m512 v0s = _mm512_loadu_ps(src + i);
+        const __mmask16 cmp_mask = ArithHelperF32<AOp, CmpOp>::op(v0s, right_v, value_v);
+        res_u16[i / 16] = cmp_mask;
+    }
+
+    // process leftovers
+    if (size16 != size) {
+        // process 8 elements
+        const __m256 vs = _mm256_loadu_ps(src + size16);
+        const __m512 v0s = _mm512_castps256_ps512(vs);
+        const __mmask16 cmp_mask = ArithHelperF32<AOp, CmpOp>::op(v0s, right_v, value_v);
+        res_u8[size16 / 8] = uint8_t(cmp_mask);
+    }
+
+    return true;
+}
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const double* const __restrict src,
+    const ArithHighPrecisionType<double>& right_operand,
+    const ArithHighPrecisionType<double>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+
+    //
+    const __m512d right_v = _mm512_set1_pd(right_operand);
+    const __m512d value_v = _mm512_set1_pd(value);
+    constexpr auto pred = ComparePredicate<double, CmpOp>::value;
+
+    // todo: aligned reads & writes
+
+    // process big blocks
+    const size_t size8 = (size / 8) * 8;
+    for (size_t i = 0; i < size8; i += 8) {
+        const __m512d v0s = _mm512_loadu_pd(src + i);
+        const __mmask8 cmp_mask = ArithHelperF64<AOp, CmpOp>::op(v0s, right_v, value_v);
+
+        res_u8[i / 8] = cmp_mask;
+    }
+
+    return true;
+}
+
+//
+#undef NOT_IMPLEMENTED_OP_ARITH_COMPARE
+
+//
+#define INSTANTIATE_ARITH_COMPARE_AVX512(TTYPE,OP,CMP) \
+    template bool OpArithCompareImpl<TTYPE, ArithType::OP, CompareType::CMP>::op_arith_compare( \
+        uint8_t* const __restrict res_u8, \
+        const TTYPE* const __restrict src, \
+        const ArithHighPrecisionType<TTYPE>& right_operand, \
+        const ArithHighPrecisionType<TTYPE>& value, \
+        const size_t size \
+    );
+
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX512, int8_t)
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX512, int16_t)
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX512, int32_t)
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX512, int64_t)
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX512, float)
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX512, double)
+
+#undef INSTANTIATE_ARITH_COMPARE_AVX512
+
+
+///////////////////////////////////////////////////////////////////////////
+
 #undef ALL_COMPARE_OPS
 #undef ALL_RANGE_OPS
+#undef ALL_ARITH_CMP_OPS
+
 
 }
 }

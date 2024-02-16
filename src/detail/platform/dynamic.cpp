@@ -37,6 +37,19 @@ using namespace milvus::bitset::detail::arm;
     FUNC(__VA_ARGS__,ExcInc); \
     FUNC(__VA_ARGS__,ExcExc);
 
+// a facility to run through all possible arithmetic compare operations
+#define ALL_ARITH_CMP_OPS(FUNC,...) \
+    FUNC(__VA_ARGS__,Add,EQ); \
+    FUNC(__VA_ARGS__,Add,NEQ); \
+    FUNC(__VA_ARGS__,Sub,EQ); \
+    FUNC(__VA_ARGS__,Sub,NEQ); \
+    FUNC(__VA_ARGS__,Mul,EQ); \
+    FUNC(__VA_ARGS__,Mul,NEQ); \
+    FUNC(__VA_ARGS__,Div,EQ); \
+    FUNC(__VA_ARGS__,Div,NEQ); \
+    FUNC(__VA_ARGS__,Mod,EQ); \
+    FUNC(__VA_ARGS__,Mod,NEQ);
+
 //
 namespace milvus {
 namespace bitset {
@@ -47,7 +60,12 @@ namespace detail {
 
 // Define pointers for op_compare
 template<typename T, typename U, CompareType Op>
-using OpCompareColumnPtr = bool(*)(uint8_t* const __restrict output, const T* const __restrict t, const U* const __restrict u, const size_t size);
+using OpCompareColumnPtr = bool(*)(
+    uint8_t* const __restrict output, 
+    const T* const __restrict t, 
+    const U* const __restrict u, 
+    const size_t size
+);
 
 #define DECLARE_OP_COMPARE_COLUMN(TTYPE, UTYPE, OP) \
     OpCompareColumnPtr<TTYPE, UTYPE, CompareType::OP> op_compare_column_##TTYPE##_##UTYPE##_##OP = VectorizedRef::template op_compare_column<TTYPE, UTYPE, CompareType::OP>;
@@ -72,8 +90,7 @@ namespace dynamic {
         const TTYPE* const __restrict u, \
         const size_t size \
     ) { \
-        op_compare_column_##TTYPE##_##TTYPE##_##OP(bitmask, t, u, size); \
-        return true; \
+        return op_compare_column_##TTYPE##_##TTYPE##_##OP(bitmask, t, u, size); \
     }
 
 ALL_COMPARE_OPS(DISPATCH_OP_COMPARE_COLUMN_IMPL, int8_t)
@@ -91,7 +108,12 @@ ALL_COMPARE_OPS(DISPATCH_OP_COMPARE_COLUMN_IMPL, double)
 /////////////////////////////////////////////////////////////////////////////
 // op_compare_val
 template<typename T, CompareType Op>
-using OpCompareValPtr = bool(*)(uint8_t* const __restrict output, const T* const __restrict t, const size_t size, const T& value);
+using OpCompareValPtr = bool(*)(
+    uint8_t* const __restrict output, 
+    const T* const __restrict t, 
+    const size_t size, 
+    const T& value
+);
 
 #define DECLARE_OP_COMPARE_VAL(TTYPE, OP) \
     OpCompareValPtr<TTYPE, CompareType::OP> op_compare_val_##TTYPE##_##OP = VectorizedRef::template op_compare_val<TTYPE, CompareType::OP>;
@@ -115,8 +137,7 @@ namespace dynamic {
         const size_t size, \
         const TTYPE& value \
     ) { \
-        op_compare_val_##TTYPE##_##OP(bitmask, t, size, value); \
-        return true; \
+        return op_compare_val_##TTYPE##_##OP(bitmask, t, size, value); \
     }
 
 ALL_COMPARE_OPS(DISPATCH_OP_COMPARE_VAL_IMPL, int8_t)
@@ -134,7 +155,13 @@ ALL_COMPARE_OPS(DISPATCH_OP_COMPARE_VAL_IMPL, double)
 /////////////////////////////////////////////////////////////////////////////
 // op_within_range column
 template<typename T, RangeType Op>
-using OpWithinRangeColumnPtr = bool(*)(uint8_t* const __restrict output, const T* const __restrict lower, const T* const __restrict upper, const T* const __restrict values, const size_t size);
+using OpWithinRangeColumnPtr = bool(*)(
+    uint8_t* const __restrict output, 
+    const T* const __restrict lower, 
+    const T* const __restrict upper, 
+    const T* const __restrict values, 
+    const size_t size
+);
 
 #define DECLARE_OP_WITHIN_RANGE_COLUMN(TTYPE, OP) \
     OpWithinRangeColumnPtr<TTYPE, RangeType::OP> op_within_range_column_##TTYPE##_##OP = VectorizedRef::template op_within_range_column<TTYPE, RangeType::OP>;
@@ -160,8 +187,7 @@ namespace dynamic {
         const TTYPE* const __restrict values, \
         const size_t size \
     ) { \
-        op_within_range_column_##TTYPE##_##OP(output, lower, upper, values, size); \
-        return true; \
+        return op_within_range_column_##TTYPE##_##OP(output, lower, upper, values, size); \
     }
 
 ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_COLUMN_IMPL, int8_t)
@@ -178,7 +204,13 @@ ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_COLUMN_IMPL, double)
 /////////////////////////////////////////////////////////////////////////////
 // op_within_range val
 template<typename T, RangeType Op>
-using OpWithinRangeValPtr = bool(*)(uint8_t* const __restrict output, const T& lower, const T& upper, const T* const __restrict values, const size_t size);
+using OpWithinRangeValPtr = bool(*)(
+    uint8_t* const __restrict output, 
+    const T& lower, 
+    const T& upper, 
+    const T* const __restrict values, 
+    const size_t size
+);
 
 #define DECLARE_OP_WITHIN_RANGE_VAL(TTYPE, OP) \
     OpWithinRangeValPtr<TTYPE, RangeType::OP> op_within_range_val_##TTYPE##_##OP = VectorizedRef::template op_within_range_val<TTYPE, RangeType::OP>;
@@ -204,8 +236,7 @@ namespace dynamic {
         const TTYPE* const __restrict values, \
         const size_t size \
     ) { \
-        op_within_range_val_##TTYPE##_##OP(output, lower, upper, values, size); \
-        return true; \
+        return op_within_range_val_##TTYPE##_##OP(output, lower, upper, values, size); \
     }
 
 ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_VAL_IMPL, int8_t)
@@ -214,6 +245,55 @@ ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_VAL_IMPL, int32_t)
 ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_VAL_IMPL, int64_t)
 ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_VAL_IMPL, float)
 ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_VAL_IMPL, double)
+
+}
+
+
+/////////////////////////////////////////////////////////////////////////////
+// op_arith_compare
+template<typename T, ArithType AOp, CompareType CmpOp>
+using OpArithComparePtr = bool(*)(
+    uint8_t* const __restrict output, 
+    const T* const __restrict src, 
+    const ArithHighPrecisionType<T>& right_operand, 
+    const ArithHighPrecisionType<T>& value, 
+    const size_t size
+);
+
+#define DECLARE_OP_ARITH_COMPARE(TTYPE, AOP, CMPOP) \
+    OpArithComparePtr<TTYPE, ArithType::AOP, CompareType::CMPOP> op_arith_compare_##TTYPE##_##AOP##_##CMPOP = VectorizedRef::template op_arith_compare<TTYPE, ArithType::AOP, CompareType::CMPOP>;
+
+ALL_ARITH_CMP_OPS(DECLARE_OP_ARITH_COMPARE, int8_t)
+ALL_ARITH_CMP_OPS(DECLARE_OP_ARITH_COMPARE, int16_t)
+ALL_ARITH_CMP_OPS(DECLARE_OP_ARITH_COMPARE, int32_t)
+ALL_ARITH_CMP_OPS(DECLARE_OP_ARITH_COMPARE, int64_t)
+ALL_ARITH_CMP_OPS(DECLARE_OP_ARITH_COMPARE, float)
+ALL_ARITH_CMP_OPS(DECLARE_OP_ARITH_COMPARE, double)
+
+#undef DECLARE_OP_ARITH_COMPARE
+
+
+//
+namespace dynamic {
+
+#define DISPATCH_OP_ARITH_COMPARE(TTYPE, AOP, CMPOP) \
+    template<> \
+    bool OpArithCompareImpl<TTYPE, ArithType::AOP, CompareType::CMPOP>::op_arith_compare( \
+        uint8_t* const __restrict output, \
+        const TTYPE* const __restrict src, \
+        const ArithHighPrecisionType<TTYPE>& right_operand, \
+        const ArithHighPrecisionType<TTYPE>& value, \
+        const size_t size \
+    ) { \
+        return op_arith_compare_##TTYPE##_##AOP##_##CMPOP(output, src, right_operand, value, size); \
+    }
+
+ALL_ARITH_CMP_OPS(DISPATCH_OP_ARITH_COMPARE, int8_t)
+ALL_ARITH_CMP_OPS(DISPATCH_OP_ARITH_COMPARE, int16_t)
+ALL_ARITH_CMP_OPS(DISPATCH_OP_ARITH_COMPARE, int32_t)
+ALL_ARITH_CMP_OPS(DISPATCH_OP_ARITH_COMPARE, int64_t)
+ALL_ARITH_CMP_OPS(DISPATCH_OP_ARITH_COMPARE, float)
+ALL_ARITH_CMP_OPS(DISPATCH_OP_ARITH_COMPARE, double)
 
 }
 
@@ -237,6 +317,8 @@ static void init_dynamic_hook() {
     op_within_range_column_##TTYPE##_##OP = VectorizedAvx512::template op_within_range_column<TTYPE, RangeType::OP>;
 #define SET_OP_WITHIN_RANGE_VAL_AVX512(TTYPE, OP) \
     op_within_range_val_##TTYPE##_##OP = VectorizedAvx512::template op_within_range_val<TTYPE, RangeType::OP>;
+#define SET_ARITH_COMPARE_AVX512(TTYPE, AOP, CMPOP) \
+    op_arith_compare_##TTYPE##_##AOP##_##CMPOP = VectorizedAvx512::template op_arith_compare<TTYPE, ArithType::AOP, CompareType::CMPOP>;
 
         // assign AVX512-related pointers
         ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_AVX512, int8_t, int8_t)
@@ -267,10 +349,18 @@ static void init_dynamic_hook() {
         ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_AVX512, float)
         ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_AVX512, double)
 
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_AVX512, int8_t)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_AVX512, int16_t)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_AVX512, int32_t)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_AVX512, int64_t)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_AVX512, float)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_AVX512, double)
+
 #undef SET_OP_COMPARE_COLUMN_AVX512
 #undef SET_OP_COMPARE_VAL_AVX512
 #undef SET_OP_WITHIN_RANGE_COLUMN_AVX512
 #undef SET_OP_WITHIN_RANGE_VAL_AVX512
+#undef SET_ARITH_COMPARE_AVX512
 
         return;
     }
@@ -285,6 +375,8 @@ static void init_dynamic_hook() {
     op_within_range_column_##TTYPE##_##OP = VectorizedAvx2::template op_within_range_column<TTYPE, RangeType::OP>;
 #define SET_OP_WITHIN_RANGE_VAL_AVX2(TTYPE, OP) \
     op_within_range_val_##TTYPE##_##OP = VectorizedAvx2::template op_within_range_val<TTYPE, RangeType::OP>;
+#define SET_ARITH_COMPARE_AVX2(TTYPE, AOP, CMPOP) \
+    op_arith_compare_##TTYPE##_##AOP##_##CMPOP = VectorizedAvx2::template op_arith_compare<TTYPE, ArithType::AOP, CompareType::CMPOP>;
 
         // assign AVX2-related pointers
         ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_AVX2, int8_t, int8_t)
@@ -315,10 +407,18 @@ static void init_dynamic_hook() {
         ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_AVX2, float)
         ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_AVX2, double)
 
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_AVX2, int8_t)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_AVX2, int16_t)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_AVX2, int32_t)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_AVX2, int64_t)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_AVX2, float)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_AVX2, double)
+
 #undef SET_OP_COMPARE_COLUMN_AVX2
 #undef SET_OP_COMPARE_VAL_AVX2
 #undef SET_OP_WITHIN_RANGE_COLUMN_AVX2
 #undef SET_OP_WITHIN_RANGE_VAL_AVX2
+#undef SET_ARITH_COMPARE_AVX2
 
         return;
     }
@@ -335,6 +435,8 @@ static void init_dynamic_hook() {
     op_within_range_column_##TTYPE##_##OP = VectorizedNeon::template op_within_range_column<TTYPE, RangeType::OP>;
 #define SET_OP_WITHIN_RANGE_VAL_NEON(TTYPE, OP) \
     op_within_range_val_##TTYPE##_##OP = VectorizedNeon::template op_within_range_val<TTYPE, RangeType::OP>;
+#define SET_ARITH_COMPARE_NEON(TTYPE, AOP, CMPOP) \
+    op_arith_compare_##TTYPE##_##AOP##_##CMPOP = VectorizedNeon::template op_arith_compare<TTYPE, ArithType::AOP, CompareType::CMPOP>;
 
         // assign AVX2-related pointers
         ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_NEON, int8_t, int8_t)
@@ -365,10 +467,18 @@ static void init_dynamic_hook() {
         ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_NEON, float)
         ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_NEON, double)
 
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_NEON, int8_t)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_NEON, int16_t)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_NEON, int32_t)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_NEON, int64_t)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_NEON, float)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_NEON, double)
+
 #undef SET_OP_COMPARE_COLUMN_NEON
 #undef SET_OP_COMPARE_VAL_NEON
 #undef SET_OP_WITHIN_RANGE_COLUMN_NEON
 #undef SET_OP_WITHIN_RANGE_VAL_NEON
+#undef SET_ARITH_COMPARE_NEON
 
     }
 #endif
@@ -378,6 +488,7 @@ static void init_dynamic_hook() {
 // no longer needed
 #undef ALL_COMPARE_OPS
 #undef ALL_RANGE_OPS
+#undef ALL_ARITH_CMP_OPS
 
 //
 static int init_dynamic_ = []() {

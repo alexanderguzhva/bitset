@@ -103,8 +103,8 @@ struct CustomBitsetPolicy {
     }
 
     static inline void op_and(
-        data_type* left, 
-        const data_type* right, 
+        data_type* const left, 
+        const data_type* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
@@ -120,8 +120,8 @@ struct CustomBitsetPolicy {
     }
 
     static inline void op_or(
-        data_type* left, 
-        const data_type* right, 
+        data_type* const left, 
+        const data_type* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
@@ -226,8 +226,8 @@ struct CustomBitsetPolicy {
     }
 
     static inline bool op_eq(
-        const data_type* left, 
-        const data_type* right, 
+        const data_type* const left, 
+        const data_type* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
@@ -245,8 +245,8 @@ struct CustomBitsetPolicy {
     }
 
     static inline void op_xor(
-        data_type* left, 
-        const data_type* right, 
+        data_type* const left, 
+        const data_type* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
@@ -262,8 +262,8 @@ struct CustomBitsetPolicy {
     }
 
     static inline void op_sub(
-        data_type* left, 
-        const data_type* right, 
+        data_type* const left, 
+        const data_type* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
@@ -349,6 +349,21 @@ struct CustomBitsetPolicy {
     ) {
         for (size_type i = 0; i < size; i++) {
             get_proxy(data, start + i) = RangeOperator<Op>::within_range(lower, upper, values[i]);
+        }
+    }
+
+    //
+    template<typename T,  ArithType AOp, CompareType CmpOp>
+    static inline void op_arith_compare(
+        data_type* const __restrict data, 
+        const size_type start,
+        const T* const __restrict src,
+        const ArithHighPrecisionType<T>& right_operand,
+        const ArithHighPrecisionType<T>& value,
+        const size_type size
+    ) {
+        for (size_type i = 0; i < size; i++) {
+            get_proxy(data, start + i) = ArithCompareOperator<AOp, CmpOp>::compare(src[i], right_operand, value);
         }
     }
 };

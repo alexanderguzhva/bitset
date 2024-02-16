@@ -42,6 +42,7 @@ struct VectorizedRef {
         return false;
     }
 
+    // API requirement: size % 8 == 0
     template<typename T, RangeType Op>
     static inline bool op_within_range_column(
         uint8_t* const __restrict data, 
@@ -53,12 +54,25 @@ struct VectorizedRef {
         return false;
     }
 
+    // API requirement: size % 8 == 0
     template<typename T, RangeType Op>
     static inline bool op_within_range_val(
         uint8_t* const __restrict data, 
         const T& lower,
         const T& upper,
         const T* const __restrict values,
+        const size_t size
+    ) {
+        return false;
+    }
+
+    // API requirement: size % 8 == 0
+    template<typename T, ArithType AOp, CompareType CmpOp>
+    static inline bool op_arith_compare(
+        uint8_t* const __restrict bitmask, 
+        const T* const __restrict src,
+        const ArithHighPrecisionType<T>& right_operand,
+        const ArithHighPrecisionType<T>& value,
         const size_t size
     ) {
         return false;

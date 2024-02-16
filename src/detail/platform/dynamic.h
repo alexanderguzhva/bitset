@@ -140,6 +140,34 @@ ALL_DATATYPES_1(DECLARE_PARTIAL_OP_WITHIN_RANGE_VAL)
 
 #undef DECLARE_PARTIAL_OP_WITHIN_RANGE_VAL
 
+// the default implementation
+template<typename T, ArithType AOp, CompareType CmpOp>
+struct OpArithCompareImpl {
+    static inline bool op_arith_compare(
+        uint8_t* const __restrict bitmask, 
+        const T* const __restrict src,
+        const ArithHighPrecisionType<T>& right_operand,
+        const ArithHighPrecisionType<T>& value,
+        const size_t size
+    ) {
+        return false;
+    }
+};
+
+#define DECLARE_PARTIAL_OP_ARITH_COMPARE(TTYPE) \
+    template<ArithType AOp, CompareType CmpOp> \
+    struct OpArithCompareImpl<TTYPE, AOp, CmpOp> { \
+        static bool op_arith_compare( \
+            uint8_t* const __restrict bitmask, \
+            const TTYPE* const __restrict src, \
+            const ArithHighPrecisionType<TTYPE>& right_operand, \
+            const ArithHighPrecisionType<TTYPE>& value, \
+            const size_t size \
+        ); \
+    };
+
+ALL_DATATYPES_1(DECLARE_PARTIAL_OP_ARITH_COMPARE)
+
 //
 
 #undef ALL_DATATYPES_1
@@ -195,6 +223,18 @@ struct VectorizedDynamic {
         const size_t size
     ) {
         return dynamic::OpWithinRangeValImpl<T, Op>::op_within_range_val(bitmask, lower, upper, values, size);
+    }
+
+    // API requirement: size % 8 == 0
+    template<typename T, ArithType AOp, CompareType CmpOp>
+    static inline bool op_arith_compare(
+        uint8_t* const __restrict bitmask, 
+        const T* const __restrict src,
+        const ArithHighPrecisionType<T>& right_operand,
+        const ArithHighPrecisionType<T>& value,
+        const size_t size
+    ) {
+        return dynamic::OpArithCompareImpl<T, AOp, CmpOp>::op_arith_compare(bitmask, src, right_operand, value, size);
     }
 };
 

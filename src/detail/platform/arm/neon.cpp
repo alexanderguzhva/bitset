@@ -29,6 +29,19 @@ namespace neon {
     FUNC(__VA_ARGS__,ExcInc); \
     FUNC(__VA_ARGS__,ExcExc);
 
+// a facility to run through all possible arithmetic compare operations
+#define ALL_ARITH_CMP_OPS(FUNC,...) \
+    FUNC(__VA_ARGS__,Add,EQ); \
+    FUNC(__VA_ARGS__,Add,NEQ); \
+    FUNC(__VA_ARGS__,Sub,EQ); \
+    FUNC(__VA_ARGS__,Sub,NEQ); \
+    FUNC(__VA_ARGS__,Mul,EQ); \
+    FUNC(__VA_ARGS__,Mul,NEQ); \
+    FUNC(__VA_ARGS__,Div,EQ); \
+    FUNC(__VA_ARGS__,Div,NEQ); \
+    FUNC(__VA_ARGS__,Mod,EQ); \
+    FUNC(__VA_ARGS__,Mod,NEQ);
+
 // this function is missing somewhy
 inline uint64x2_t vmvnq_u64(const uint64x2_t value) {
     const uint64x2_t m1 = vreinterpretq_u64_u32(vdupq_n_u32(0xFFFFFFFF));
@@ -1213,9 +1226,171 @@ ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_NEON, double)
 
 ///////////////////////////////////////////////////////////////////////////
 
+// https://github.com/ridiculousfish/libdivide
+// https://github.com/lemire/fastmod
+
+// todo: Mul, Div, Mod
+
+#define NOT_IMPLEMENTED_OP_ARITH_COMPARE(TTYPE, AOP, CMPOP) \
+    template<> \
+    bool OpArithCompareImpl<TTYPE, ArithType::AOP, CompareType::CMPOP>::op_arith_compare( \
+        uint8_t* const __restrict res_u8, \
+        const TTYPE* const __restrict src, \
+        const ArithHighPrecisionType<TTYPE>& right_operand, \
+        const ArithHighPrecisionType<TTYPE>& value, \
+        const size_t size \
+    ) { \
+        return false; \
+    }
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const int8_t* const __restrict src,
+    const ArithHighPrecisionType<int8_t>& right_operand,
+    const ArithHighPrecisionType<int8_t>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+
+    return true;
+}
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const int16_t* const __restrict src,
+    const ArithHighPrecisionType<int16_t>& right_operand,
+    const ArithHighPrecisionType<int16_t>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+
+    return true;
+}
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const int32_t* const __restrict src,
+    const ArithHighPrecisionType<int32_t>& right_operand,
+    const ArithHighPrecisionType<int32_t>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+
+    return true;
+}
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const int64_t* const __restrict src,
+    const ArithHighPrecisionType<int64_t>& right_operand,
+    const ArithHighPrecisionType<int64_t>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+
+    return true;
+}
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const float* const __restrict src,
+    const ArithHighPrecisionType<float>& right_operand,
+    const ArithHighPrecisionType<float>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+
+    return true;
+}
+
+//
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, NEQ)
+
+template<ArithType AOp, CompareType CmpOp>
+bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
+    uint8_t* const __restrict res_u8,
+    const double* const __restrict src,
+    const ArithHighPrecisionType<double>& right_operand,
+    const ArithHighPrecisionType<double>& value,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+
+    return true;
+}
+
+//
+#undef NOT_IMPLEMENTED_OP_ARITH_COMPARE
+
+//
+#define INSTANTIATE_ARITH_COMPARE_NEON(TTYPE,OP,CMP) \
+    template bool OpArithCompareImpl<TTYPE, ArithType::OP, CompareType::CMP>::op_arith_compare( \
+        uint8_t* const __restrict res_u8, \
+        const TTYPE* const __restrict src, \
+        const ArithHighPrecisionType<TTYPE>& right_operand, \
+        const ArithHighPrecisionType<TTYPE>& value, \
+        const size_t size \
+    );
+
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_NEON, int8_t)
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_NEON, int16_t)
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_NEON, int32_t)
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_NEON, int64_t)
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_NEON, float)
+ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_NEON, double)
+
+#undef INSTANTIATE_ARITH_COMPARE_NEON
+
+///////////////////////////////////////////////////////////////////////////
+
 //
 #undef ALL_COMPARE_OPS
 #undef ALL_RANGE_OPS
+#undef ALL_ARITH_CMP_OPS
 
 }
 }

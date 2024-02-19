@@ -12,41 +12,41 @@ namespace detail {
 namespace x86 {
 
 //
-template<typename T, CompareType type>
+template<typename T, CompareOpType type>
 struct ComparePredicate {};
 
 template<typename T>
-struct ComparePredicate<T, CompareType::EQ> {
+struct ComparePredicate<T, CompareOpType::EQ> {
     static inline constexpr int value = 
         std::is_floating_point_v<T> ? _CMP_EQ_OQ : _MM_CMPINT_EQ; 
 };
 
 template<typename T>
-struct ComparePredicate<T, CompareType::LT> {
+struct ComparePredicate<T, CompareOpType::LT> {
     static inline constexpr int value = 
         std::is_floating_point_v<T> ? _CMP_LT_OQ : _MM_CMPINT_LT; 
 };
 
 template<typename T>
-struct ComparePredicate<T, CompareType::LE> {
+struct ComparePredicate<T, CompareOpType::LE> {
     static inline constexpr int value = 
         std::is_floating_point_v<T> ? _CMP_LE_OQ : _MM_CMPINT_LE; 
 };
 
 template<typename T>
-struct ComparePredicate<T, CompareType::GT> {
+struct ComparePredicate<T, CompareOpType::GT> {
     static inline constexpr int value = 
         std::is_floating_point_v<T> ? _CMP_GT_OQ : _MM_CMPINT_NLE; 
 };
 
 template<typename T>
-struct ComparePredicate<T, CompareType::GE> {
+struct ComparePredicate<T, CompareOpType::GE> {
     static inline constexpr int value = 
         std::is_floating_point_v<T> ? _CMP_GE_OQ : _MM_CMPINT_NLT; 
 };
 
 template<typename T>
-struct ComparePredicate<T, CompareType::NEQ> {
+struct ComparePredicate<T, CompareOpType::NEQ> {
     static inline constexpr int value = 
         std::is_floating_point_v<T> ? _CMP_NEQ_OQ : _MM_CMPINT_NE; 
 };
@@ -57,26 +57,26 @@ struct Range2Compare {};
 
 template<>
 struct Range2Compare<RangeType::IncInc> {
-    static constexpr inline CompareType lower = CompareType::LE;  
-    static constexpr inline CompareType upper = CompareType::LE;  
+    static constexpr inline CompareOpType lower = CompareOpType::LE;  
+    static constexpr inline CompareOpType upper = CompareOpType::LE;  
 };
 
 template<>
 struct Range2Compare<RangeType::IncExc> {
-    static constexpr inline CompareType lower = CompareType::LE;  
-    static constexpr inline CompareType upper = CompareType::LT;  
+    static constexpr inline CompareOpType lower = CompareOpType::LE;  
+    static constexpr inline CompareOpType upper = CompareOpType::LT;  
 };
 
 template<>
 struct Range2Compare<RangeType::ExcInc> {
-    static constexpr inline CompareType lower = CompareType::LT;  
-    static constexpr inline CompareType upper = CompareType::LE;  
+    static constexpr inline CompareOpType lower = CompareOpType::LT;  
+    static constexpr inline CompareOpType upper = CompareOpType::LE;  
 };
 
 template<>
 struct Range2Compare<RangeType::ExcExc> {
-    static constexpr inline CompareType lower = CompareType::LT;  
-    static constexpr inline CompareType upper = CompareType::LT;  
+    static constexpr inline CompareOpType lower = CompareOpType::LT;  
+    static constexpr inline CompareOpType upper = CompareOpType::LT;  
 };
 
 }

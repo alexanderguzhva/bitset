@@ -736,7 +736,7 @@ struct CustomBitsetPolicy2 {
     }
 
     //
-    template<typename T, typename U, CompareType Op>
+    template<typename T, typename U, CompareOpType Op>
     static inline void op_compare_column(
         data_type* const __restrict data, 
         const size_type start,
@@ -750,7 +750,7 @@ struct CustomBitsetPolicy2 {
     }
 
     //
-    template<typename T, CompareType Op>
+    template<typename T, CompareOpType Op>
     static inline void op_compare_val(
         data_type* const __restrict data, 
         const size_type start,
@@ -794,7 +794,7 @@ struct CustomBitsetPolicy2 {
     }
 
     //
-    template<typename T, ArithType AOp, CompareType CmpOp>
+    template<typename T, ArithOpType AOp, CompareOpType CmpOp>
     static inline void op_arith_compare(
         data_type* const __restrict data, 
         const size_type start,

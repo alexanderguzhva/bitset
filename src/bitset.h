@@ -414,32 +414,32 @@ public:
         const T* const __restrict t,
         const U* const __restrict u,
         const size_type size,
-        CompareType op
+        CompareOpType op
     ) {
-        if (op == CompareType::EQ) {
-            this->inplace_compare_column<T, U, CompareType::EQ>(t, u, size);
+        if (op == CompareOpType::EQ) {
+            this->inplace_compare_column<T, U, CompareOpType::EQ>(t, u, size);
         }
-        else if (op == CompareType::GE) {
-            this->inplace_compare_column<T, U, CompareType::GE>(t, u, size);
+        else if (op == CompareOpType::GE) {
+            this->inplace_compare_column<T, U, CompareOpType::GE>(t, u, size);
         }
-        else if (op == CompareType::GT) {
-            this->inplace_compare_column<T, U, CompareType::GT>(t, u, size);
+        else if (op == CompareOpType::GT) {
+            this->inplace_compare_column<T, U, CompareOpType::GT>(t, u, size);
         }
-        else if (op == CompareType::LE) {
-            this->inplace_compare_column<T, U, CompareType::LE>(t, u, size);
+        else if (op == CompareOpType::LE) {
+            this->inplace_compare_column<T, U, CompareOpType::LE>(t, u, size);
         }
-        else if (op == CompareType::LT) {
-            this->inplace_compare_column<T, U, CompareType::LT>(t, u, size);
+        else if (op == CompareOpType::LT) {
+            this->inplace_compare_column<T, U, CompareOpType::LT>(t, u, size);
         }
-        else if (op == CompareType::NEQ) {
-            this->inplace_compare_column<T, U, CompareType::NEQ>(t, u, size);
+        else if (op == CompareOpType::NEQ) {
+            this->inplace_compare_column<T, U, CompareOpType::NEQ>(t, u, size);
         }
         else {
             // unimplemented
         }
     }
 
-    template<typename T, typename U, CompareType Op>
+    template<typename T, typename U, CompareOpType Op>
     void inplace_compare_column(
         const T* const __restrict t,
         const U* const __restrict u,
@@ -462,32 +462,32 @@ public:
         const T* const __restrict t,
         const size_type size,
         const T& value,
-        CompareType op
+        CompareOpType op
     ) {
-        if (op == CompareType::EQ) {
-            this->inplace_compare_val<T, CompareType::EQ>(t, size, value);
+        if (op == CompareOpType::EQ) {
+            this->inplace_compare_val<T, CompareOpType::EQ>(t, size, value);
         }
-        else if (op == CompareType::GE) {
-            this->inplace_compare_val<T, CompareType::GE>(t, size, value);
+        else if (op == CompareOpType::GE) {
+            this->inplace_compare_val<T, CompareOpType::GE>(t, size, value);
         }
-        else if (op == CompareType::GT) {
-            this->inplace_compare_val<T, CompareType::GT>(t, size, value);
+        else if (op == CompareOpType::GT) {
+            this->inplace_compare_val<T, CompareOpType::GT>(t, size, value);
         }
-        else if (op == CompareType::LE) {
-            this->inplace_compare_val<T, CompareType::LE>(t, size, value);
+        else if (op == CompareOpType::LE) {
+            this->inplace_compare_val<T, CompareOpType::LE>(t, size, value);
         }
-        else if (op == CompareType::LT) {
-            this->inplace_compare_val<T, CompareType::LT>(t, size, value);
+        else if (op == CompareOpType::LT) {
+            this->inplace_compare_val<T, CompareOpType::LT>(t, size, value);
         }
-        else if (op == CompareType::NEQ) {
-            this->inplace_compare_val<T, CompareType::NEQ>(t, size, value);
+        else if (op == CompareOpType::NEQ) {
+            this->inplace_compare_val<T, CompareOpType::NEQ>(t, size, value);
         }
         else {
             // unimplemented
         }
     }
 
-    template<typename T, CompareType Op>
+    template<typename T, CompareOpType Op>
     void inplace_compare_val(
         const T* const __restrict t,
         const size_type size,
@@ -593,35 +593,35 @@ public:
         const ArithHighPrecisionType<T>& right_operand,
         const ArithHighPrecisionType<T>& value,
         const size_type size,
-        const ArithType a_op,
-        const CompareType cmp_op
+        const ArithOpType a_op,
+        const CompareOpType cmp_op
     ) {
-        if (a_op == ArithType::Add && cmp_op == CompareType::EQ) {
-            this->inplace_arith_compare<T, ArithType::Add, CompareType::EQ>(src, right_operand, value, size);
-        } else if (a_op == ArithType::Add && cmp_op == CompareType::NEQ) {
-            this->inplace_arith_compare<T, ArithType::Add, CompareType::NEQ>(src, right_operand, value, size);
-        } else if (a_op == ArithType::Sub && cmp_op == CompareType::EQ) {
-            this->inplace_arith_compare<T, ArithType::Sub, CompareType::EQ>(src, right_operand, value, size);
-        } else if (a_op == ArithType::Sub && cmp_op == CompareType::NEQ) {
-            this->inplace_arith_compare<T, ArithType::Sub, CompareType::NEQ>(src, right_operand, value, size);
-        } else if (a_op == ArithType::Mul && cmp_op == CompareType::EQ) {
-            this->inplace_arith_compare<T, ArithType::Mul, CompareType::EQ>(src, right_operand, value, size);
-        } else if (a_op == ArithType::Mul && cmp_op == CompareType::NEQ) {
-            this->inplace_arith_compare<T, ArithType::Mul, CompareType::NEQ>(src, right_operand, value, size);
-        } else if (a_op == ArithType::Div && cmp_op == CompareType::EQ) {
-            this->inplace_arith_compare<T, ArithType::Div, CompareType::EQ>(src, right_operand, value, size);
-        } else if (a_op == ArithType::Div && cmp_op == CompareType::NEQ) {
-            this->inplace_arith_compare<T, ArithType::Div, CompareType::NEQ>(src, right_operand, value, size);
-        } else if (a_op == ArithType::Mod && cmp_op == CompareType::EQ) {
-            this->inplace_arith_compare<T, ArithType::Mod, CompareType::EQ>(src, right_operand, value, size);
-        } else if (a_op == ArithType::Mod && cmp_op == CompareType::NEQ) {
-            this->inplace_arith_compare<T, ArithType::Mod, CompareType::NEQ>(src, right_operand, value, size);
+        if (a_op == ArithOpType::Add && cmp_op == CompareOpType::EQ) {
+            this->inplace_arith_compare<T, ArithOpType::Add, CompareOpType::EQ>(src, right_operand, value, size);
+        } else if (a_op == ArithOpType::Add && cmp_op == CompareOpType::NEQ) {
+            this->inplace_arith_compare<T, ArithOpType::Add, CompareOpType::NEQ>(src, right_operand, value, size);
+        } else if (a_op == ArithOpType::Sub && cmp_op == CompareOpType::EQ) {
+            this->inplace_arith_compare<T, ArithOpType::Sub, CompareOpType::EQ>(src, right_operand, value, size);
+        } else if (a_op == ArithOpType::Sub && cmp_op == CompareOpType::NEQ) {
+            this->inplace_arith_compare<T, ArithOpType::Sub, CompareOpType::NEQ>(src, right_operand, value, size);
+        } else if (a_op == ArithOpType::Mul && cmp_op == CompareOpType::EQ) {
+            this->inplace_arith_compare<T, ArithOpType::Mul, CompareOpType::EQ>(src, right_operand, value, size);
+        } else if (a_op == ArithOpType::Mul && cmp_op == CompareOpType::NEQ) {
+            this->inplace_arith_compare<T, ArithOpType::Mul, CompareOpType::NEQ>(src, right_operand, value, size);
+        } else if (a_op == ArithOpType::Div && cmp_op == CompareOpType::EQ) {
+            this->inplace_arith_compare<T, ArithOpType::Div, CompareOpType::EQ>(src, right_operand, value, size);
+        } else if (a_op == ArithOpType::Div && cmp_op == CompareOpType::NEQ) {
+            this->inplace_arith_compare<T, ArithOpType::Div, CompareOpType::NEQ>(src, right_operand, value, size);
+        } else if (a_op == ArithOpType::Mod && cmp_op == CompareOpType::EQ) {
+            this->inplace_arith_compare<T, ArithOpType::Mod, CompareOpType::EQ>(src, right_operand, value, size);
+        } else if (a_op == ArithOpType::Mod && cmp_op == CompareOpType::NEQ) {
+            this->inplace_arith_compare<T, ArithOpType::Mod, CompareOpType::NEQ>(src, right_operand, value, size);
         } else {
             // unimplemented
         }            
     }
 
-    template<typename T, ArithType AOp, CompareType CmpOp>
+    template<typename T, ArithOpType AOp, CompareOpType CmpOp>
     void inplace_arith_compare(
         const T* const __restrict src,
         const ArithHighPrecisionType<T>& right_operand,

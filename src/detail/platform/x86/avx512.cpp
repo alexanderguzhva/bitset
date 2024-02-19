@@ -94,7 +94,7 @@ OrAVX512(void* const left, const void* const right, const size_t size) {
 ///////////////////////////////////////////////////////////////////////////
 
 //
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareValImpl<int8_t, Op>::op_compare_val(
     uint8_t* const __restrict res_u8,
     const int8_t* const __restrict src, 
@@ -138,7 +138,7 @@ bool OpCompareValImpl<int8_t, Op>::op_compare_val(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareValImpl<int16_t, Op>::op_compare_val(
     uint8_t* const __restrict res_u8,
     const int16_t* const __restrict src, 
@@ -182,7 +182,7 @@ bool OpCompareValImpl<int16_t, Op>::op_compare_val(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareValImpl<int32_t, Op>::op_compare_val(
     uint8_t* const __restrict res_u8,
     const int32_t* const __restrict src, 
@@ -221,7 +221,7 @@ bool OpCompareValImpl<int32_t, Op>::op_compare_val(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareValImpl<int64_t, Op>::op_compare_val(
     uint8_t* const __restrict res_u8,
     const int64_t* const __restrict src, 
@@ -249,7 +249,7 @@ bool OpCompareValImpl<int64_t, Op>::op_compare_val(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareValImpl<float, Op>::op_compare_val(
     uint8_t* const __restrict res_u8,
     const float* const __restrict src, 
@@ -289,7 +289,7 @@ bool OpCompareValImpl<float, Op>::op_compare_val(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareValImpl<double, Op>::op_compare_val(
     uint8_t* const __restrict res_u8,
     const double* const __restrict src, 
@@ -320,7 +320,7 @@ bool OpCompareValImpl<double, Op>::op_compare_val(
 
 //
 #define INSTANTIATE_COMPARE_VAL_AVX512(TTYPE,OP) \
-    template bool OpCompareValImpl<TTYPE, CompareType::OP>::op_compare_val( \
+    template bool OpCompareValImpl<TTYPE, CompareOpType::OP>::op_compare_val( \
         uint8_t* const __restrict bitmask, \
         const TTYPE* const __restrict src, \
         const size_t size, \
@@ -340,7 +340,7 @@ ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_AVX512, double)
 ///////////////////////////////////////////////////////////////////////////
 
 //
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareColumnImpl<int8_t, int8_t, Op>::op_compare_column(
     uint8_t* const __restrict res_u8,
     const int8_t* const __restrict left, 
@@ -385,7 +385,7 @@ bool OpCompareColumnImpl<int8_t, int8_t, Op>::op_compare_column(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareColumnImpl<int16_t, int16_t, Op>::op_compare_column(
     uint8_t* const __restrict res_u8,
     const int16_t* const __restrict left, 
@@ -430,7 +430,7 @@ bool OpCompareColumnImpl<int16_t, int16_t, Op>::op_compare_column(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareColumnImpl<int32_t, int32_t, Op>::op_compare_column(
     uint8_t* const __restrict res_u8,
     const int32_t* const __restrict left, 
@@ -469,7 +469,7 @@ bool OpCompareColumnImpl<int32_t, int32_t, Op>::op_compare_column(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareColumnImpl<int64_t, int64_t, Op>::op_compare_column(
     uint8_t* const __restrict res_u8,
     const int64_t* const __restrict left, 
@@ -497,7 +497,7 @@ bool OpCompareColumnImpl<int64_t, int64_t, Op>::op_compare_column(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareColumnImpl<float, float, Op>::op_compare_column(
     uint8_t* const __restrict res_u8,
     const float* const __restrict left, 
@@ -536,7 +536,7 @@ bool OpCompareColumnImpl<float, float, Op>::op_compare_column(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareColumnImpl<double, double, Op>::op_compare_column(
     uint8_t* const __restrict res_u8,
     const double* const __restrict left, 
@@ -566,7 +566,7 @@ bool OpCompareColumnImpl<double, double, Op>::op_compare_column(
 
 //
 #define INSTANTIATE_COMPARE_COLUMN_AVX2(TTYPE,OP) \
-    template bool OpCompareColumnImpl<TTYPE, TTYPE, CompareType::OP>::op_compare_column( \
+    template bool OpCompareColumnImpl<TTYPE, TTYPE, CompareOpType::OP>::op_compare_column( \
         uint8_t* const __restrict bitmask, \
         const TTYPE* const __restrict left, \
         const TTYPE* const __restrict right, \
@@ -1140,11 +1140,11 @@ ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_AVX512, double)
 // https://github.com/lemire/fastmod
 
 //
-template<ArithType AOp, CompareType CmpOp>
+template<ArithOpType AOp, CompareOpType CmpOp>
 struct ArithHelperI64 {};
 
-template<CompareType CmpOp>
-struct ArithHelperI64<ArithType::Add, CmpOp> {
+template<CompareOpType CmpOp>
+struct ArithHelperI64<ArithOpType::Add, CmpOp> {
     static inline __mmask8 op(const __m512i left, const __m512i right, const __m512i value) {
         // left + right == value
         constexpr auto pred = ComparePredicate<int64_t, CmpOp>::value;
@@ -1152,8 +1152,8 @@ struct ArithHelperI64<ArithType::Add, CmpOp> {
     }
 };
 
-template<CompareType CmpOp>
-struct ArithHelperI64<ArithType::Sub, CmpOp> {
+template<CompareOpType CmpOp>
+struct ArithHelperI64<ArithOpType::Sub, CmpOp> {
     static inline __mmask8 op(const __m512i left, const __m512i right, const __m512i value) {
         // left - right == value
         constexpr auto pred = ComparePredicate<int64_t, CmpOp>::value;
@@ -1161,8 +1161,8 @@ struct ArithHelperI64<ArithType::Sub, CmpOp> {
     }
 };
 
-template<CompareType CmpOp>
-struct ArithHelperI64<ArithType::Mul, CmpOp> {
+template<CompareOpType CmpOp>
+struct ArithHelperI64<ArithOpType::Mul, CmpOp> {
     static inline __mmask8 op(const __m512i left, const __m512i right, const __m512i value) {
         // left * right == value
         constexpr auto pred = ComparePredicate<int64_t, CmpOp>::value;
@@ -1171,11 +1171,11 @@ struct ArithHelperI64<ArithType::Mul, CmpOp> {
 };
 
 //
-template<ArithType AOp, CompareType CmpOp>
+template<ArithOpType AOp, CompareOpType CmpOp>
 struct ArithHelperF32 {};
 
-template<CompareType CmpOp>
-struct ArithHelperF32<ArithType::Add, CmpOp> {
+template<CompareOpType CmpOp>
+struct ArithHelperF32<ArithOpType::Add, CmpOp> {
     static inline __mmask16 op(const __m512 left, const __m512 right, const __m512 value) {
         // left + right == value
         constexpr auto pred = ComparePredicate<float, CmpOp>::value;
@@ -1183,8 +1183,8 @@ struct ArithHelperF32<ArithType::Add, CmpOp> {
     }
 };
 
-template<CompareType CmpOp>
-struct ArithHelperF32<ArithType::Sub, CmpOp> {
+template<CompareOpType CmpOp>
+struct ArithHelperF32<ArithOpType::Sub, CmpOp> {
     static inline __mmask16 op(const __m512 left, const __m512 right, const __m512 value) {
         // left - right == value
         constexpr auto pred = ComparePredicate<float, CmpOp>::value;
@@ -1192,8 +1192,8 @@ struct ArithHelperF32<ArithType::Sub, CmpOp> {
     }
 };
 
-template<CompareType CmpOp>
-struct ArithHelperF32<ArithType::Mul, CmpOp> {
+template<CompareOpType CmpOp>
+struct ArithHelperF32<ArithOpType::Mul, CmpOp> {
     static inline __mmask16 op(const __m512 left, const __m512 right, const __m512 value) {
         // left * right == value
         constexpr auto pred = ComparePredicate<float, CmpOp>::value;
@@ -1201,8 +1201,8 @@ struct ArithHelperF32<ArithType::Mul, CmpOp> {
     }
 };
 
-template<CompareType CmpOp>
-struct ArithHelperF32<ArithType::Div, CmpOp> {
+template<CompareOpType CmpOp>
+struct ArithHelperF32<ArithOpType::Div, CmpOp> {
     static inline __mmask16 op(const __m512 left, const __m512 right, const __m512 value) {
         // left == right * value
         constexpr auto pred = ComparePredicate<float, CmpOp>::value;
@@ -1211,11 +1211,11 @@ struct ArithHelperF32<ArithType::Div, CmpOp> {
 };
 
 //
-template<ArithType AOp, CompareType CmpOp>
+template<ArithOpType AOp, CompareOpType CmpOp>
 struct ArithHelperF64 {};
 
-template<CompareType CmpOp>
-struct ArithHelperF64<ArithType::Add, CmpOp> {
+template<CompareOpType CmpOp>
+struct ArithHelperF64<ArithOpType::Add, CmpOp> {
     static inline __mmask8 op(const __m512d left, const __m512d right, const __m512d value) {
         // left + right == value
         constexpr auto pred = ComparePredicate<double, CmpOp>::value;
@@ -1223,8 +1223,8 @@ struct ArithHelperF64<ArithType::Add, CmpOp> {
     }
 };
 
-template<CompareType CmpOp>
-struct ArithHelperF64<ArithType::Sub, CmpOp> {
+template<CompareOpType CmpOp>
+struct ArithHelperF64<ArithOpType::Sub, CmpOp> {
     static inline __mmask8 op(const __m512d left, const __m512d right, const __m512d value) {
         // left - right == value
         constexpr auto pred = ComparePredicate<double, CmpOp>::value;
@@ -1232,8 +1232,8 @@ struct ArithHelperF64<ArithType::Sub, CmpOp> {
     }
 };
 
-template<CompareType CmpOp>
-struct ArithHelperF64<ArithType::Mul, CmpOp> {
+template<CompareOpType CmpOp>
+struct ArithHelperF64<ArithOpType::Mul, CmpOp> {
     static inline __mmask8 op(const __m512d left, const __m512d right, const __m512d value) {
         // left * right == value
         constexpr auto pred = ComparePredicate<double, CmpOp>::value;
@@ -1241,8 +1241,8 @@ struct ArithHelperF64<ArithType::Mul, CmpOp> {
     }
 };
 
-template<CompareType CmpOp>
-struct ArithHelperF64<ArithType::Div, CmpOp> {
+template<CompareOpType CmpOp>
+struct ArithHelperF64<ArithOpType::Div, CmpOp> {
     static inline __mmask8 op(const __m512d left, const __m512d right, const __m512d value) {
         // left == right * value
         constexpr auto pred = ComparePredicate<double, CmpOp>::value;
@@ -1255,7 +1255,7 @@ struct ArithHelperF64<ArithType::Div, CmpOp> {
 
 #define NOT_IMPLEMENTED_OP_ARITH_COMPARE(TTYPE, AOP, CMPOP) \
     template<> \
-    bool OpArithCompareImpl<TTYPE, ArithType::AOP, CompareType::CMPOP>::op_arith_compare( \
+    bool OpArithCompareImpl<TTYPE, ArithOpType::AOP, CompareOpType::CMPOP>::op_arith_compare( \
         uint8_t* const __restrict res_u8, \
         const TTYPE* const __restrict src, \
         const ArithHighPrecisionType<TTYPE>& right_operand, \
@@ -1271,7 +1271,7 @@ NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, NEQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, NEQ)
 
-template<ArithType AOp, CompareType CmpOp>
+template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
     uint8_t* const __restrict res_u8,
     const int8_t* const __restrict src,
@@ -1321,7 +1321,7 @@ NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, NEQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, NEQ)
 
-template<ArithType AOp, CompareType CmpOp>
+template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
     uint8_t* const __restrict res_u8,
     const int16_t* const __restrict src,
@@ -1372,7 +1372,7 @@ NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, NEQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, NEQ)
 
-template<ArithType AOp, CompareType CmpOp>
+template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
     uint8_t* const __restrict res_u8,
     const int32_t* const __restrict src,
@@ -1423,7 +1423,7 @@ NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, NEQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, NEQ)
 
-template<ArithType AOp, CompareType CmpOp>
+template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
     uint8_t* const __restrict res_u8,
     const int64_t* const __restrict src,
@@ -1458,7 +1458,7 @@ bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, NEQ)
 
-template<ArithType AOp, CompareType CmpOp>
+template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
     uint8_t* const __restrict res_u8,
     const float* const __restrict src,
@@ -1501,7 +1501,7 @@ bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, NEQ)
 
-template<ArithType AOp, CompareType CmpOp>
+template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
     uint8_t* const __restrict res_u8,
     const double* const __restrict src,
@@ -1536,7 +1536,7 @@ bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
 
 //
 #define INSTANTIATE_ARITH_COMPARE_AVX512(TTYPE,OP,CMP) \
-    template bool OpArithCompareImpl<TTYPE, ArithType::OP, CompareType::CMP>::op_arith_compare( \
+    template bool OpArithCompareImpl<TTYPE, ArithOpType::OP, CompareOpType::CMP>::op_arith_compare( \
         uint8_t* const __restrict res_u8, \
         const TTYPE* const __restrict src, \
         const ArithHighPrecisionType<TTYPE>& right_operand, \

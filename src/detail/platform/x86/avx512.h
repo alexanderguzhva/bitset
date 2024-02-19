@@ -12,6 +12,8 @@ namespace x86 {
 
 namespace avx512 {
 
+
+///////////////////////////////////////////////////////////////////////////
 // a facility to run through all acceptable data types
 #define ALL_DATATYPES_1(FUNC) \
     FUNC(int8_t); \
@@ -22,8 +24,9 @@ namespace avx512 {
     FUNC(double);
 
 
+///////////////////////////////////////////////////////////////////////////
 // the default implementation
-template<typename T, typename U, CompareType Op>
+template<typename T, typename U, CompareOpType Op>
 struct OpCompareColumnImpl {
     static bool op_compare_column(
         uint8_t* const __restrict bitmask, 
@@ -36,7 +39,7 @@ struct OpCompareColumnImpl {
 };
 
 #define DECLARE_PARTIAL_OP_COMPARE_COLUMN(TTYPE) \
-    template<CompareType Op> \
+    template<CompareOpType Op> \
     struct OpCompareColumnImpl<TTYPE, TTYPE, Op> { \
         static bool op_compare_column( \
             uint8_t* const __restrict bitmask, \
@@ -51,8 +54,9 @@ ALL_DATATYPES_1(DECLARE_PARTIAL_OP_COMPARE_COLUMN)
 #undef DECLARE_PARTIAL_OP_COMPARE_COLUMN
 
 
+///////////////////////////////////////////////////////////////////////////
 // the default implementation
-template<typename T, CompareType Op>
+template<typename T, CompareOpType Op>
 struct OpCompareValImpl {
     static inline bool op_compare_val(
         uint8_t* const __restrict bitmask,
@@ -65,7 +69,7 @@ struct OpCompareValImpl {
 };
 
 #define DECLARE_PARTIAL_OP_COMPARE_VAL(TTYPE) \
-    template<CompareType Op> \
+    template<CompareOpType Op> \
     struct OpCompareValImpl<TTYPE, Op> { \
         static bool op_compare_val( \
             uint8_t* const __restrict bitmask, \
@@ -80,6 +84,7 @@ ALL_DATATYPES_1(DECLARE_PARTIAL_OP_COMPARE_VAL)
 #undef DECLARE_PARTIAL_OP_COMPARE_VAL
 
 
+///////////////////////////////////////////////////////////////////////////
 // the default implementation
 template<typename T, RangeType Op>
 struct OpWithinRangeColumnImpl {
@@ -111,6 +116,7 @@ ALL_DATATYPES_1(DECLARE_PARTIAL_OP_WITHIN_RANGE_COLUMN)
 #undef DECLARE_PARTIAL_OP_WITHIN_RANGE_COLUMN
 
 
+///////////////////////////////////////////////////////////////////////////
 // the default implementation
 template<typename T, RangeType Op>
 struct OpWithinRangeValImpl {
@@ -141,8 +147,10 @@ ALL_DATATYPES_1(DECLARE_PARTIAL_OP_WITHIN_RANGE_VAL)
 
 #undef DECLARE_PARTIAL_OP_WITHIN_RANGE_VAL
 
+
+///////////////////////////////////////////////////////////////////////////
 // the default implementation
-template<typename T, ArithType AOp, CompareType CmpOp>
+template<typename T, ArithOpType AOp, CompareOpType CmpOp>
 struct OpArithCompareImpl {
     static inline bool op_arith_compare(
         uint8_t* const __restrict bitmask, 
@@ -156,7 +164,7 @@ struct OpArithCompareImpl {
 };
 
 #define DECLARE_PARTIAL_OP_ARITH_COMPARE(TTYPE) \
-    template<ArithType AOp, CompareType CmpOp> \
+    template<ArithOpType AOp, CompareOpType CmpOp> \
     struct OpArithCompareImpl<TTYPE, AOp, CmpOp> { \
         static bool op_arith_compare( \
             uint8_t* const __restrict bitmask, \
@@ -173,14 +181,18 @@ ALL_DATATYPES_1(DECLARE_PARTIAL_OP_ARITH_COMPARE)
 
 //
 
+///////////////////////////////////////////////////////////////////////////
+
 #undef ALL_DATATYPES_1
 
 }
 
+///////////////////////////////////////////////////////////////////////////
+
 //
 struct VectorizedAvx512 {
     // API requirement: size % 8 == 0
-    template<typename T, typename U, CompareType Op>
+    template<typename T, typename U, CompareOpType Op>
     static bool op_compare_column(
         uint8_t* const __restrict bitmask, 
         const T* const __restrict t,
@@ -193,7 +205,7 @@ struct VectorizedAvx512 {
     // Fills a bitmask by comparing elements of a given array to a
     //   given value.
     // API requirement: size % 8 == 0
-    template<typename T, CompareType Op>
+    template<typename T, CompareOpType Op>
     static bool op_compare_val(
         uint8_t* const __restrict bitmask,
         const T* const __restrict t,
@@ -228,7 +240,7 @@ struct VectorizedAvx512 {
     }
 
     // API requirement: size % 8 == 0
-    template<typename T, ArithType AOp, CompareType CmpOp>
+    template<typename T, ArithOpType AOp, CompareOpType CmpOp>
     static inline bool op_arith_compare(
         uint8_t* const __restrict bitmask, 
         const T* const __restrict src,

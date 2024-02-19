@@ -59,7 +59,7 @@ namespace detail {
 // op_compare_column
 
 // Define pointers for op_compare
-template<typename T, typename U, CompareType Op>
+template<typename T, typename U, CompareOpType Op>
 using OpCompareColumnPtr = bool(*)(
     uint8_t* const __restrict output, 
     const T* const __restrict t, 
@@ -68,7 +68,7 @@ using OpCompareColumnPtr = bool(*)(
 );
 
 #define DECLARE_OP_COMPARE_COLUMN(TTYPE, UTYPE, OP) \
-    OpCompareColumnPtr<TTYPE, UTYPE, CompareType::OP> op_compare_column_##TTYPE##_##UTYPE##_##OP = VectorizedRef::template op_compare_column<TTYPE, UTYPE, CompareType::OP>;
+    OpCompareColumnPtr<TTYPE, UTYPE, CompareOpType::OP> op_compare_column_##TTYPE##_##UTYPE##_##OP = VectorizedRef::template op_compare_column<TTYPE, UTYPE, CompareOpType::OP>;
 
 ALL_COMPARE_OPS(DECLARE_OP_COMPARE_COLUMN, int8_t, int8_t)
 ALL_COMPARE_OPS(DECLARE_OP_COMPARE_COLUMN, int16_t, int16_t)
@@ -84,7 +84,7 @@ namespace dynamic {
 
 #define DISPATCH_OP_COMPARE_COLUMN_IMPL(TTYPE, OP) \
     template<> \
-    bool OpCompareColumnImpl<TTYPE, TTYPE, CompareType::OP>::op_compare_column( \
+    bool OpCompareColumnImpl<TTYPE, TTYPE, CompareOpType::OP>::op_compare_column( \
         uint8_t* const __restrict bitmask,  \
         const TTYPE* const __restrict t, \
         const TTYPE* const __restrict u, \
@@ -107,7 +107,7 @@ ALL_COMPARE_OPS(DISPATCH_OP_COMPARE_COLUMN_IMPL, double)
 
 /////////////////////////////////////////////////////////////////////////////
 // op_compare_val
-template<typename T, CompareType Op>
+template<typename T, CompareOpType Op>
 using OpCompareValPtr = bool(*)(
     uint8_t* const __restrict output, 
     const T* const __restrict t, 
@@ -116,7 +116,7 @@ using OpCompareValPtr = bool(*)(
 );
 
 #define DECLARE_OP_COMPARE_VAL(TTYPE, OP) \
-    OpCompareValPtr<TTYPE, CompareType::OP> op_compare_val_##TTYPE##_##OP = VectorizedRef::template op_compare_val<TTYPE, CompareType::OP>;
+    OpCompareValPtr<TTYPE, CompareOpType::OP> op_compare_val_##TTYPE##_##OP = VectorizedRef::template op_compare_val<TTYPE, CompareOpType::OP>;
 
 ALL_COMPARE_OPS(DECLARE_OP_COMPARE_VAL, int8_t)
 ALL_COMPARE_OPS(DECLARE_OP_COMPARE_VAL, int16_t)
@@ -131,7 +131,7 @@ namespace dynamic {
 
 #define DISPATCH_OP_COMPARE_VAL_IMPL(TTYPE, OP) \
     template<> \
-    bool OpCompareValImpl<TTYPE, CompareType::OP>::op_compare_val( \
+    bool OpCompareValImpl<TTYPE, CompareOpType::OP>::op_compare_val( \
         uint8_t* const __restrict bitmask,  \
         const TTYPE* const __restrict t, \
         const size_t size, \
@@ -251,7 +251,7 @@ ALL_RANGE_OPS(DISPATCH_OP_WITHIN_RANGE_VAL_IMPL, double)
 
 /////////////////////////////////////////////////////////////////////////////
 // op_arith_compare
-template<typename T, ArithType AOp, CompareType CmpOp>
+template<typename T, ArithOpType AOp, CompareOpType CmpOp>
 using OpArithComparePtr = bool(*)(
     uint8_t* const __restrict output, 
     const T* const __restrict src, 
@@ -261,7 +261,7 @@ using OpArithComparePtr = bool(*)(
 );
 
 #define DECLARE_OP_ARITH_COMPARE(TTYPE, AOP, CMPOP) \
-    OpArithComparePtr<TTYPE, ArithType::AOP, CompareType::CMPOP> op_arith_compare_##TTYPE##_##AOP##_##CMPOP = VectorizedRef::template op_arith_compare<TTYPE, ArithType::AOP, CompareType::CMPOP>;
+    OpArithComparePtr<TTYPE, ArithOpType::AOP, CompareOpType::CMPOP> op_arith_compare_##TTYPE##_##AOP##_##CMPOP = VectorizedRef::template op_arith_compare<TTYPE, ArithOpType::AOP, CompareOpType::CMPOP>;
 
 ALL_ARITH_CMP_OPS(DECLARE_OP_ARITH_COMPARE, int8_t)
 ALL_ARITH_CMP_OPS(DECLARE_OP_ARITH_COMPARE, int16_t)
@@ -278,7 +278,7 @@ namespace dynamic {
 
 #define DISPATCH_OP_ARITH_COMPARE(TTYPE, AOP, CMPOP) \
     template<> \
-    bool OpArithCompareImpl<TTYPE, ArithType::AOP, CompareType::CMPOP>::op_arith_compare( \
+    bool OpArithCompareImpl<TTYPE, ArithOpType::AOP, CompareOpType::CMPOP>::op_arith_compare( \
         uint8_t* const __restrict output, \
         const TTYPE* const __restrict src, \
         const ArithHighPrecisionType<TTYPE>& right_operand, \
@@ -310,15 +310,15 @@ static void init_dynamic_hook() {
     // AVX512 ?
     if (cpu_support_avx512()) {
 #define SET_OP_COMPARE_COLUMN_AVX512(TTYPE, UTYPE, OP) \
-    op_compare_column_##TTYPE##_##UTYPE##_##OP = VectorizedAvx512::template op_compare_column<TTYPE, UTYPE, CompareType::OP>;
+    op_compare_column_##TTYPE##_##UTYPE##_##OP = VectorizedAvx512::template op_compare_column<TTYPE, UTYPE, CompareOpType::OP>;
 #define SET_OP_COMPARE_VAL_AVX512(TTYPE, OP) \
-    op_compare_val_##TTYPE##_##OP = VectorizedAvx512::template op_compare_val<TTYPE, CompareType::OP>;
+    op_compare_val_##TTYPE##_##OP = VectorizedAvx512::template op_compare_val<TTYPE, CompareOpType::OP>;
 #define SET_OP_WITHIN_RANGE_COLUMN_AVX512(TTYPE, OP) \
     op_within_range_column_##TTYPE##_##OP = VectorizedAvx512::template op_within_range_column<TTYPE, RangeType::OP>;
 #define SET_OP_WITHIN_RANGE_VAL_AVX512(TTYPE, OP) \
     op_within_range_val_##TTYPE##_##OP = VectorizedAvx512::template op_within_range_val<TTYPE, RangeType::OP>;
 #define SET_ARITH_COMPARE_AVX512(TTYPE, AOP, CMPOP) \
-    op_arith_compare_##TTYPE##_##AOP##_##CMPOP = VectorizedAvx512::template op_arith_compare<TTYPE, ArithType::AOP, CompareType::CMPOP>;
+    op_arith_compare_##TTYPE##_##AOP##_##CMPOP = VectorizedAvx512::template op_arith_compare<TTYPE, ArithOpType::AOP, CompareOpType::CMPOP>;
 
         // assign AVX512-related pointers
         ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_AVX512, int8_t, int8_t)
@@ -368,15 +368,15 @@ static void init_dynamic_hook() {
     // AVX2 ?
     if (cpu_support_avx2()) {
 #define SET_OP_COMPARE_COLUMN_AVX2(TTYPE, UTYPE, OP) \
-    op_compare_column_##TTYPE##_##UTYPE##_##OP = VectorizedAvx2::template op_compare_column<TTYPE, UTYPE, CompareType::OP>;
+    op_compare_column_##TTYPE##_##UTYPE##_##OP = VectorizedAvx2::template op_compare_column<TTYPE, UTYPE, CompareOpType::OP>;
 #define SET_OP_COMPARE_VAL_AVX2(TTYPE, OP) \
-    op_compare_val_##TTYPE##_##OP = VectorizedAvx2::template op_compare_val<TTYPE, CompareType::OP>;
+    op_compare_val_##TTYPE##_##OP = VectorizedAvx2::template op_compare_val<TTYPE, CompareOpType::OP>;
 #define SET_OP_WITHIN_RANGE_COLUMN_AVX2(TTYPE, OP) \
     op_within_range_column_##TTYPE##_##OP = VectorizedAvx2::template op_within_range_column<TTYPE, RangeType::OP>;
 #define SET_OP_WITHIN_RANGE_VAL_AVX2(TTYPE, OP) \
     op_within_range_val_##TTYPE##_##OP = VectorizedAvx2::template op_within_range_val<TTYPE, RangeType::OP>;
 #define SET_ARITH_COMPARE_AVX2(TTYPE, AOP, CMPOP) \
-    op_arith_compare_##TTYPE##_##AOP##_##CMPOP = VectorizedAvx2::template op_arith_compare<TTYPE, ArithType::AOP, CompareType::CMPOP>;
+    op_arith_compare_##TTYPE##_##AOP##_##CMPOP = VectorizedAvx2::template op_arith_compare<TTYPE, ArithOpType::AOP, CompareOpType::CMPOP>;
 
         // assign AVX2-related pointers
         ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_AVX2, int8_t, int8_t)
@@ -428,15 +428,15 @@ static void init_dynamic_hook() {
     // neon ?
     {
 #define SET_OP_COMPARE_COLUMN_NEON(TTYPE, UTYPE, OP) \
-    op_compare_column_##TTYPE##_##UTYPE##_##OP = VectorizedNeon::template op_compare_column<TTYPE, UTYPE, CompareType::OP>;
+    op_compare_column_##TTYPE##_##UTYPE##_##OP = VectorizedNeon::template op_compare_column<TTYPE, UTYPE, CompareOpType::OP>;
 #define SET_OP_COMPARE_VAL_NEON(TTYPE, OP) \
-    op_compare_val_##TTYPE##_##OP = VectorizedNeon::template op_compare_val<TTYPE, CompareType::OP>;
+    op_compare_val_##TTYPE##_##OP = VectorizedNeon::template op_compare_val<TTYPE, CompareOpType::OP>;
 #define SET_OP_WITHIN_RANGE_COLUMN_NEON(TTYPE, OP) \
     op_within_range_column_##TTYPE##_##OP = VectorizedNeon::template op_within_range_column<TTYPE, RangeType::OP>;
 #define SET_OP_WITHIN_RANGE_VAL_NEON(TTYPE, OP) \
     op_within_range_val_##TTYPE##_##OP = VectorizedNeon::template op_within_range_val<TTYPE, RangeType::OP>;
 #define SET_ARITH_COMPARE_NEON(TTYPE, AOP, CMPOP) \
-    op_arith_compare_##TTYPE##_##AOP##_##CMPOP = VectorizedNeon::template op_arith_compare<TTYPE, ArithType::AOP, CompareType::CMPOP>;
+    op_arith_compare_##TTYPE##_##AOP##_##CMPOP = VectorizedNeon::template op_arith_compare<TTYPE, ArithOpType::AOP, CompareOpType::CMPOP>;
 
         // assign AVX2-related pointers
         ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_NEON, int8_t, int8_t)

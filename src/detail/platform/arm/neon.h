@@ -12,6 +12,7 @@ namespace arm {
 
 namespace neon {
 
+///////////////////////////////////////////////////////////////////////////
 // a facility to run through all acceptable data types
 #define ALL_DATATYPES_1(FUNC) \
     FUNC(int8_t); \
@@ -22,8 +23,9 @@ namespace neon {
     FUNC(double);
 
 
+///////////////////////////////////////////////////////////////////////////
 // the default implementation
-template<typename T, typename U, CompareType Op>
+template<typename T, typename U, CompareOpType Op>
 struct OpCompareColumnImpl {
     static bool op_compare_column(
         uint8_t* const __restrict bitmask, 
@@ -36,7 +38,7 @@ struct OpCompareColumnImpl {
 };
 
 #define DECLARE_PARTIAL_OP_COMPARE_COLUMN(TTYPE) \
-    template<CompareType Op> \
+    template<CompareOpType Op> \
     struct OpCompareColumnImpl<TTYPE, TTYPE, Op> { \
         static bool op_compare_column( \
             uint8_t* const __restrict bitmask, \
@@ -51,8 +53,9 @@ ALL_DATATYPES_1(DECLARE_PARTIAL_OP_COMPARE_COLUMN)
 #undef DECLARE_PARTIAL_OP_COMPARE_COLUMN
 
 
+///////////////////////////////////////////////////////////////////////////
 // the default implementation
-template<typename T, CompareType Op>
+template<typename T, CompareOpType Op>
 struct OpCompareValImpl {
     static inline bool op_compare_val(
         uint8_t* const __restrict bitmask,
@@ -65,7 +68,7 @@ struct OpCompareValImpl {
 };
 
 #define DECLARE_PARTIAL_OP_COMPARE_VAL(TTYPE) \
-    template<CompareType Op> \
+    template<CompareOpType Op> \
     struct OpCompareValImpl<TTYPE, Op> { \
         static bool op_compare_val( \
             uint8_t* const __restrict bitmask, \
@@ -80,6 +83,7 @@ ALL_DATATYPES_1(DECLARE_PARTIAL_OP_COMPARE_VAL)
 #undef DECLARE_PARTIAL_OP_COMPARE_VAL
 
 
+///////////////////////////////////////////////////////////////////////////
 // the default implementation
 template<typename T, RangeType Op>
 struct OpWithinRangeColumnImpl {
@@ -111,6 +115,7 @@ ALL_DATATYPES_1(DECLARE_PARTIAL_OP_WITHIN_RANGE_COLUMN)
 #undef DECLARE_PARTIAL_OP_WITHIN_RANGE_COLUMN
 
 
+///////////////////////////////////////////////////////////////////////////
 // the default implementation
 template<typename T, RangeType Op>
 struct OpWithinRangeValImpl {
@@ -141,16 +146,52 @@ ALL_DATATYPES_1(DECLARE_PARTIAL_OP_WITHIN_RANGE_VAL)
 
 #undef DECLARE_PARTIAL_OP_WITHIN_RANGE_VAL
 
+
+///////////////////////////////////////////////////////////////////////////
+// the default implementation
+template<typename T, ArithOpType AOp, CompareOpType CmpOp>
+struct OpArithCompareImpl {
+    static inline bool op_arith_compare(
+        uint8_t* const __restrict bitmask, 
+        const T* const __restrict src,
+        const ArithHighPrecisionType<T>& right_operand,
+        const ArithHighPrecisionType<T>& value,
+        const size_t size
+    ) {
+        return false;
+    }
+};
+
+#define DECLARE_PARTIAL_OP_ARITH_COMPARE(TTYPE) \
+    template<ArithOpType AOp, CompareOpType CmpOp> \
+    struct OpArithCompareImpl<TTYPE, AOp, CmpOp> { \
+        static bool op_arith_compare( \
+            uint8_t* const __restrict bitmask, \
+            const TTYPE* const __restrict src, \
+            const ArithHighPrecisionType<TTYPE>& right_operand, \
+            const ArithHighPrecisionType<TTYPE>& value, \
+            const size_t size \
+        ); \
+    };
+
+ALL_DATATYPES_1(DECLARE_PARTIAL_OP_ARITH_COMPARE)
+
+#undef DECLARE_PARTIAL_OP_ARITH_COMPARE
+
 //
+
+///////////////////////////////////////////////////////////////////////////
 
 #undef ALL_DATATYPES_1
 
 }
 
+///////////////////////////////////////////////////////////////////////////
+
 //
 struct VectorizedNeon {
     // API requirement: size % 8 == 0
-    template<typename T, typename U, CompareType Op>
+    template<typename T, typename U, CompareOpType Op>
     static bool op_compare_column(
         uint8_t* const __restrict bitmask, 
         const T* const __restrict t,
@@ -163,7 +204,7 @@ struct VectorizedNeon {
     // Fills a bitmask by comparing elements of a given array to a
     //   given value.
     // API requirement: size % 8 == 0
-    template<typename T, CompareType Op>
+    template<typename T, CompareOpType Op>
     static bool op_compare_val(
         uint8_t* const __restrict bitmask,
         const T* const __restrict t,
@@ -195,6 +236,18 @@ struct VectorizedNeon {
         const size_t size
     ) {
         return neon::OpWithinRangeValImpl<T, Op>::op_within_range_val(bitmask, lower, upper, values, size);
+    }
+
+    // API requirement: size % 8 == 0
+    template<typename T, ArithOpType AOp, CompareOpType CmpOp>
+    static inline bool op_arith_compare(
+        uint8_t* const __restrict bitmask, 
+        const T* const __restrict src,
+        const ArithHighPrecisionType<T>& right_operand,
+        const ArithHighPrecisionType<T>& value,
+        const size_t size
+    ) {
+        return neon::OpArithCompareImpl<T, AOp, CmpOp>::op_arith_compare(bitmask, src, right_operand, value, size);
     }
 };
 

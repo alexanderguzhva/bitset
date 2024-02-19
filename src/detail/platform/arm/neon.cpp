@@ -127,11 +127,11 @@ inline uint8_t movemask(const uint64x2x4_t cmp) {
 }
 
 //
-template<CompareType Op>
+template<CompareOpType Op>
 struct CmpHelper{};
 
 template<>
-struct CmpHelper<CompareType::EQ> {
+struct CmpHelper<CompareOpType::EQ> {
     static inline uint8x8_t compare(const int8x8_t a, const int8x8_t b) {
         return vceq_s8(a, b);
     }
@@ -153,8 +153,8 @@ struct CmpHelper<CompareType::EQ> {
     }
 
     static inline uint64x2x4_t compare(const int64x2x4_t a, const int64x2x4_t b) {
-        return {vceqq_u64(a.val[0], b.val[0]), vceqq_u64(a.val[1], b.val[1]),
-                vceqq_u64(a.val[2], b.val[2]), vceqq_u64(a.val[3], b.val[3])};
+        return {vceqq_s64(a.val[0], b.val[0]), vceqq_s64(a.val[1], b.val[1]),
+                vceqq_s64(a.val[2], b.val[2]), vceqq_s64(a.val[3], b.val[3])};
     }
 
     static inline uint32x4x2_t compare(const float32x4x2_t a, const float32x4x2_t b) {
@@ -168,7 +168,7 @@ struct CmpHelper<CompareType::EQ> {
 };
 
 template<>
-struct CmpHelper<CompareType::GE> {
+struct CmpHelper<CompareOpType::GE> {
     static inline uint8x8_t compare(const int8x8_t a, const int8x8_t b) {
         return vcge_s8(a, b);
     }
@@ -190,8 +190,8 @@ struct CmpHelper<CompareType::GE> {
     }
 
     static inline uint64x2x4_t compare(const int64x2x4_t a, const int64x2x4_t b) {
-        return {vcgeq_u64(a.val[0], b.val[0]), vcgeq_u64(a.val[1], b.val[1]),
-                vcgeq_u64(a.val[2], b.val[2]), vcgeq_u64(a.val[3], b.val[3])};
+        return {vcgeq_s64(a.val[0], b.val[0]), vcgeq_s64(a.val[1], b.val[1]),
+                vcgeq_s64(a.val[2], b.val[2]), vcgeq_s64(a.val[3], b.val[3])};
     }
 
     static inline uint32x4x2_t compare(const float32x4x2_t a, const float32x4x2_t b) {
@@ -205,7 +205,7 @@ struct CmpHelper<CompareType::GE> {
 };
 
 template<>
-struct CmpHelper<CompareType::GT> {
+struct CmpHelper<CompareOpType::GT> {
     static inline uint8x8_t compare(const int8x8_t a, const int8x8_t b) {
         return vcgt_s8(a, b);
     }
@@ -227,8 +227,8 @@ struct CmpHelper<CompareType::GT> {
     }
 
     static inline uint64x2x4_t compare(const int64x2x4_t a, const int64x2x4_t b) {
-        return {vcgtq_u64(a.val[0], b.val[0]), vcgtq_u64(a.val[1], b.val[1]),
-                vcgtq_u64(a.val[2], b.val[2]), vcgtq_u64(a.val[3], b.val[3])};
+        return {vcgtq_s64(a.val[0], b.val[0]), vcgtq_s64(a.val[1], b.val[1]),
+                vcgtq_s64(a.val[2], b.val[2]), vcgtq_s64(a.val[3], b.val[3])};
     }
 
     static inline uint32x4x2_t compare(const float32x4x2_t a, const float32x4x2_t b) {
@@ -242,7 +242,7 @@ struct CmpHelper<CompareType::GT> {
 };
 
 template<>
-struct CmpHelper<CompareType::LE> {
+struct CmpHelper<CompareOpType::LE> {
     static inline uint8x8_t compare(const int8x8_t a, const int8x8_t b) {
         return vcle_s8(a, b);
     }
@@ -279,7 +279,7 @@ struct CmpHelper<CompareType::LE> {
 };
 
 template<>
-struct CmpHelper<CompareType::LT> {
+struct CmpHelper<CompareOpType::LT> {
     static inline uint8x8_t compare(const int8x8_t a, const int8x8_t b) {
         return vclt_s8(a, b);
     }
@@ -301,8 +301,8 @@ struct CmpHelper<CompareType::LT> {
     }
 
     static inline uint64x2x4_t compare(const int64x2x4_t a, const int64x2x4_t b) {
-        return {vcltq_u64(a.val[0], b.val[0]), vcltq_u64(a.val[1], b.val[1]),
-                vcltq_u64(a.val[2], b.val[2]), vcltq_u64(a.val[3], b.val[3])};
+        return {vcltq_s64(a.val[0], b.val[0]), vcltq_s64(a.val[1], b.val[1]),
+                vcltq_s64(a.val[2], b.val[2]), vcltq_s64(a.val[3], b.val[3])};
     }
 
     static inline uint32x4x2_t compare(const float32x4x2_t a, const float32x4x2_t b) {
@@ -316,7 +316,7 @@ struct CmpHelper<CompareType::LT> {
 };
 
 template<>
-struct CmpHelper<CompareType::NEQ> {
+struct CmpHelper<CompareOpType::NEQ> {
     static inline uint8x8_t compare(const int8x8_t a, const int8x8_t b) {
         return vmvn_u8(vceq_s8(a, b));
     }
@@ -355,7 +355,7 @@ struct CmpHelper<CompareType::NEQ> {
 ///////////////////////////////////////////////////////////////////////////
 
 //
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareValImpl<int8_t, Op>::op_compare_val(
     uint8_t* const __restrict res_u8,
     const int8_t* const __restrict src, 
@@ -391,7 +391,7 @@ bool OpCompareValImpl<int8_t, Op>::op_compare_val(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareValImpl<int16_t, Op>::op_compare_val(
     uint8_t* const __restrict res_u8,
     const int16_t* const __restrict src, 
@@ -428,7 +428,7 @@ bool OpCompareValImpl<int16_t, Op>::op_compare_val(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareValImpl<int32_t, Op>::op_compare_val(
     uint8_t* const __restrict res_u8,
     const int32_t* const __restrict src, 
@@ -455,7 +455,7 @@ bool OpCompareValImpl<int32_t, Op>::op_compare_val(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareValImpl<int64_t, Op>::op_compare_val(
     uint8_t* const __restrict res_u8,
     const int64_t* const __restrict src, 
@@ -482,7 +482,7 @@ bool OpCompareValImpl<int64_t, Op>::op_compare_val(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareValImpl<float, Op>::op_compare_val(
     uint8_t* const __restrict res_u8,
     const float* const __restrict src, 
@@ -509,7 +509,7 @@ bool OpCompareValImpl<float, Op>::op_compare_val(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareValImpl<double, Op>::op_compare_val(
     uint8_t* const __restrict res_u8,
     const double* const __restrict src, 
@@ -538,7 +538,7 @@ bool OpCompareValImpl<double, Op>::op_compare_val(
 
 //
 #define INSTANTIATE_COMPARE_VAL_NEON(TTYPE,OP) \
-    template bool OpCompareValImpl<TTYPE, CompareType::OP>::op_compare_val( \
+    template bool OpCompareValImpl<TTYPE, CompareOpType::OP>::op_compare_val( \
         uint8_t* const __restrict bitmask, \
         const TTYPE* const __restrict src, \
         const size_t size, \
@@ -558,7 +558,7 @@ ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_NEON, double)
 ///////////////////////////////////////////////////////////////////////////
 
 //
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareColumnImpl<int8_t, int8_t, Op>::op_compare_column(
     uint8_t* const __restrict res_u8,
     const int8_t* const __restrict left, 
@@ -595,7 +595,7 @@ bool OpCompareColumnImpl<int8_t, int8_t, Op>::op_compare_column(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareColumnImpl<int16_t, int16_t, Op>::op_compare_column(
     uint8_t* const __restrict res_u8,
     const int16_t* const __restrict left, 
@@ -633,7 +633,7 @@ bool OpCompareColumnImpl<int16_t, int16_t, Op>::op_compare_column(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareColumnImpl<int32_t, int32_t, Op>::op_compare_column(
     uint8_t* const __restrict res_u8,
     const int32_t* const __restrict left, 
@@ -658,7 +658,7 @@ bool OpCompareColumnImpl<int32_t, int32_t, Op>::op_compare_column(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareColumnImpl<int64_t, int64_t, Op>::op_compare_column(
     uint8_t* const __restrict res_u8,
     const int64_t* const __restrict left, 
@@ -683,7 +683,7 @@ bool OpCompareColumnImpl<int64_t, int64_t, Op>::op_compare_column(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareColumnImpl<float, float, Op>::op_compare_column(
     uint8_t* const __restrict res_u8,
     const float* const __restrict left, 
@@ -708,7 +708,7 @@ bool OpCompareColumnImpl<float, float, Op>::op_compare_column(
     return true;
 }
 
-template<CompareType Op>
+template<CompareOpType Op>
 bool OpCompareColumnImpl<double, double, Op>::op_compare_column(
     uint8_t* const __restrict res_u8,
     const double* const __restrict left, 
@@ -735,7 +735,7 @@ bool OpCompareColumnImpl<double, double, Op>::op_compare_column(
 
 //
 #define INSTANTIATE_COMPARE_COLUMN_NEON(TTYPE,OP) \
-    template bool OpCompareColumnImpl<TTYPE, TTYPE, CompareType::OP>::op_compare_column( \
+    template bool OpCompareColumnImpl<TTYPE, TTYPE, CompareOpType::OP>::op_compare_column( \
         uint8_t* const __restrict bitmask, \
         const TTYPE* const __restrict left, \
         const TTYPE* const __restrict right, \
@@ -1226,14 +1226,185 @@ ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_NEON, double)
 
 ///////////////////////////////////////////////////////////////////////////
 
+// https://godbolt.org/z/CYipz7
 // https://github.com/ridiculousfish/libdivide
 // https://github.com/lemire/fastmod
+
+//
+template<ArithOpType AOp, CompareOpType CmpOp>
+struct ArithHelperI64 {};
+
+template<CompareOpType CmpOp>
+struct ArithHelperI64<ArithOpType::Add, CmpOp> {
+    static inline uint64x2x4_t op(const int64x2x4_t left, const int64x2x4_t right, const int64x2x4_t value) {
+        // left + right == value
+        const int64x2x4_t lr = {
+            vaddq_s64(left.val[0], right.val[0]),
+            vaddq_s64(left.val[1], right.val[1]),
+            vaddq_s64(left.val[2], right.val[2]),
+            vaddq_s64(left.val[3], right.val[3])
+        };
+        return CmpHelper<CmpOp>::compare(lr, value);
+    }
+};
+
+template<CompareOpType CmpOp>
+struct ArithHelperI64<ArithOpType::Sub, CmpOp> {
+    static inline uint64x2x4_t op(const int64x2x4_t left, const int64x2x4_t right, const int64x2x4_t value) {
+        // left - right == value
+        const int64x2x4_t lr = {
+            vsubq_s64(left.val[0], right.val[0]),
+            vsubq_s64(left.val[1], right.val[1]),
+            vsubq_s64(left.val[2], right.val[2]),
+            vsubq_s64(left.val[3], right.val[3])
+        };
+        return CmpHelper<CmpOp>::compare(lr, value);
+    }
+};
+
+// template<CompareOpType CmpOp>
+// struct ArithHelperI64<ArithOpType::Mul, CmpOp> {
+//     // todo draft: https://stackoverflow.com/questions/60236627/facing-problem-in-implementing-multiplication-of-64-bit-variables-using-arm-neon
+//     inline int64x2_t arm_vmulq_s64(const int64x2_t a, const int64x2_t b)
+//     {
+//         const auto ac = vmovn_s64(a);
+//         const auto pr = vmovn_s64(b);
+
+//         const auto hi = vmulq_s32(b, vrev64q_s32(a));
+
+//         return vmlal_u32(vshlq_n_s64(vpaddlq_u32(hi), 32), ac, pr);
+//     }
+
+//     static inline uint64x2x4_t op(const int64x2x4_t left, const int64x2x4_t right, const int64x2x4_t value) {
+//         // left * right == value
+//         const int64x2x4_t lr = {
+//             arm_vmulq_s64(left.val[0], right.val[0]),
+//             arm_vmulq_s64(left.val[1], right.val[1]),
+//             arm_vmulq_s64(left.val[2], right.val[2]),
+//             arm_vmulq_s64(left.val[3], right.val[3])
+//         };
+//         return CmpHelper<CmpOp>::compare(lr, value);
+//     }
+// };
+
+//
+template<ArithOpType AOp, CompareOpType CmpOp>
+struct ArithHelperF32 {};
+
+template<CompareOpType CmpOp>
+struct ArithHelperF32<ArithOpType::Add, CmpOp> {
+    static inline uint32x4x2_t op(const float32x4x2_t left, const float32x4x2_t right, const float32x4x2_t value) {
+        // left + right == value
+        const float32x4x2_t lr = {
+            vaddq_f32(left.val[0], right.val[0]),
+            vaddq_f32(left.val[1], right.val[1])
+        };
+        return CmpHelper<CmpOp>::compare(lr, value);
+    }
+};
+
+template<CompareOpType CmpOp>
+struct ArithHelperF32<ArithOpType::Sub, CmpOp> {
+    static inline uint32x4x2_t op(const float32x4x2_t left, const float32x4x2_t right, const float32x4x2_t value) {
+        // left - right == value
+        const float32x4x2_t lr = {
+            vsubq_f32(left.val[0], right.val[0]),
+            vsubq_f32(left.val[1], right.val[1])
+        };
+        return CmpHelper<CmpOp>::compare(lr, value);
+    }
+};
+
+template<CompareOpType CmpOp>
+struct ArithHelperF32<ArithOpType::Mul, CmpOp> {
+    static inline uint32x4x2_t op(const float32x4x2_t left, const float32x4x2_t right, const float32x4x2_t value) {
+        // left * right == value
+        const float32x4x2_t lr = {
+            vmulq_f32(left.val[0], right.val[0]),
+            vmulq_f32(left.val[1], right.val[1])
+        };
+        return CmpHelper<CmpOp>::compare(lr, value);
+    }
+};
+
+template<CompareOpType CmpOp>
+struct ArithHelperF32<ArithOpType::Div, CmpOp> {
+    static inline uint32x4x2_t op(const float32x4x2_t left, const float32x4x2_t right, const float32x4x2_t value) {
+        // left == right * value
+        const float32x4x2_t rv = {
+            vmulq_f32(right.val[0], value.val[0]),
+            vmulq_f32(right.val[1], value.val[1])
+        };
+        return CmpHelper<CmpOp>::compare(left, rv);
+    }
+};
+
+//
+template<ArithOpType AOp, CompareOpType CmpOp>
+struct ArithHelperF64 {};
+
+template<CompareOpType CmpOp>
+struct ArithHelperF64<ArithOpType::Add, CmpOp> {
+    static inline uint64x2x4_t op(const float64x2x4_t left, const float64x2x4_t right, const float64x2x4_t value) {
+        // left + right == value
+        const float64x2x4_t lr = {
+            vaddq_f64(left.val[0], right.val[0]),
+            vaddq_f64(left.val[1], right.val[1]),
+            vaddq_f64(left.val[2], right.val[2]),
+            vaddq_f64(left.val[3], right.val[3])
+        };
+        return CmpHelper<CmpOp>::compare(lr, value);
+    }
+};
+
+template<CompareOpType CmpOp>
+struct ArithHelperF64<ArithOpType::Sub, CmpOp> {
+    static inline uint64x2x4_t op(const float64x2x4_t left, const float64x2x4_t right, const float64x2x4_t value) {
+        // left - right == value
+        const float64x2x4_t lr = {
+            vsubq_f64(left.val[0], right.val[0]),
+            vsubq_f64(left.val[1], right.val[1]),
+            vsubq_f64(left.val[2], right.val[2]),
+            vsubq_f64(left.val[3], right.val[3])
+        };
+        return CmpHelper<CmpOp>::compare(lr, value);
+    }
+};
+
+template<CompareOpType CmpOp>
+struct ArithHelperF64<ArithOpType::Mul, CmpOp> {
+    static inline uint64x2x4_t op(const float64x2x4_t left, const float64x2x4_t right, const float64x2x4_t value) {
+        // left * right == value
+        const float64x2x4_t lr = {
+            vmulq_f64(left.val[0], right.val[0]),
+            vmulq_f64(left.val[1], right.val[1]),
+            vmulq_f64(left.val[2], right.val[2]),
+            vmulq_f64(left.val[3], right.val[3])
+        };
+        return CmpHelper<CmpOp>::compare(lr, value);
+    }
+};
+
+template<CompareOpType CmpOp>
+struct ArithHelperF64<ArithOpType::Div, CmpOp> {
+    static inline uint64x2x4_t op(const float64x2x4_t left, const float64x2x4_t right, const float64x2x4_t value) {
+        // left == right * value
+        const float64x2x4_t rv = {
+            vmulq_f64(right.val[0], value.val[0]),
+            vmulq_f64(right.val[1], value.val[1]),
+            vmulq_f64(right.val[2], value.val[2]),
+            vmulq_f64(right.val[3], value.val[3])
+        };
+        return CmpHelper<CmpOp>::compare(left, rv);
+    }
+};
+
 
 // todo: Mul, Div, Mod
 
 #define NOT_IMPLEMENTED_OP_ARITH_COMPARE(TTYPE, AOP, CMPOP) \
     template<> \
-    bool OpArithCompareImpl<TTYPE, ArithType::AOP, CompareType::CMPOP>::op_arith_compare( \
+    bool OpArithCompareImpl<TTYPE, ArithOpType::AOP, CompareOpType::CMPOP>::op_arith_compare( \
         uint8_t* const __restrict res_u8, \
         const TTYPE* const __restrict src, \
         const ArithHighPrecisionType<TTYPE>& right_operand, \
@@ -1244,12 +1415,14 @@ ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_NEON, double)
     }
 
 //
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mul, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mul, NEQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, NEQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, NEQ)
 
-template<ArithType AOp, CompareType CmpOp>
+template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
     uint8_t* const __restrict res_u8,
     const int8_t* const __restrict src,
@@ -1265,12 +1438,14 @@ bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
 }
 
 //
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mul, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mul, NEQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, NEQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, NEQ)
 
-template<ArithType AOp, CompareType CmpOp>
+template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
     uint8_t* const __restrict res_u8,
     const int16_t* const __restrict src,
@@ -1286,12 +1461,14 @@ bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
 }
 
 //
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mul, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mul, NEQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, NEQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, NEQ)
 
-template<ArithType AOp, CompareType CmpOp>
+template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
     uint8_t* const __restrict res_u8,
     const int32_t* const __restrict src,
@@ -1307,12 +1484,14 @@ bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
 }
 
 //
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mul, EQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mul, NEQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, NEQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, NEQ)
 
-template<ArithType AOp, CompareType CmpOp>
+template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
     uint8_t* const __restrict res_u8,
     const int64_t* const __restrict src,
@@ -1331,7 +1510,7 @@ bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, NEQ)
 
-template<ArithType AOp, CompareType CmpOp>
+template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
     uint8_t* const __restrict res_u8,
     const float* const __restrict src,
@@ -1349,7 +1528,7 @@ bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, NEQ)
 
-template<ArithType AOp, CompareType CmpOp>
+template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
     uint8_t* const __restrict res_u8,
     const double* const __restrict src,
@@ -1360,6 +1539,21 @@ bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
     // the restriction of the API
     assert((size % 8) == 0);
 
+    //
+    const float64x2x4_t right_v = {vdupq_n_f64(right_operand), vdupq_n_f64(right_operand), vdupq_n_f64(right_operand), vdupq_n_f64(right_operand)};
+    const float64x2x4_t value_v = {vdupq_n_f64(value), vdupq_n_f64(value), vdupq_n_f64(value), vdupq_n_f64(value)};
+
+    // todo: aligned reads & writes
+
+    const size_t size8 = (size / 8) * 8;
+    for (size_t i = 0; i < size8; i += 8) {
+        const float64x2x4_t v0v = {vld1q_f64(src + i), vld1q_f64(src + i + 2), vld1q_f64(src + i + 4), vld1q_f64(src + i + 6)};
+        const uint64x2x4_t cmp = ArithHelperF64<AOp, CmpOp>::op(v0v, right_v, value_v);
+
+        const uint8_t mmask = movemask(cmp);
+        res_u8[i / 8] = mmask;
+    }
+
     return true;
 }
 
@@ -1368,7 +1562,7 @@ bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
 
 //
 #define INSTANTIATE_ARITH_COMPARE_NEON(TTYPE,OP,CMP) \
-    template bool OpArithCompareImpl<TTYPE, ArithType::OP, CompareType::CMP>::op_arith_compare( \
+    template bool OpArithCompareImpl<TTYPE, ArithOpType::OP, CompareOpType::CMP>::op_arith_compare( \
         uint8_t* const __restrict res_u8, \
         const TTYPE* const __restrict src, \
         const ArithHighPrecisionType<TTYPE>& right_operand, \
@@ -1384,8 +1578,6 @@ ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_NEON, float)
 ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_NEON, double)
 
 #undef INSTANTIATE_ARITH_COMPARE_NEON
-
-///////////////////////////////////////////////////////////////////////////
 
 //
 #undef ALL_COMPARE_OPS

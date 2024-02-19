@@ -222,30 +222,10 @@ struct CustomBitsetPolicy2 {
         const size_t start_right, 
         const size_t size
     ) {
-        if (size == 0) [[unlikely]] {
-            return;
-        }
-
-        // process big blocks
-        const size_type size_b = (size / data_bits) * data_bits;
-        for (size_type i = 0; i < size_b; i += data_bits) {
-            data_type left_v = read(left, start_left + i, data_bits);
-            const data_type right_v = read(right, start_right + i, data_bits);
-
-            left_v &= right_v;
-            
-            write(left, start_left + i, data_bits, left_v);
-        }
-
-        // process leftovers
-        if (size_b != size) {
-            data_type left_v = read(left, start_left + size_b, size - size_b);
-            const data_type right_v = read(right, start_right + size_b, size - size_b);
-
-            left_v &= right_v;
-
-            write(left, start_left + size_b, size - size_b, left_v);
-        }
+        op_func(left, right, start_left, start_right, size, 
+            [](const data_type left_v, const data_type right_v) { 
+                return left_v & right_v; 
+            });
     }
 
     static inline void op_or(
@@ -255,30 +235,10 @@ struct CustomBitsetPolicy2 {
         const size_t start_right, 
         const size_t size
     ) {
-        if (size == 0) [[unlikely]] {
-            return;
-        }
-
-        // process big blocks
-        const size_type size_b = (size / data_bits) * data_bits;
-        for (size_type i = 0; i < size_b; i += data_bits) {
-            data_type left_v = read(left, start_left + i, data_bits);
-            const data_type right_v = read(right, start_right + i, data_bits);
-
-            left_v |= right_v;
-            
-            write(left, start_left + i, data_bits, left_v);
-        }
-
-        // process leftovers
-        if (size_b != size) {
-            data_type left_v = read(left, start_left + size_b, size - size_b);
-            const data_type right_v = read(right, start_right + size_b, size - size_b);
-
-            left_v |= right_v;
-
-            write(left, start_left + size_b, size - size_b, left_v);
-        }
+        op_func(left, right, start_left, start_right, size, 
+            [](const data_type left_v, const data_type right_v) { 
+                return left_v | right_v; 
+            });
     }
 
     static inline data_type get_shift_mask_begin(const size_type shift) {
@@ -610,18 +570,23 @@ struct CustomBitsetPolicy2 {
 
         if ((start_left % data_bits) == 0) {
             if ((start_right % data_bits) == 0) {
-                // plain memcpy
-                for (size_type i = 0; i < size_b; i += data_bits) {
-                    const data_type left_v = left[(start_left + i) / data_bits];
-                    const data_type right_v = right[(start_right + i) / data_bits];
+                // plain "memcpy"
+                size_type start_left_idx = start_left / data_bits;
+                size_type start_right_idx = start_right / data_bits;
+
+                for (size_type i = 0, j = 0; i < size_b; i += data_bits, j += 1) {
+                    const data_type left_v = left[start_left_idx + j];
+                    const data_type right_v = right[start_right_idx + j];
                     if (left_v != right_v) {
                         return false;
                     }
                 }                
             } else {
                 // easier left
-                for (size_type i = 0; i < size_b; i += data_bits) {
-                    const data_type left_v = left[(start_left + i) / data_bits];
+                size_type start_left_idx = start_left / data_bits;
+
+                for (size_type i = 0, j = 0; i < size_b; i += data_bits, j += 1) {
+                    const data_type left_v = left[start_left_idx + j];
                     const data_type right_v = read(right, start_right + i, data_bits);
                     if (left_v != right_v) {
                         return false;
@@ -631,9 +596,11 @@ struct CustomBitsetPolicy2 {
         } else {
             if ((start_right % data_bits) == 0) {
                 // easier right
-                for (size_type i = 0; i < size_b; i += data_bits) {
+                size_type start_right_idx = start_right / data_bits;
+
+                for (size_type i = 0, j = 0; i < size_b; i += data_bits, j += 1) {
                     const data_type left_v = read(left, start_left + i, data_bits);
-                    const data_type right_v = right[(start_right + i) / data_bits];
+                    const data_type right_v = right[start_right_idx + j];
                     if (left_v != right_v) {
                         return false;
                     }
@@ -669,30 +636,10 @@ struct CustomBitsetPolicy2 {
         const size_t start_right, 
         const size_t size
     ) {
-        if (size == 0) [[unlikely]] {
-            return;
-        }
-
-        // process big blocks
-        const size_type size_b = (size / data_bits) * data_bits;
-        for (size_type i = 0; i < size_b; i += data_bits) {
-            data_type left_v = read(left, start_left + i, data_bits);
-            const data_type right_v = read(right, start_right + i, data_bits);
-
-            left_v ^= right_v;
-            
-            write(left, start_left + i, data_bits, left_v);
-        }
-
-        // process leftovers
-        if (size_b != size) {
-            data_type left_v = read(left, start_left + size_b, size - size_b);
-            const data_type right_v = read(right, start_right + size_b, size - size_b);
-
-            left_v ^= right_v;
-
-            write(left, start_left + size_b, size - size_b, left_v);
-        }
+        op_func(left, right, start_left, start_right, size, 
+            [](const data_type left_v, const data_type right_v) { 
+                return left_v ^ right_v; 
+            });
     }
 
     static inline void op_sub(
@@ -706,26 +653,10 @@ struct CustomBitsetPolicy2 {
             return;
         }
 
-        // process big blocks
-        const size_type size_b = (size / data_bits) * data_bits;
-        for (size_type i = 0; i < size_b; i += data_bits) {
-            data_type left_v = read(left, start_left + i, data_bits);
-            const data_type right_v = read(right, start_right + i, data_bits);
-
-            left_v &= ~right_v;
-            
-            write(left, start_left + i, data_bits, left_v);
-        }
-
-        // process leftovers
-        if (size_b != size) {
-            data_type left_v = read(left, start_left + size_b, size - size_b);
-            const data_type right_v = read(right, start_right + size_b, size - size_b);
-
-            left_v &= ~right_v;
-
-            write(left, start_left + size_b, size - size_b, left_v);
-        }
+        op_func(left, right, start_left, start_right, size, 
+            [](const data_type left_v, const data_type right_v) { 
+                return left_v & ~right_v; 
+            });
     }
 
     //
@@ -876,6 +807,82 @@ struct CustomBitsetPolicy2 {
             get_proxy(data, start + i) = ArithCompareOperator<AOp, CmpOp>::compare(src[i], right_operand, value);
         }
     }
+
+    template<typename Func>
+    static inline void op_func(
+        data_type* const left, 
+        const data_type* const right, 
+        const size_t start_left,
+        const size_t start_right, 
+        const size_t size,
+        Func func
+    ) {
+        if (size == 0) [[unlikely]] {
+            return;
+        }
+
+        // process big blocks
+        const size_type size_b = (size / data_bits) * data_bits;
+        if ((start_left % data_bits) == 0) {
+            if ((start_right % data_bits) == 0) {
+                // plain "memcpy".
+                // A compiler auto-vectorization is expected.
+                size_type start_left_idx = start_left / data_bits;
+                size_type start_right_idx = start_right / data_bits;
+
+                for (size_type i = 0, j = 0; i < size_b; i += data_bits, j += 1) {
+                    data_type& left_v = left[start_left_idx + j];
+                    const data_type right_v = right[start_right_idx + j];
+
+                    const data_type result_v = func(left_v, right_v);
+                    left_v = result_v;
+                }
+            } else {
+                // easier read
+                size_type start_right_idx = start_right / data_bits;
+
+                for (size_type i = 0, j = 0; i < size_b; i += data_bits, j += 1) {
+                    const data_type left_v = read(left, start_left + i, data_bits);
+                    const data_type right_v = right[start_right_idx + j];
+
+                    const data_type result_v = func(left_v, right_v);
+                    write(left, start_right + i, data_bits, result_v);
+                }
+            }
+        } else {
+            if ((start_right % data_bits) == 0) {
+                // easier write
+                size_type start_left_idx = start_left / data_bits;
+
+                for (size_type i = 0, j = 0; i < size_b; i += data_bits, j += 1) {
+                    data_type& left_v = left[start_left_idx + j];
+                    const data_type right_v = read(right, start_right + i, data_bits);
+
+                    const data_type result_v = func(left_v, right_v);
+                    left_v = result_v;
+                }
+            } else {
+                // general case
+                for (size_type i = 0; i < size_b; i += data_bits) {
+                    const data_type left_v = read(left, start_left + i, data_bits);
+                    const data_type right_v = read(right, start_right + i, data_bits);
+
+                    const data_type result_v = func(left_v, right_v);
+                    write(left, start_right + i, data_bits, left_v & result_v);
+                }
+            }
+        }
+
+        // process leftovers
+        if (size_b != size) {
+            const data_type left_v = read(left, start_left + size_b, size - size_b);
+            const data_type right_v = read(right, start_right + size_b, size - size_b);
+
+            const data_type result_v = func(left_v, right_v);
+            write(left, start_left + size_b, size - size_b, left_v);
+        }
+    }
+
 };
 
 }

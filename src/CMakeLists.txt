@@ -17,11 +17,11 @@ elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm*")
         detail/platform/arm/sve.cpp
     )
 
-    set_source_files_properties(detail/platform/dynamic.cpp PROPERTIES COMPILE_FLAGS "-mcpu=neoverse-512tvb")
-
     # let dynamic.cpp know that SVE is available
     # comment it out for now
-    # set_source_files_properties(detail/platform/arm/sve.cpp PROPERTIES COMPILE_FLAGS "-mcpu=neoverse-512tvb")
+    # set_source_files_properties(detail/platform/dynamic.cpp PROPERTIES COMPILE_FLAGS "-mcpu=neoverse-512tvb")
+
+    set_source_files_properties(detail/platform/arm/sve.cpp PROPERTIES COMPILE_FLAGS "-mcpu=neoverse-512tvb")
 endif()
 
 add_library(bitset ${BITSET_SRCS})

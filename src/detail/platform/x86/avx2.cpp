@@ -1252,11 +1252,6 @@ ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_AVX2, double)
 
 ///////////////////////////////////////////////////////////////////////////
 
-// https://godbolt.org/z/CYipz7
-// https://github.com/ridiculousfish/libdivide
-// https://github.com/lemire/fastmod
-
-//
 //
 template<ArithOpType Op, CompareOpType CmpOp>
 struct ArithHelperI64 {};

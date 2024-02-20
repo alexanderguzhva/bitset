@@ -48,47 +48,29 @@ namespace sve {
 //
 constexpr size_t MAX_SVE_WIDTH = 2048; 
 
-//
-inline void write_bitmask_full(
+///////////////////////////////////////////////////////////////////////////
+
+// based on code from https://github.com/zwegner/zp7/blob/master/zp7.c
+
+// 512 bit width, 8 bit elements
+inline void write_bitmask_full_512_8(
     uint8_t* const bitmask, 
     const svbool_t pred
 ) {
     *((svbool_t*)bitmask) = pred;
-
-    uint8_t pred_mask[512 / 64];
-    *((svbool_t*)pred_mask) = pred; 
-    uint64_t pred_m = *(uint64_t*)(pred_mask);
-    for (size_t i = 0; i < 64; i++) {
-        printf("%d ", int((pred_m >> i) & 1));
-    }
-    printf("\n");
-
-/*
-    // SVE width in bytes
-    const size_t sve_width = svcntb();
-    assert((sve_width % 8) == 0);
-    assert(sve_width * 8 <= MAX_SVE_WIDTH);
-
-    // 2048 bits, 256 bytes => 256 bits bitmask, 32 bytes
-    uint8_t pred_mask[MAX_SVE_WIDTH / 64];
-    // *((svbool_t)pred_mask) = pred; 
-    std::memcpy(pred_mask, &pred, sve_width / 8);
-
-    //
-    for (size_t i = 0; i < sve_width / 8; i++) {
-        bitmask[i] = pred_mask[i];
-    }
-*/
 }
 
-inline void write_bitmask_full_16(
+// 512 bit width, 16 bit elements
+inline void write_bitmask_full_512_16(
     uint8_t* const bitmask,
     const svbool_t pred
 ) {
-    uint8_t pred_mask[512 / 64];
+    uint8_t pred_mask[MAX_SVE_WIDTH / 64];
     *((svbool_t*)pred_mask) = pred; 
 
     uint64_t pred_m = *(uint64_t*)(pred_mask);
+
+    // pred_m = pext(pred_m, 0x55555555555555ULL);
 
     constexpr uint64_t mask = 0x5555555555555555ULL;
     constexpr uint64_t mask0 = 0xccccccccccccccccULL;
@@ -107,15 +89,17 @@ inline void write_bitmask_full_16(
     *(uint32_t*)(bitmask) = uint32_t(pred_m);
 }
 
-
-inline void write_bitmask_full_32(
+// 512 bit width, 32 bit elements
+inline void write_bitmask_full_512_32(
     uint8_t* const bitmask,
     const svbool_t pred
 ) {
-    uint8_t pred_mask[512 / 64];
+    uint8_t pred_mask[MAX_SVE_WIDTH / 64];
     *((svbool_t*)pred_mask) = pred; 
 
     uint64_t pred_m = *(uint64_t*)(pred_mask);
+
+    // pred_m = pext(pred_m, 0x1111111111111111ULL);
 
     constexpr uint64_t mask = 0x1111111111111111ULL;
     constexpr uint64_t mask0 = 0xb4b4b4b4b4b4b4b4ULL;
@@ -136,14 +120,17 @@ inline void write_bitmask_full_32(
     *(uint16_t*)(bitmask) = uint16_t(pred_m);
 }
 
-inline void write_bitmask_full_64(
+// 512 bit width, 64 bit elements
+inline void write_bitmask_full_512_64(
     uint8_t* const bitmask,
     const svbool_t pred
 ) {
-    uint8_t pred_mask[512 / 64];
+    uint8_t pred_mask[MAX_SVE_WIDTH / 64];
     *((svbool_t*)pred_mask) = pred; 
 
     uint64_t pred_m = *(uint64_t*)(pred_mask);
+
+    // pred_m = pext(pred_m, 0x0101010101010101ULL);
 
     constexpr uint64_t mask = 0x0101010101010101ULL;
     constexpr uint64_t mask0 = 0xab54ab54ab54ab54ULL;
@@ -164,7 +151,8 @@ inline void write_bitmask_full_64(
     *bitmask = uint8_t(pred_m);
 }
 
-//
+/*
+// todo
 inline void write_bitmask_partial(
     uint8_t* const bitmask, 
     const svbool_t pred,
@@ -192,6 +180,7 @@ inline void write_bitmask_partial(
         bitmask[i] = pred_mask[i];
     }
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -378,6 +367,12 @@ bool OpCompareValImpl<int8_t, Op>::op_compare_val(
     const size_t sve_width = svcntb();
     assert((sve_width % 8) == 0);
 
+    // only 512 bits are implemented for now
+    if (sve_width * 8 != 512) {
+        return false;
+    }
+
+    //
     const svbool_t pred_all = svptrue_b8();
 
     //
@@ -389,9 +384,10 @@ bool OpCompareValImpl<int8_t, Op>::op_compare_val(
         const svint8_t v = svld1_s8(pred_all, src + i);
         const svbool_t cmp = CmpHelper<Op>::compare(pred_all, v, target);
         
-        write_bitmask_full(res_u8 + i / 8, cmp);
+        write_bitmask_full_512_8(res_u8 + i / 8, cmp);
     }
 
+/*
     // process leftovers
     if (size_sve != size) {
         const svint8_t v = svldff1_s8(pred_all, src + size_sve);
@@ -400,13 +396,13 @@ bool OpCompareValImpl<int8_t, Op>::op_compare_val(
 
         write_bitmask_partial(res_u8 + size_sve / 8, cmp, valid_mask);
     }
+*/
 
     return true;
 }
 
 // https://stackoverflow.com/questions/77834169/what-is-a-fast-fallback-algorithm-which-emulates-pdep-and-pext-in-software
 // SVE2 has bitperm
-// https://github.com/zwegner/zp7/blob/master/zp7.c
 template<CompareOpType Op>
 bool OpCompareValImpl<int16_t, Op>::op_compare_val(
     uint8_t* const __restrict res_u8,
@@ -417,10 +413,16 @@ bool OpCompareValImpl<int16_t, Op>::op_compare_val(
     // the restriction of the API
     assert((size % 8) == 0);
 
-    // SVE width in words
+    // SVE width in 16-bit values
     const size_t sve_width = svcnth();
     assert((sve_width % 8) == 0);
 
+    // only 512 bits are implemented for now
+    if (sve_width * 16 != 512) {
+        return false;
+    }
+
+    //
     const svbool_t pred_all = svptrue_b16();
 
     //
@@ -432,7 +434,7 @@ bool OpCompareValImpl<int16_t, Op>::op_compare_val(
         const svint16_t v = svld1_s16(pred_all, src + i);
         const svbool_t cmp = CmpHelper<Op>::compare(pred_all, v, target);
         
-        write_bitmask_full_16(res_u8 + i / 8, cmp);
+        write_bitmask_full_512_16(res_u8 + i / 8, cmp);
     }
 
 /*
@@ -459,10 +461,16 @@ bool OpCompareValImpl<int32_t, Op>::op_compare_val(
     // the restriction of the API
     assert((size % 8) == 0);
 
-    // SVE width in words
+    // SVE width in 32-bit values
     const size_t sve_width = svcntw();
     assert((sve_width % 8) == 0);
 
+    // only 512 bits are implemented for now
+    if (sve_width * 32 != 512) {
+        return false;
+    }
+
+    //
     const svbool_t pred_all = svptrue_b32();
 
     //
@@ -474,7 +482,7 @@ bool OpCompareValImpl<int32_t, Op>::op_compare_val(
         const svint32_t v = svld1_s32(pred_all, src + i);
         const svbool_t cmp = CmpHelper<Op>::compare(pred_all, v, target);
         
-        write_bitmask_full_32(res_u8 + i / 8, cmp);
+        write_bitmask_full_512_32(res_u8 + i / 8, cmp);
     }
 
 /*
@@ -501,10 +509,16 @@ bool OpCompareValImpl<int64_t, Op>::op_compare_val(
     // the restriction of the API
     assert((size % 8) == 0);
 
-    // SVE width in words
+    // SVE width in 64-bit values
     const size_t sve_width = svcntd();
     assert((sve_width % 8) == 0);
 
+    // only 512 bits are implemented for now
+    if (sve_width * 64 != 512) {
+        return false;
+    }
+
+    //
     const svbool_t pred_all = svptrue_b64();
 
     //
@@ -516,7 +530,7 @@ bool OpCompareValImpl<int64_t, Op>::op_compare_val(
         const svint64_t v = svld1_s64(pred_all, src + i);
         const svbool_t cmp = CmpHelper<Op>::compare(pred_all, v, target);
         
-        write_bitmask_full_64(res_u8 + i / 8, cmp);
+        write_bitmask_full_512_64(res_u8 + i / 8, cmp);
     }
 
 /*
@@ -543,10 +557,16 @@ bool OpCompareValImpl<float, Op>::op_compare_val(
     // the restriction of the API
     assert((size % 8) == 0);
 
-    // SVE width in words
+    // SVE width in 32-bit values
     const size_t sve_width = svcntw();
     assert((sve_width % 8) == 0);
 
+    // only 512 bits are implemented for now
+    if (sve_width * 32 != 512) {
+        return false;
+    }
+
+    //
     const svbool_t pred_all = svptrue_b32();
 
     //
@@ -558,7 +578,7 @@ bool OpCompareValImpl<float, Op>::op_compare_val(
         const svfloat32_t v = svld1_f32(pred_all, src + i);
         const svbool_t cmp = CmpHelper<Op>::compare(pred_all, v, target);
         
-        write_bitmask_full_32(res_u8 + i / 8, cmp);
+        write_bitmask_full_512_32(res_u8 + i / 8, cmp);
     }
 
 /*
@@ -585,10 +605,16 @@ bool OpCompareValImpl<double, Op>::op_compare_val(
     // the restriction of the API
     assert((size % 8) == 0);
 
-    // SVE width in words
+    // SVE width in 64-bit values
     const size_t sve_width = svcntd();
     assert((sve_width % 8) == 0);
 
+    // only 512 bits are implemented for now
+    if (sve_width * 64 != 512) {
+        return false;
+    }
+
+    //
     const svbool_t pred_all = svptrue_b64();
 
     //
@@ -600,7 +626,7 @@ bool OpCompareValImpl<double, Op>::op_compare_val(
         const svfloat64_t v = svld1_f64(pred_all, src + i);
         const svbool_t cmp = CmpHelper<Op>::compare(pred_all, v, target);
         
-        write_bitmask_full_64(res_u8 + i / 8, cmp);
+        write_bitmask_full_512_64(res_u8 + i / 8, cmp);
     }
 
 /*
@@ -949,11 +975,6 @@ ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_SVE, double)
 #undef INSTANTIATE_WITHIN_RANGE_VAL_SVE
 
 ///////////////////////////////////////////////////////////////////////////
-
-// https://godbolt.org/z/CYipz7
-// https://github.com/ridiculousfish/libdivide
-// https://github.com/lemire/fastmod
-
 
 // todo: Mul, Div, Mod
 

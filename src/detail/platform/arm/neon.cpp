@@ -48,7 +48,7 @@ inline uint64x2_t vmvnq_u64(const uint64x2_t value) {
     return veorq_u64(value, m1);
 }
 
-// draft: movemask functions from SSE2SIMD library.
+// draft: movemask functions from sse2neon library.
 // todo: can this be made better?
 
 // todo: optimize
@@ -65,7 +65,7 @@ inline uint8_t movemask(const uint8x8_t cmp) {
 }
 
 // todo: optimize
-// https://lemire.me/blog/2017/07/10/pruning-spaces-faster-on-arm-processors-with-vector-table-lookups/
+// https://lemire.me/blog/2017/07/10/pruning-spaces-faster-on-arm-processors-with-vector-table-lookups/ (?)
 inline uint16_t movemask(const uint8x16_t cmp) {
     uint16x8_t high_bits = vreinterpretq_u16_u8(vshrq_n_u8(cmp, 7));
     uint32x4_t paired16 = vreinterpretq_u32_u16(vsraq_n_u16(high_bits, high_bits, 7));
@@ -1226,10 +1226,6 @@ ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_NEON, double)
 #undef INSTANTIATE_WITHIN_RANGE_VAL_NEON
 
 ///////////////////////////////////////////////////////////////////////////
-
-// https://godbolt.org/z/CYipz7
-// https://github.com/ridiculousfish/libdivide
-// https://github.com/lemire/fastmod
 
 //
 template<ArithOpType AOp, CompareOpType CmpOp>

@@ -152,7 +152,6 @@ void FillRandom(
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-/*
 //
 template<typename BitsetT>
 void TestFindImpl(BitsetT& bitset, const size_t max_v) {
@@ -401,7 +400,6 @@ REGISTER_TYPED_TEST_SUITE_P(InplaceCompareColumnSuite, BitWise, ElementWise, Avx
 
 INSTANTIATE_TYPED_TEST_SUITE_P(InplaceCompareColumnTest, InplaceCompareColumnSuite, InplaceCompareColumnTtypes);
 
-*/
 //////////////////////////////////////////////////////////////////////////////////////////
 
 //
@@ -552,7 +550,6 @@ INSTANTIATE_TYPED_TEST_SUITE_P(InplaceCompareValTest, InplaceCompareValSuite, In
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-/*
 //
 template<typename BitsetT, typename T>
 void TestInplaceWithinRangeColumnImpl(

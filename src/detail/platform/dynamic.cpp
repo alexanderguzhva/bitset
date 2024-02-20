@@ -15,7 +15,12 @@ using namespace milvus::bitset::detail::x86;
 #if defined(__aarch64__)
 #include "arm/neon.h"
 
+#ifdef __ARM_FEATURE_SVE
+#include "arm/sve.h"
+#endif
+
 using namespace milvus::bitset::detail::arm;
+
 #endif
 
 #include "vectorized_ref.h"
@@ -438,7 +443,7 @@ static void init_dynamic_hook() {
 #define SET_ARITH_COMPARE_NEON(TTYPE, AOP, CMPOP) \
     op_arith_compare_##TTYPE##_##AOP##_##CMPOP = VectorizedNeon::template op_arith_compare<TTYPE, ArithOpType::AOP, CompareOpType::CMPOP>;
 
-        // assign AVX2-related pointers
+        // assign NEON-related pointers
         ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_NEON, int8_t, int8_t)
         ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_NEON, int16_t, int16_t)
         ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_NEON, int32_t, int32_t)
@@ -481,6 +486,67 @@ static void init_dynamic_hook() {
 #undef SET_ARITH_COMPARE_NEON
 
     }
+
+#ifdef __ARM_FEATURE_SVE
+
+    // sve?
+    {
+#define SET_OP_COMPARE_COLUMN_SVE(TTYPE, UTYPE, OP) \
+    op_compare_column_##TTYPE##_##UTYPE##_##OP = VectorizedSve::template op_compare_column<TTYPE, UTYPE, CompareOpType::OP>;
+#define SET_OP_COMPARE_VAL_SVE(TTYPE, OP) \
+    op_compare_val_##TTYPE##_##OP = VectorizedSve::template op_compare_val<TTYPE, CompareOpType::OP>;
+#define SET_OP_WITHIN_RANGE_COLUMN_SVE(TTYPE, OP) \
+    op_within_range_column_##TTYPE##_##OP = VectorizedSve::template op_within_range_column<TTYPE, RangeType::OP>;
+#define SET_OP_WITHIN_RANGE_VAL_SVE(TTYPE, OP) \
+    op_within_range_val_##TTYPE##_##OP = VectorizedSve::template op_within_range_val<TTYPE, RangeType::OP>;
+#define SET_ARITH_COMPARE_SVE(TTYPE, AOP, CMPOP) \
+    op_arith_compare_##TTYPE##_##AOP##_##CMPOP = VectorizedSve::template op_arith_compare<TTYPE, ArithOpType::AOP, CompareOpType::CMPOP>;
+
+        // assign SVE-related pointers
+        ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_SVE, int8_t, int8_t)
+        ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_SVE, int16_t, int16_t)
+        ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_SVE, int32_t, int32_t)
+        ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_SVE, int64_t, int64_t)
+        ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_SVE, float, float)
+        ALL_COMPARE_OPS(SET_OP_COMPARE_COLUMN_SVE, double, double)
+
+        ALL_COMPARE_OPS(SET_OP_COMPARE_VAL_SVE, int8_t)
+        ALL_COMPARE_OPS(SET_OP_COMPARE_VAL_SVE, int16_t)
+        ALL_COMPARE_OPS(SET_OP_COMPARE_VAL_SVE, int32_t)
+        ALL_COMPARE_OPS(SET_OP_COMPARE_VAL_SVE, int64_t)
+        ALL_COMPARE_OPS(SET_OP_COMPARE_VAL_SVE, float)
+        ALL_COMPARE_OPS(SET_OP_COMPARE_VAL_SVE, double)
+
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_SVE, int8_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_SVE, int16_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_SVE, int32_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_SVE, int64_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_SVE, float)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_COLUMN_SVE, double)
+
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_SVE, int8_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_SVE, int16_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_SVE, int32_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_SVE, int64_t)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_SVE, float)
+        ALL_RANGE_OPS(SET_OP_WITHIN_RANGE_VAL_SVE, double)
+
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_SVE, int8_t)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_SVE, int16_t)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_SVE, int32_t)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_SVE, int64_t)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_SVE, float)
+        ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_SVE, double)
+
+#undef SET_OP_COMPARE_COLUMN_SVE
+#undef SET_OP_COMPARE_VAL_SVE
+#undef SET_OP_WITHIN_RANGE_COLUMN_SVE
+#undef SET_OP_WITHIN_RANGE_VAL_SVE
+#undef SET_ARITH_COMPARE_SVE
+
+    }
+#endif
+
 #endif
 
 }

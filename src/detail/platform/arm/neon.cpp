@@ -65,6 +65,7 @@ inline uint8_t movemask(const uint8x8_t cmp) {
 }
 
 // todo: optimize
+// https://lemire.me/blog/2017/07/10/pruning-spaces-faster-on-arm-processors-with-vector-table-lookups/
 inline uint16_t movemask(const uint8x16_t cmp) {
     uint16x8_t high_bits = vreinterpretq_u16_u8(vshrq_n_u8(cmp, 7));
     uint32x4_t paired16 = vreinterpretq_u32_u16(vsraq_n_u16(high_bits, high_bits, 7));
@@ -1434,6 +1435,33 @@ bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
     assert((size % 8) == 0);
     static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
 
+    //
+    const int64x2x4_t right_v = {vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand)};
+    const int64x2x4_t value_v = {vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value)};
+
+    // todo: aligned reads & writes
+
+    const size_t size8 = (size / 8) * 8;
+    for (size_t i = 0; i < size8; i += 8) {
+        const int8x8_t v0v_i8 = vld1_s8(src + i);
+        const int16x8_t v0v_i16 = vmovl_s8(v0v_i8);
+        const int32x4x2_t v0v_i32 = {
+            vmovl_s16(vget_low_s16(v0v_i16)),
+            vmovl_s16(vget_high_s16(v0v_i16))
+        };
+        const int64x2x4_t v0v_i64 = {
+            vmovl_s32(vget_low_s32(v0v_i32.val[0])), 
+            vmovl_s32(vget_high_s32(v0v_i32.val[0])),
+            vmovl_s32(vget_low_s32(v0v_i32.val[1])), 
+            vmovl_s32(vget_high_s32(v0v_i32.val[1]))
+        };
+
+        const uint64x2x4_t cmp = ArithHelperI64<AOp, CmpOp>::op(v0v_i64, right_v, value_v);
+
+        const uint8_t mmask = movemask(cmp);
+        res_u8[i / 8] = mmask;
+    }
+
     return true;
 }
 
@@ -1456,6 +1484,32 @@ bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
     // the restriction of the API
     assert((size % 8) == 0);
     static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+
+    //
+    const int64x2x4_t right_v = {vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand)};
+    const int64x2x4_t value_v = {vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value)};
+
+    // todo: aligned reads & writes
+
+    const size_t size8 = (size / 8) * 8;
+    for (size_t i = 0; i < size8; i += 8) {
+        const int16x8_t v0v_i16 = vld1q_s16(src + i);
+        const int32x4x2_t v0v_i32 = {
+            vmovl_s16(vget_low_s16(v0v_i16)),
+            vmovl_s16(vget_high_s16(v0v_i16))
+        };
+        const int64x2x4_t v0v_i64 = {
+            vmovl_s32(vget_low_s32(v0v_i32.val[0])), 
+            vmovl_s32(vget_high_s32(v0v_i32.val[0])),
+            vmovl_s32(vget_low_s32(v0v_i32.val[1])), 
+            vmovl_s32(vget_high_s32(v0v_i32.val[1]))
+        };
+
+        const uint64x2x4_t cmp = ArithHelperI64<AOp, CmpOp>::op(v0v_i64, right_v, value_v);
+
+        const uint8_t mmask = movemask(cmp);
+        res_u8[i / 8] = mmask;
+    }
 
     return true;
 }
@@ -1480,6 +1534,28 @@ bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
     assert((size % 8) == 0);
     static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
 
+    //
+    const int64x2x4_t right_v = {vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand)};
+    const int64x2x4_t value_v = {vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value)};
+
+    // todo: aligned reads & writes
+
+    const size_t size8 = (size / 8) * 8;
+    for (size_t i = 0; i < size8; i += 8) {
+        const int32x4x2_t v0v_i32 = {vld1q_s32(src + i), vld1q_s32(src + i + 4)};
+        const int64x2x4_t v0v_i64 = {
+            vmovl_s32(vget_low_s32(v0v_i32.val[0])), 
+            vmovl_s32(vget_high_s32(v0v_i32.val[0])),
+            vmovl_s32(vget_low_s32(v0v_i32.val[1])), 
+            vmovl_s32(vget_high_s32(v0v_i32.val[1]))
+        };
+
+        const uint64x2x4_t cmp = ArithHelperI64<AOp, CmpOp>::op(v0v_i64, right_v, value_v);
+
+        const uint8_t mmask = movemask(cmp);
+        res_u8[i / 8] = mmask;
+    }
+
     return true;
 }
 
@@ -1503,6 +1579,21 @@ bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
     assert((size % 8) == 0);
     static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
 
+    //
+    const int64x2x4_t right_v = {vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand)};
+    const int64x2x4_t value_v = {vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value)};
+
+    // todo: aligned reads & writes
+
+    const size_t size8 = (size / 8) * 8;
+    for (size_t i = 0; i < size8; i += 8) {
+        const int64x2x4_t v0v = {vld1q_s64(src + i), vld1q_s64(src + i + 2), vld1q_s64(src + i + 4), vld1q_s64(src + i + 6)};
+        const uint64x2x4_t cmp = ArithHelperI64<AOp, CmpOp>::op(v0v, right_v, value_v);
+
+        const uint8_t mmask = movemask(cmp);
+        res_u8[i / 8] = mmask;
+    }
+
     return true;
 }
 
@@ -1520,6 +1611,21 @@ bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
 ) {
     // the restriction of the API
     assert((size % 8) == 0);
+
+    //
+    const float32x4x2_t right_v = {vdupq_n_f32(right_operand), vdupq_n_f32(right_operand)};
+    const float32x4x2_t value_v = {vdupq_n_f32(value), vdupq_n_f32(value)};
+
+    // todo: aligned reads & writes
+
+    const size_t size8 = (size / 8) * 8;
+    for (size_t i = 0; i < size8; i += 8) {
+        const float32x4x2_t v0v = {vld1q_f32(src + i), vld1q_f32(src + i + 4)};
+        const uint32x4x2_t cmp = ArithHelperF32<AOp, CmpOp>::op(v0v, right_v, value_v);
+
+        const uint8_t mmask = movemask(cmp);
+        res_u8[i / 8] = mmask;
+    }
 
     return true;
 }
@@ -1578,6 +1684,8 @@ ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_NEON, float)
 ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_NEON, double)
 
 #undef INSTANTIATE_ARITH_COMPARE_NEON
+
+///////////////////////////////////////////////////////////////////////////
 
 //
 #undef ALL_COMPARE_OPS

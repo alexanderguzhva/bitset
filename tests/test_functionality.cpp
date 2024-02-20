@@ -24,6 +24,11 @@
 
 #if defined(__aarch64__)
 #include <detail/platform/arm/neon.h>
+
+#ifdef __ARM_FEATURE_SVE
+#include <detail/platform/arm/sve.h>
+#endif
+
 #endif
 
 #include "utils.h"
@@ -87,6 +92,19 @@ using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_ty
 using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 
 }
+
+#ifdef __ARM_FEATURE_SVE
+namespace sve_u64_u8 {
+
+using vectorized_type = milvus::bitset::detail::arm::VectorizedSve;
+using policy_type = milvus::bitset::detail::CustomBitsetVectorizedPolicy<uint64_t, vectorized_type>;
+using container_type = std::vector<uint8_t>;
+using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_type, false>;
+using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
+
+}
+#endif
+
 #endif
 
 //
@@ -104,7 +122,7 @@ using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 
 //
 static constexpr bool print_log = false;
-static constexpr bool print_timing = true;
+static constexpr bool print_timing = false;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -135,7 +153,6 @@ void FillRandom(
 //////////////////////////////////////////////////////////////////////////////////////////
 
 /*
-
 //
 template<typename BitsetT>
 void TestFindImpl(BitsetT& bitset, const size_t max_v) {
@@ -205,25 +222,28 @@ void TestFindImpl() {
     }
 }
 
-// //
-// TEST(FindRef, f) {
-//     TestFindImpl<ref_u64_u8::bitset_type>();
-// }
+//
+TEST(FindRef, f) {
+    TestFindImpl<ref_u64_u8::bitset_type>();
+}
 
-// //
-// TEST(FindElement, f) {
-//     TestFindImpl<element_u64_u8::bitset_type>();
-// }
+//
+TEST(FindElement, f) {
+    TestFindImpl<element_u64_u8::bitset_type>();
+}
 
 // //
 // TEST(FindVectorizedAvx2, f) {
 //     TestFindImpl<avx2_u64_u8::bitset_type>();
 // }
 
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
 //
 template<typename BitsetT, typename T, typename U>
 void TestInplaceCompareColumnImpl(
-    BitsetT& bitset, CompareType op
+    BitsetT& bitset, CompareOpType op
 ) {
     const size_t n = bitset.size();
     constexpr size_t max_v = 2;
@@ -243,17 +263,17 @@ void TestInplaceCompareColumnImpl(
     }
 
     for (size_t i = 0; i < n; i++) {
-        if (op == CompareType::EQ) {
+        if (op == CompareOpType::EQ) {
             ASSERT_EQ(t[i] == u[i], bitset[i]) << i;
-        } else if (op == CompareType::GE) {
+        } else if (op == CompareOpType::GE) {
             ASSERT_EQ(t[i] >= u[i], bitset[i]) << i;
-        } else if (op == CompareType::GT) {
+        } else if (op == CompareOpType::GT) {
             ASSERT_EQ(t[i] > u[i], bitset[i]) << i;
-        } else if (op == CompareType::LE) {
+        } else if (op == CompareOpType::LE) {
             ASSERT_EQ(t[i] <= u[i], bitset[i]) << i;            
-        } else if (op == CompareType::LT) {
+        } else if (op == CompareOpType::LT) {
             ASSERT_EQ(t[i] < u[i], bitset[i]) << i;            
-        } else if (op == CompareType::NEQ) {
+        } else if (op == CompareOpType::NEQ) {
             ASSERT_EQ(t[i] != u[i], bitset[i]) << i;            
         } else {
             ASSERT_TRUE(false) << "Not implemented";
@@ -263,9 +283,8 @@ void TestInplaceCompareColumnImpl(
 
 template<typename BitsetT, typename T, typename U>
 void TestInplaceCompareColumnImpl() {
-    // for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
-    for (const size_t n : {10000000}) {
-        for (const auto op : {CompareType::EQ, CompareType::GE, CompareType::GT, CompareType::LE, CompareType::LT, CompareType::NEQ}) {
+    for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
+        for (const auto op : {CompareOpType::EQ, CompareOpType::GE, CompareOpType::GT, CompareOpType::LE, CompareOpType::LT, CompareOpType::NEQ}) {
             BitsetT bitset(n);
             bitset.reset();
 
@@ -275,20 +294,20 @@ void TestInplaceCompareColumnImpl() {
             
             TestInplaceCompareColumnImpl<BitsetT, T, U>(bitset, op);
 
-            // for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
-            //     if (offset >= n) {
-            //         continue;
-            //     }
+            for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
+                if (offset >= n) {
+                    continue;
+                }
 
-            //     bitset.reset();
-            //     auto view = bitset.view(offset);
+                bitset.reset();
+                auto view = bitset.view(offset);
 
-            //     if (print_log) {
-            //         printf("Testing bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
-            //     }
+                if (print_log) {
+                    printf("Testing bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
+                }
                 
-            //     TestInplaceCompareColumnImpl<decltype(view), T, U>(view, op);
-            // }
+                TestInplaceCompareColumnImpl<decltype(view), T, U>(view, op);
+            }
         }
     }
 }
@@ -350,6 +369,17 @@ TYPED_TEST_P(InplaceCompareColumnSuite, Neon) {
 #endif
 }
 
+TYPED_TEST_P(InplaceCompareColumnSuite, Sve) {
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+    using namespace milvus::bitset::detail::arm;
+
+    TestInplaceCompareColumnImpl<
+        sve_u64_u8::bitset_type, 
+        std::tuple_element_t<0, TypeParam>,
+        std::tuple_element_t<1, TypeParam>>();
+#endif
+}
+
 TYPED_TEST_P(InplaceCompareColumnSuite, Dynamic) {
     TestInplaceCompareColumnImpl<
         dynamic_u64_u8::bitset_type, 
@@ -367,17 +397,17 @@ using InplaceCompareColumnTtypes = ::testing::Types<
     std::tuple<double, double>
 >;
 
-REGISTER_TYPED_TEST_SUITE_P(InplaceCompareColumnSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Dynamic);
+REGISTER_TYPED_TEST_SUITE_P(InplaceCompareColumnSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Sve, Dynamic);
 
 INSTANTIATE_TYPED_TEST_SUITE_P(InplaceCompareColumnTest, InplaceCompareColumnSuite, InplaceCompareColumnTtypes);
 
-
+*/
 //////////////////////////////////////////////////////////////////////////////////////////
 
 //
 template<typename BitsetT, typename T>
 void TestInplaceCompareValImpl(
-    BitsetT& bitset, CompareType op
+    BitsetT& bitset, CompareOpType op
 ) {
     const size_t n = bitset.size();
     constexpr size_t max_v = 3;
@@ -396,17 +426,17 @@ void TestInplaceCompareValImpl(
     }
 
     for (size_t i = 0; i < n; i++) {
-        if (op == CompareType::EQ) {
+        if (op == CompareOpType::EQ) {
             ASSERT_EQ(t[i] == value, bitset[i]) << i;
-        } else if (op == CompareType::GE) {
+        } else if (op == CompareOpType::GE) {
             ASSERT_EQ(t[i] >= value, bitset[i]) << i;
-        } else if (op == CompareType::GT) {
+        } else if (op == CompareOpType::GT) {
             ASSERT_EQ(t[i] > value, bitset[i]) << i;
-        } else if (op == CompareType::LE) {
+        } else if (op == CompareOpType::LE) {
             ASSERT_EQ(t[i] <= value, bitset[i]) << i;            
-        } else if (op == CompareType::LT) {
+        } else if (op == CompareOpType::LT) {
             ASSERT_EQ(t[i] < value, bitset[i]) << i;            
-        } else if (op == CompareType::NEQ) {
+        } else if (op == CompareOpType::NEQ) {
             ASSERT_EQ(t[i] != value, bitset[i]) << i;            
         } else {
             ASSERT_TRUE(false) << "Not implemented";
@@ -416,9 +446,8 @@ void TestInplaceCompareValImpl(
 
 template<typename BitsetT, typename T>
 void TestInplaceCompareValImpl() {
-    // for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
-    for (const size_t n : {10000000}) {
-        for (const auto op : {CompareType::EQ, CompareType::GE, CompareType::GT, CompareType::LE, CompareType::LT, CompareType::NEQ}) {
+    for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
+        for (const auto op : {CompareOpType::EQ, CompareOpType::GE, CompareOpType::GT, CompareOpType::LE, CompareOpType::LT, CompareOpType::NEQ}) {
             BitsetT bitset(n);
             bitset.reset();
 
@@ -428,20 +457,20 @@ void TestInplaceCompareValImpl() {
             
             TestInplaceCompareValImpl<BitsetT, T>(bitset, op);
 
-            // for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
-            //     if (offset >= n) {
-            //         continue;
-            //     }
+            for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
+                if (offset >= n) {
+                    continue;
+                }
 
-            //     bitset.reset();
-            //     auto view = bitset.view(offset);
+                bitset.reset();
+                auto view = bitset.view(offset);
 
-            //     if (print_log) {
-            //         printf("Testing bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
-            //     }
+                if (print_log) {
+                    printf("Testing bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
+                }
                 
-            //     TestInplaceCompareValImpl<decltype(view), T>(view, op);
-            // }
+                TestInplaceCompareValImpl<decltype(view), T>(view, op);
+            }
         }
     }
 }
@@ -498,6 +527,16 @@ TYPED_TEST_P(InplaceCompareValSuite, Neon) {
 #endif
 }
 
+TYPED_TEST_P(InplaceCompareValSuite, Sve) {
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+    using namespace milvus::bitset::detail::arm;
+
+    TestInplaceCompareValImpl<
+        sve_u64_u8::bitset_type, 
+        TypeParam>();
+#endif
+}
+
 TYPED_TEST_P(InplaceCompareValSuite, Dynamic) {
     TestInplaceCompareValImpl<
         dynamic_u64_u8::bitset_type, 
@@ -506,13 +545,14 @@ TYPED_TEST_P(InplaceCompareValSuite, Dynamic) {
 
 using InplaceCompareValTtypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t, float, double>;
 
-REGISTER_TYPED_TEST_SUITE_P(InplaceCompareValSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Dynamic);
+REGISTER_TYPED_TEST_SUITE_P(InplaceCompareValSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Sve, Dynamic);
 
 INSTANTIATE_TYPED_TEST_SUITE_P(InplaceCompareValTest, InplaceCompareValSuite, InplaceCompareValTtypes);
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
+/*
 //
 template<typename BitsetT, typename T>
 void TestInplaceWithinRangeColumnImpl(
@@ -560,8 +600,7 @@ void TestInplaceWithinRangeColumnImpl(
 
 template<typename BitsetT, typename T>
 void TestInplaceWithinRangeColumnImpl() {
-    // for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
-    for (const size_t n : {10000000}) {
+    for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
         for (const auto op : {RangeType::IncInc, RangeType::IncExc, RangeType::ExcInc, RangeType::ExcExc}) {
             BitsetT bitset(n);
             bitset.reset();
@@ -572,20 +611,20 @@ void TestInplaceWithinRangeColumnImpl() {
             
             TestInplaceWithinRangeColumnImpl<BitsetT, T>(bitset, op);
 
-            // for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
-            //     if (offset >= n) {
-            //         continue;
-            //     }
+            for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
+                if (offset >= n) {
+                    continue;
+                }
 
-            //     bitset.reset();
-            //     auto view = bitset.view(offset);
+                bitset.reset();
+                auto view = bitset.view(offset);
 
-            //     if (print_log) {
-            //         printf("Testing bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
-            //     }
+                if (print_log) {
+                    printf("Testing bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
+                }
                 
-            //     TestInplaceWithinRangeColumnImpl<decltype(view), T>(view, op);
-            // }
+                TestInplaceWithinRangeColumnImpl<decltype(view), T>(view, op);
+            }
         }
     }
 }
@@ -698,8 +737,7 @@ void TestInplaceWithinRangeValImpl(
 
 template<typename BitsetT, typename T>
 void TestInplaceWithinRangeValImpl() {
-    // for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
-    for (const size_t n : {10000000}) {
+    for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
         for (const auto op : {RangeType::IncInc, RangeType::IncExc, RangeType::ExcInc, RangeType::ExcExc}) {
             BitsetT bitset(n);
             bitset.reset();
@@ -710,20 +748,20 @@ void TestInplaceWithinRangeValImpl() {
             
             TestInplaceWithinRangeValImpl<BitsetT, T>(bitset, op);
 
-            // for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
-            //     if (offset >= n) {
-            //         continue;
-            //     }
+            for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
+                if (offset >= n) {
+                    continue;
+                }
 
-            //     bitset.reset();
-            //     auto view = bitset.view(offset);
+                bitset.reset();
+                auto view = bitset.view(offset);
 
-            //     if (print_log) {
-            //         printf("Testing bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
-            //     }
+                if (print_log) {
+                    printf("Testing bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
+                }
                 
-            //     TestInplaceWithinRangeValImpl<decltype(view), T>(view, op);
-            // }
+                TestInplaceWithinRangeValImpl<decltype(view), T>(view, op);
+            }
         }
     }
 }
@@ -793,14 +831,13 @@ REGISTER_TYPED_TEST_SUITE_P(InplaceWithinRangeValSuite, BitWise, ElementWise, Av
 
 INSTANTIATE_TYPED_TEST_SUITE_P(InplaceWithinRangeValTest, InplaceWithinRangeValSuite, InplaceWithinRangeValTtypes);
 
-*/
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
 //
 template<typename BitsetT, typename T>
 void TestInplaceArithCompareImpl(
-    BitsetT& bitset, ArithType a_op, CompareType cmp_op
+    BitsetT& bitset, ArithOpType a_op, CompareOpType cmp_op
 ) {
     using HT = ArithHighPrecisionType<T>;
 
@@ -822,25 +859,25 @@ void TestInplaceArithCompareImpl(
     }
 
     for (size_t i = 0; i < n; i++) {
-        if (a_op == ArithType::Add && cmp_op == CompareType::EQ) {
+        if (a_op == ArithOpType::Add && cmp_op == CompareOpType::EQ) {
             ASSERT_EQ((left[i] + right_operand) == value, bitset[i]) << i;
-        } else if (a_op == ArithType::Add && cmp_op == CompareType::NEQ) {
+        } else if (a_op == ArithOpType::Add && cmp_op == CompareOpType::NEQ) {
             ASSERT_EQ((left[i] + right_operand) != value, bitset[i]) << i;
-        } else if (a_op == ArithType::Sub && cmp_op == CompareType::EQ) {
+        } else if (a_op == ArithOpType::Sub && cmp_op == CompareOpType::EQ) {
             ASSERT_EQ((left[i] - right_operand) == value, bitset[i]) << i;
-        } else if (a_op == ArithType::Sub && cmp_op == CompareType::NEQ) {
+        } else if (a_op == ArithOpType::Sub && cmp_op == CompareOpType::NEQ) {
             ASSERT_EQ((left[i] - right_operand) != value, bitset[i]) << i;
-        } else if (a_op == ArithType::Mul && cmp_op == CompareType::EQ) {
+        } else if (a_op == ArithOpType::Mul && cmp_op == CompareOpType::EQ) {
             ASSERT_EQ((left[i] * right_operand) == value, bitset[i]) << i;
-        } else if (a_op == ArithType::Mul && cmp_op == CompareType::NEQ) {
+        } else if (a_op == ArithOpType::Mul && cmp_op == CompareOpType::NEQ) {
             ASSERT_EQ((left[i] * right_operand) != value, bitset[i]) << i;
-        } else if (a_op == ArithType::Div && cmp_op == CompareType::EQ) {
+        } else if (a_op == ArithOpType::Div && cmp_op == CompareOpType::EQ) {
             ASSERT_EQ((left[i] / right_operand) == value, bitset[i]) << i;
-        } else if (a_op == ArithType::Div && cmp_op == CompareType::NEQ) {
+        } else if (a_op == ArithOpType::Div && cmp_op == CompareOpType::NEQ) {
             ASSERT_EQ((left[i] / right_operand) != value, bitset[i]) << i;
-        } else if (a_op == ArithType::Mod && cmp_op == CompareType::EQ) {
+        } else if (a_op == ArithOpType::Mod && cmp_op == CompareOpType::EQ) {
             ASSERT_EQ(fmod(left[i], right_operand) == value, bitset[i]) << i;
-        } else if (a_op == ArithType::Mod && cmp_op == CompareType::NEQ) {
+        } else if (a_op == ArithOpType::Mod && cmp_op == CompareOpType::NEQ) {
             ASSERT_EQ(fmod(left[i], right_operand) != value, bitset[i]) << i;
         } else {
             ASSERT_TRUE(false) << "Not implemented";
@@ -850,10 +887,9 @@ void TestInplaceArithCompareImpl(
 
 template<typename BitsetT, typename T>
 void TestInplaceArithCompareImpl() {
-    // for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
-    for (const size_t n : {10000000}) {
-        for (const auto a_op : {ArithType::Add, ArithType::Sub, ArithType::Mul, ArithType::Div, ArithType::Mod}) {
-            for (const auto cmp_op : {CompareType::EQ, CompareType::NEQ}) {
+    for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
+        for (const auto a_op : {ArithOpType::Add, ArithOpType::Sub, ArithOpType::Mul, ArithOpType::Div, ArithOpType::Mod}) {
+            for (const auto cmp_op : {CompareOpType::EQ, CompareOpType::NEQ}) {
                 BitsetT bitset(n);
                 bitset.reset();
 
@@ -863,26 +899,25 @@ void TestInplaceArithCompareImpl() {
                 
                 TestInplaceArithCompareImpl<BitsetT, T>(bitset, a_op, cmp_op);
 
-                // for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
-                //     if (offset >= n) {
-                //         continue;
-                //     }
+                for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
+                    if (offset >= n) {
+                        continue;
+                    }
 
-                //     bitset.reset();
-                //     auto view = bitset.view(offset);
+                    bitset.reset();
+                    auto view = bitset.view(offset);
 
-                //     if (print_log) {
-                //         printf("Testing bitset view, n=%zd, offset=%zd, a_op=%zd, cmp_op=%zd\n", n, offset, (size_t)a_op, (size_t)cmp_op);
-                //     }
+                    if (print_log) {
+                        printf("Testing bitset view, n=%zd, offset=%zd, a_op=%zd, cmp_op=%zd\n", n, offset, (size_t)a_op, (size_t)cmp_op);
+                    }
                     
-                //     TestInplaceArithCompareImpl<decltype(view), T>(view, a_op, cmp_op);
-                // }
+                    TestInplaceArithCompareImpl<decltype(view), T>(view, a_op, cmp_op);
+                }
             }
         }
     }
 }
 
-/*
 //
 template<typename T>
 class InplaceArithCompareSuite : public ::testing::Test {};
@@ -946,11 +981,9 @@ TYPED_TEST_P(InplaceArithCompareSuite, Dynamic) {
 
 using InplaceArithCompareTtypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t, float, double>;
 
-// REGISTER_TYPED_TEST_SUITE_P(InplaceArithCompareSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Dynamic);
-REGISTER_TYPED_TEST_SUITE_P(InplaceArithCompareSuite, Dynamic);
+REGISTER_TYPED_TEST_SUITE_P(InplaceArithCompareSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Dynamic);
 
 INSTANTIATE_TYPED_TEST_SUITE_P(InplaceArithCompareTest, InplaceArithCompareSuite, InplaceArithCompareTtypes);
-*/
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1038,9 +1071,12 @@ TEST(Append, ElementWise) {
     TestAppendImpl<element_u64_u8::bitset_type>();
 }
 
-
 //////////////////////////////////////////////////////////////////////////////////////////
 
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+/*
 TEST(FOO,Boo) {
     constexpr size_t n = 10000;
     using bitset_t = avx2_u64_u8::bitset_type;
@@ -1056,3 +1092,4 @@ TEST(FOO,Boo) {
     bitset.inplace_within_range_val(lower, upper, values.data(), n, RangeType::IncInc);
 
 }
+*/

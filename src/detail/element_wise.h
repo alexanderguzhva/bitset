@@ -868,7 +868,7 @@ struct CustomBitsetPolicy2 {
                     const data_type right_v = read(right, start_right + i, data_bits);
 
                     const data_type result_v = func(left_v, right_v);
-                    write(left, start_right + i, data_bits, left_v & result_v);
+                    write(left, start_right + i, data_bits, result_v);
                 }
             }
         }
@@ -879,7 +879,7 @@ struct CustomBitsetPolicy2 {
             const data_type right_v = read(right, start_right + size_b, size - size_b);
 
             const data_type result_v = func(left_v, right_v);
-            write(left, start_left + size_b, size - size_b, left_v);
+            write(left, start_left + size_b, size - size_b, result_v);
         }
     }
 

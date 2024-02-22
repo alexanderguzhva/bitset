@@ -349,6 +349,76 @@ inline void write_bitmask_partial_512_64(
 }
 
 //
+template<typename T, size_t width>
+struct MaskWriter {};
+
+template<size_t width>
+struct MaskWriter<int8_t, width> {
+    inline static void write_full(uint8_t* const bitmask, const svbool_t pred) {
+        write_bitmask_full_8(bitmask, pred);
+    }
+
+    inline static void write_partial(uint8_t* const bitmask, const svbool_t pred, const svbool_t valid) {
+        write_bitmask_partial_8(bitmask, pred, valid);
+    }
+};
+
+template<>
+struct MaskWriter<int16_t, 512> {
+    inline static void write_full(uint8_t* const bitmask, const svbool_t pred) {
+        write_bitmask_full_512_16(bitmask, pred);
+    }
+
+    inline static void write_partial(uint8_t* const bitmask, const svbool_t pred, const svbool_t valid) {
+        write_bitmask_partial_512_16(bitmask, pred, valid);
+    }
+};
+
+template<>
+struct MaskWriter<int32_t, 512> {
+    inline static void write_full(uint8_t* const bitmask, const svbool_t pred) {
+        write_bitmask_full_512_32(bitmask, pred);
+    }
+
+    inline static void write_partial(uint8_t* const bitmask, const svbool_t pred, const svbool_t valid) {
+        write_bitmask_partial_512_32(bitmask, pred, valid);
+    }
+};
+
+template<>
+struct MaskWriter<int64_t, 512> {
+    inline static void write_full(uint8_t* const bitmask, const svbool_t pred) {
+        write_bitmask_full_512_64(bitmask, pred);
+    }
+
+    inline static void write_partial(uint8_t* const bitmask, const svbool_t pred, const svbool_t valid) {
+        write_bitmask_partial_512_64(bitmask, pred, valid);
+    }
+};
+
+template<>
+struct MaskWriter<float, 512> {
+    inline static void write_full(uint8_t* const bitmask, const svbool_t pred) {
+        write_bitmask_full_512_32(bitmask, pred);
+    }
+
+    inline static void write_partial(uint8_t* const bitmask, const svbool_t pred, const svbool_t valid) {
+        write_bitmask_partial_512_32(bitmask, pred, valid);
+    }
+};
+
+template<>
+struct MaskWriter<double, 512> {
+    inline static void write_full(uint8_t* const bitmask, const svbool_t pred) {
+        write_bitmask_full_512_64(bitmask, pred);
+    }
+
+    inline static void write_partial(uint8_t* const bitmask, const svbool_t pred, const svbool_t valid) {
+        write_bitmask_partial_512_64(bitmask, pred, valid);
+    }
+};
+
+//
 inline svbool_t get_pred_write(const size_t n_elements) {
     assert((n_elements % 8) == 0);
 
@@ -393,6 +463,57 @@ inline svbool_t get_pred_op_64(const size_t n_elements) {
     const svuint64_t leftovers_op = svdup_n_u64(n_elements);
     const svbool_t pred_op = svcmpgt_u64(pred_all_64, leftovers_op, lanes_64);
     return pred_op;
+}
+
+//
+template<typename T>
+struct GetPredHelper {};
+
+template<>
+struct GetPredHelper<int8_t> {
+    inline static svbool_t get_pred_op(const size_t n_elements) {
+        return get_pred_op_8(n_elements);
+    }
+};
+
+template<>
+struct GetPredHelper<int16_t> {
+    inline static svbool_t get_pred_op(const size_t n_elements) {
+        return get_pred_op_16(n_elements);
+    }
+};
+
+template<>
+struct GetPredHelper<int32_t> {
+    inline static svbool_t get_pred_op(const size_t n_elements) {
+        return get_pred_op_32(n_elements);
+    }
+};
+
+template<>
+struct GetPredHelper<int64_t> {
+    inline static svbool_t get_pred_op(const size_t n_elements) {
+        return get_pred_op_64(n_elements);
+    }
+};
+
+template<>
+struct GetPredHelper<float> {
+    inline static svbool_t get_pred_op(const size_t n_elements) {
+        return get_pred_op_32(n_elements);
+    }
+};
+
+template<>
+struct GetPredHelper<double> {
+    inline static svbool_t get_pred_op(const size_t n_elements) {
+        return get_pred_op_64(n_elements);
+    }
+};
+
+template<typename T>
+inline svbool_t get_pred_op(const size_t n_elements) {
+    return GetPredHelper<T>::get_pred_op(n_elements);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -565,6 +686,199 @@ struct CmpHelper<CompareOpType::NEQ> {
 
 ///////////////////////////////////////////////////////////////////////////
 
+template<typename T>
+struct SVEVector {};
+
+template<>
+struct SVEVector<int8_t> {
+    using data_type = int8_t;
+    using sve_type = svint8_t;
+
+    // measured in the number of elements that an SVE register can hold
+    static inline size_t width() {
+        return svcntb();
+    }
+
+    static inline svbool_t pred_all() {
+        return svptrue_b8();
+    }
+
+    inline static sve_type set1(const data_type value) {
+        return svdup_n_s8(value);
+    }
+
+    inline static sve_type load(const svbool_t pred, const data_type* value) {
+        return svld1_s8(pred, value);
+    }
+};
+
+template<>
+struct SVEVector<int16_t> {
+    using data_type = int16_t;
+    using sve_type = svint16_t;
+
+    // measured in the number of elements that an SVE register can hold
+    static inline size_t width() {
+        return svcnth();
+    }
+
+    static inline svbool_t pred_all() {
+        return svptrue_b16();
+    }
+
+    inline static sve_type set1(const data_type value) {
+        return svdup_n_s16(value);
+    }
+
+    inline static sve_type load(const svbool_t pred, const data_type* value) {
+        return svld1_s16(pred, value);
+    }
+};
+
+template<>
+struct SVEVector<int32_t> {
+    using data_type = int32_t;
+    using sve_type = svint32_t;
+
+    // measured in the number of elements that an SVE register can hold
+    static inline size_t width() {
+        return svcntw();
+    }
+
+    static inline svbool_t pred_all() {
+        return svptrue_b32();
+    }
+
+    inline static sve_type set1(const data_type value) {
+        return svdup_n_s32(value);
+    }
+
+    inline static sve_type load(const svbool_t pred, const data_type* value) {
+        return svld1_s32(pred, value);
+    }
+};
+
+template<>
+struct SVEVector<int64_t> {
+    using data_type = int64_t;
+    using sve_type = svint64_t;
+
+    // measured in the number of elements that an SVE register can hold
+    static inline size_t width() {
+        return svcntd();
+    }
+
+    static inline svbool_t pred_all() {
+        return svptrue_b64();
+    }
+
+    inline static sve_type set1(const data_type value) {
+        return svdup_n_s64(value);
+    }
+
+    inline static sve_type load(const svbool_t pred, const data_type* value) {
+        return svld1_s64(pred, value);
+    }
+};
+
+template<>
+struct SVEVector<float> {
+    using data_type = float;
+    using sve_type = svfloat32_t;
+
+    // measured in the number of elements that an SVE register can hold
+    static inline size_t width() {
+        return svcntw();
+    }
+
+    static inline svbool_t pred_all() {
+        return svptrue_b32();
+    }
+
+    inline static sve_type set1(const data_type value) {
+        return svdup_n_f32(value);
+    }
+
+    inline static sve_type load(const svbool_t pred, const data_type* value) {
+        return svld1_f32(pred, value);
+    }
+};
+
+template<>
+struct SVEVector<double> {
+    using data_type = double;
+    using sve_type = svfloat64_t;
+
+    // measured in the number of elements that an SVE register can hold
+    static inline size_t width() {
+        return svcntd();
+    }
+
+    static inline svbool_t pred_all() {
+        return svptrue_b64();
+    }
+
+    inline static sve_type set1(const data_type value) {
+        return svdup_n_f64(value);
+    }
+
+    inline static sve_type load(const svbool_t pred, const data_type* value) {
+        return svld1_f64(pred, value);
+    }
+};
+
+///////////////////////////////////////////////////////////////////////////
+template<typename T, CompareOpType CmpOp>
+bool op_compare_val_impl(
+    uint8_t* const __restrict res_u8,
+    const T* const __restrict src, 
+    const size_t size, 
+    const T& val
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+
+    //
+    using sve_t = SVEVector<T>;
+
+    // SVE width in bytes
+    const size_t sve_width = sve_t::width();
+    assert((sve_width % 8) == 0);
+
+    // Only 512 bits are implemented for now. This is because 
+    //   512 bits hold 8 64-bit values. If the width is lower, then
+    //   a different code is needed, just like for AVX2.
+    if (sve_width * 8 * sizeof(T) != 512) {
+        return false;
+    }
+
+    //
+    const svbool_t pred_all = sve_t::pred_all();
+    const auto target = sve_t::set1(val);
+
+    // process big blocks
+    const size_t size_sve = (size / sve_width) * sve_width;
+    for (size_t i = 0; i < size_sve; i += sve_width) {
+        const auto v = sve_t::load(pred_all, src + i);
+        const svbool_t cmp = CmpHelper<CmpOp>::compare(pred_all, v, target);
+        
+        MaskWriter<T, 512>::write_full(res_u8 + i / 8, cmp);
+    }
+
+    // process leftovers
+    if (size_sve != size) {
+        const svbool_t pred_op = get_pred_op<T>(size - size_sve);
+        const svbool_t pred_write = get_pred_write(size - size_sve);
+
+        const auto v = sve_t::load(pred_op, src + size_sve);
+        const svbool_t cmp = CmpHelper<CmpOp>::compare(pred_op, v, target);
+
+        MaskWriter<T, 512>::write_partial(res_u8 + size_sve / 8, cmp, pred_write);
+    }
+
+    return true;
+}
+
 //
 template<CompareOpType Op>
 bool OpCompareValImpl<int8_t, Op>::op_compare_val(
@@ -573,40 +887,7 @@ bool OpCompareValImpl<int8_t, Op>::op_compare_val(
     const size_t size, 
     const int8_t& val
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    // SVE width in bytes
-    const size_t sve_width = svcntb();
-    assert((sve_width % 8) == 0);
-
-    //
-    const svbool_t pred_all = svptrue_b8();
-
-    //
-    const svint8_t target = svdup_n_s8(val);
-
-    // process large blocks
-    const size_t size_sve = (size / sve_width) * sve_width;
-    for (size_t i = 0; i < size_sve; i += sve_width) {
-        const svint8_t v = svld1_s8(pred_all, src + i);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_all, v, target);
-        
-        write_bitmask_full_8(res_u8 + i / 8, cmp);
-    }
-
-    // process leftovers
-    if (size_sve != size) {
-        const svbool_t pred_op = get_pred_op_8(size - size_sve);
-        const svbool_t pred_write = get_pred_write(size - size_sve);
-
-        const svint8_t v = svld1_s8(pred_op, src + size_sve);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_op, v, target);
-
-        write_bitmask_partial_8(res_u8 + size_sve / 8, cmp, pred_write);
-    }
-
-    return true;
+    return op_compare_val_impl<int8_t, Op>(res_u8, src, size, val);
 }
 
 template<CompareOpType Op>
@@ -616,45 +897,7 @@ bool OpCompareValImpl<int16_t, Op>::op_compare_val(
     const size_t size, 
     const int16_t& val
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    // SVE width in 16-bit values
-    const size_t sve_width = svcnth();
-    assert((sve_width % 8) == 0);
-
-    // only 512 bits are implemented for now
-    if (sve_width * 16 != 512) {
-        return false;
-    }
-
-    //
-    const svbool_t pred_all = svptrue_b16();
-
-    //
-    const svint16_t target = svdup_n_s16(val);
-
-    // process large blocks
-    const size_t size_sve = (size / sve_width) * sve_width;
-    for (size_t i = 0; i < size_sve; i += sve_width) {
-        const svint16_t v = svld1_s16(pred_all, src + i);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_all, v, target);
-        
-        write_bitmask_full_512_16(res_u8 + i / 8, cmp);
-    }
-
-    // process leftovers
-    if (size_sve != size) {
-        const svbool_t pred_op = get_pred_op_16(size - size_sve);
-        const svbool_t pred_write = get_pred_write(size - size_sve);
-
-        const svint16_t v = svld1_s16(pred_op, src + size_sve);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_op, v, target);
-
-        write_bitmask_partial_512_16(res_u8 + size_sve / 8, cmp, pred_write);
-    }
-
-    return true;
+    return op_compare_val_impl<int16_t, Op>(res_u8, src, size, val);
 }
 
 template<CompareOpType Op>
@@ -664,45 +907,7 @@ bool OpCompareValImpl<int32_t, Op>::op_compare_val(
     const size_t size, 
     const int32_t& val 
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    // SVE width in 32-bit values
-    const size_t sve_width = svcntw();
-    assert((sve_width % 8) == 0);
-
-    // only 512 bits are implemented for now
-    if (sve_width * 32 != 512) {
-        return false;
-    }
-
-    //
-    const svbool_t pred_all = svptrue_b32();
-
-    //
-    const svint32_t target = svdup_n_s32(val);
-
-    // process large blocks
-    const size_t size_sve = (size / sve_width) * sve_width;
-    for (size_t i = 0; i < size_sve; i += sve_width) {
-        const svint32_t v = svld1_s32(pred_all, src + i);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_all, v, target);
-        
-        write_bitmask_full_512_32(res_u8 + i / 8, cmp);
-    }
-
-    // process leftovers
-    if (size_sve != size) {
-        const svbool_t pred_op = get_pred_op_32(size - size_sve);
-        const svbool_t pred_write = get_pred_write(size - size_sve);
-
-        const svint32_t v = svld1_s32(pred_op, src + size_sve);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_op, v, target);
-
-        write_bitmask_partial_512_32(res_u8 + size_sve / 8, cmp, pred_write);
-    }
-
-    return true;
+    return op_compare_val_impl<int32_t, Op>(res_u8, src, size, val);
 }
 
 template<CompareOpType Op>
@@ -712,45 +917,7 @@ bool OpCompareValImpl<int64_t, Op>::op_compare_val(
     const size_t size, 
     const int64_t& val
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    // SVE width in 64-bit values
-    const size_t sve_width = svcntd();
-    assert((sve_width % 8) == 0);
-
-    // only 512 bits are implemented for now
-    if (sve_width * 64 != 512) {
-        return false;
-    }
-
-    //
-    const svbool_t pred_all = svptrue_b64();
-
-    //
-    const svint64_t target = svdup_n_s64(val);
-
-    // process large blocks
-    const size_t size_sve = (size / sve_width) * sve_width;
-    for (size_t i = 0; i < size_sve; i += sve_width) {
-        const svint64_t v = svld1_s64(pred_all, src + i);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_all, v, target);
-        
-        write_bitmask_full_512_64(res_u8 + i / 8, cmp);
-    }
-
-    // process leftovers
-    if (size_sve != size) {
-        const svbool_t pred_op = get_pred_op_64(size - size_sve);
-        const svbool_t pred_write = get_pred_write(size - size_sve);
-
-        const svint64_t v = svld1_s64(pred_op, src + size_sve);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_op, v, target);
-
-        write_bitmask_partial_512_64(res_u8 + size_sve / 8, cmp, pred_write);
-    }
-
-    return true;
+    return op_compare_val_impl<int64_t, Op>(res_u8, src, size, val);
 }
 
 template<CompareOpType Op>
@@ -760,45 +927,7 @@ bool OpCompareValImpl<float, Op>::op_compare_val(
     const size_t size, 
     const float& val
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    // SVE width in 32-bit values
-    const size_t sve_width = svcntw();
-    assert((sve_width % 8) == 0);
-
-    // only 512 bits are implemented for now
-    if (sve_width * 32 != 512) {
-        return false;
-    }
-
-    //
-    const svbool_t pred_all = svptrue_b32();
-
-    //
-    const svfloat32_t target = svdup_n_f32(val);
-
-    // process large blocks
-    const size_t size_sve = (size / sve_width) * sve_width;
-    for (size_t i = 0; i < size_sve; i += sve_width) {
-        const svfloat32_t v = svld1_f32(pred_all, src + i);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_all, v, target);
-        
-        write_bitmask_full_512_32(res_u8 + i / 8, cmp);
-    }
-
-    // process leftovers
-    if (size_sve != size) {
-        const svbool_t pred_op = get_pred_op_32(size - size_sve);
-        const svbool_t pred_write = get_pred_write(size - size_sve);
-
-        const svfloat32_t v = svld1_f32(pred_op, src + size_sve);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_op, v, target);
-
-        write_bitmask_partial_512_32(res_u8 + size_sve / 8, cmp, pred_write);
-    }
-
-    return true;
+    return op_compare_val_impl<float, Op>(res_u8, src, size, val);
 }
 
 template<CompareOpType Op>
@@ -808,45 +937,7 @@ bool OpCompareValImpl<double, Op>::op_compare_val(
     const size_t size, 
     const double& val 
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    // SVE width in 64-bit values
-    const size_t sve_width = svcntd();
-    assert((sve_width % 8) == 0);
-
-    // only 512 bits are implemented for now
-    if (sve_width * 64 != 512) {
-        return false;
-    }
-
-    //
-    const svbool_t pred_all = svptrue_b64();
-
-    //
-    const svfloat64_t target = svdup_n_f64(val);
-
-    // process large blocks
-    const size_t size_sve = (size / sve_width) * sve_width;
-    for (size_t i = 0; i < size_sve; i += sve_width) {
-        const svfloat64_t v = svld1_f64(pred_all, src + i);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_all, v, target);
-        
-        write_bitmask_full_512_64(res_u8 + i / 8, cmp);
-    }
-
-    // process leftovers
-    if (size_sve != size) {
-        const svbool_t pred_op = get_pred_op_64(size - size_sve);
-        const svbool_t pred_write = get_pred_write(size - size_sve);
-
-        const svfloat64_t v = svld1_f64(pred_op, src + size_sve);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_op, v, target);
-
-        write_bitmask_partial_512_64(res_u8 + size_sve / 8, cmp, pred_write);
-    }
-
-    return true;
+    return op_compare_val_impl<double, Op>(res_u8, src, size, val);
 }
 
 //
@@ -869,6 +960,57 @@ ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_SVE, double)
 
 
 ///////////////////////////////////////////////////////////////////////////
+template<typename T, CompareOpType CmpOp>
+bool op_compare_column_impl(
+    uint8_t* const __restrict res_u8,
+    const T* const __restrict left, 
+    const T* const __restrict right, 
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+
+    //
+    using sve_t = SVEVector<T>;
+
+    // SVE width in bytes
+    const size_t sve_width = sve_t::width();
+    assert((sve_width % 8) == 0);
+
+    // Only 512 bits are implemented for now. This is because 
+    //   512 bits hold 8 64-bit values. If the width is lower, then
+    //   a different code is needed, just like for AVX2.
+    if (sve_width * 8 * sizeof(T) != 512) {
+        return false;
+    }
+
+    //
+    const svbool_t pred_all = sve_t::pred_all();
+
+    // process big blocks
+    const size_t size_sve = (size / sve_width) * sve_width;
+    for (size_t i = 0; i < size_sve; i += sve_width) {
+        const auto left_v = sve_t::load(pred_all, left + i);
+        const auto right_v = sve_t::load(pred_all, right + i);
+        const svbool_t cmp = CmpHelper<CmpOp>::compare(pred_all, left_v, right_v);
+        
+        MaskWriter<T, 512>::write_full(res_u8 + i / 8, cmp);
+    }
+
+    // process leftovers
+    if (size_sve != size) {
+        const svbool_t pred_op = get_pred_op<T>(size - size_sve);
+        const svbool_t pred_write = get_pred_write(size - size_sve);
+
+        const auto left_v = sve_t::load(pred_op, left + size_sve);
+        const auto right_v = sve_t::load(pred_op, right + size_sve);
+        const svbool_t cmp = CmpHelper<CmpOp>::compare(pred_op, left_v, right_v);
+
+        MaskWriter<T, 512>::write_partial(res_u8 + size_sve / 8, cmp, pred_write);
+    }
+
+    return true;
+}
 
 //
 template<CompareOpType Op>
@@ -878,39 +1020,7 @@ bool OpCompareColumnImpl<int8_t, int8_t, Op>::op_compare_column(
     const int8_t* const __restrict right, 
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    // SVE width in bytes
-    const size_t sve_width = svcntb();
-    assert((sve_width % 8) == 0);
-
-    //
-    const svbool_t pred_all = svptrue_b8();
-
-    // process large blocks
-    const size_t size_sve = (size / sve_width) * sve_width;
-    for (size_t i = 0; i < size_sve; i += sve_width) {
-        const svint8_t left_v = svld1_s8(pred_all, left + i);
-        const svint8_t right_v = svld1_s8(pred_all, right + i);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_all, left_v, right_v);
-        
-        write_bitmask_full_8(res_u8 + i / 8, cmp);
-    }
-
-    // process leftovers
-    if (size_sve != size) {
-        const svbool_t pred_op = get_pred_op_8(size - size_sve);
-        const svbool_t pred_write = get_pred_write(size - size_sve);
-
-        const svint8_t left_v = svld1_s8(pred_op, left + size_sve);
-        const svint8_t right_v = svld1_s8(pred_op, right + size_sve);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_op, left_v, right_v);
-
-        write_bitmask_partial_8(res_u8 + size_sve / 8, cmp, pred_write);
-    }
-
-    return true;
+    return op_compare_column_impl<int8_t, Op>(res_u8, left, right, size);
 }
 
 template<CompareOpType Op>
@@ -920,44 +1030,7 @@ bool OpCompareColumnImpl<int16_t, int16_t, Op>::op_compare_column(
     const int16_t* const __restrict right, 
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    // SVE width in 16-bit values
-    const size_t sve_width = svcnth();
-    assert((sve_width % 8) == 0);
-
-    // only 512 bits are implemented for now
-    if (sve_width * 16 != 512) {
-        return false;
-    }
-
-    //
-    const svbool_t pred_all = svptrue_b16();
-
-    // process large blocks
-    const size_t size_sve = (size / sve_width) * sve_width;
-    for (size_t i = 0; i < size_sve; i += sve_width) {
-        const svint16_t left_v = svld1_s16(pred_all, left + i);
-        const svint16_t right_v = svld1_s16(pred_all, right + i);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_all, left_v, right_v);
-
-        write_bitmask_full_512_16(res_u8 + i / 8, cmp);
-    }
-
-    // process leftovers
-    if (size_sve != size) {
-        const svbool_t pred_op = get_pred_op_16(size - size_sve);
-        const svbool_t pred_write = get_pred_write(size - size_sve);
-
-        const svint16_t left_v = svld1_s16(pred_all, left + size_sve);
-        const svint16_t right_v = svld1_s16(pred_all, right + size_sve);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_all, left_v, right_v);
-
-        write_bitmask_partial_512_16(res_u8 + size_sve / 8, cmp, pred_write);
-    }
-
-    return true;
+    return op_compare_column_impl<int16_t, Op>(res_u8, left, right, size);
 }
 
 template<CompareOpType Op>
@@ -967,44 +1040,7 @@ bool OpCompareColumnImpl<int32_t, int32_t, Op>::op_compare_column(
     const int32_t* const __restrict right, 
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    // SVE width in 32-bit values
-    const size_t sve_width = svcntw();
-    assert((sve_width % 8) == 0);
-
-    // only 512 bits are implemented for now
-    if (sve_width * 32 != 512) {
-        return false;
-    }
-
-    //
-    const svbool_t pred_all = svptrue_b32();
-
-    // process large blocks
-    const size_t size_sve = (size / sve_width) * sve_width;
-    for (size_t i = 0; i < size_sve; i += sve_width) {
-        const svint32_t left_v = svld1_s32(pred_all, left + i);
-        const svint32_t right_v = svld1_s32(pred_all, right + i);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_all, left_v, right_v);
-        
-        write_bitmask_full_512_32(res_u8 + i / 8, cmp);
-    }
-
-    // process leftovers
-    if (size_sve != size) {
-        const svbool_t pred_op = get_pred_op_32(size - size_sve);
-        const svbool_t pred_write = get_pred_write(size - size_sve);
-
-        const svint32_t left_v = svld1_s32(pred_all, left + size_sve);
-        const svint32_t right_v = svld1_s32(pred_all, right + size_sve);
-        const svbool_t cmp = CmpHelper<Op>::compare(pred_all, left_v, right_v);
-
-        write_bitmask_partial_512_32(res_u8 + size_sve / 8, cmp, pred_write);
-    }
-
-    return true;
+    return op_compare_column_impl<int32_t, Op>(res_u8, left, right, size);
 }
 
 template<CompareOpType Op>
@@ -1014,10 +1050,7 @@ bool OpCompareColumnImpl<int64_t, int64_t, Op>::op_compare_column(
     const int64_t* const __restrict right, 
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    return true;
+    return op_compare_column_impl<int64_t, Op>(res_u8, left, right, size);
 }
 
 template<CompareOpType Op>
@@ -1027,10 +1060,7 @@ bool OpCompareColumnImpl<float, float, Op>::op_compare_column(
     const float* const __restrict right, 
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    return true;
+    return op_compare_column_impl<float, Op>(res_u8, left, right, size);
 }
 
 template<CompareOpType Op>
@@ -1040,10 +1070,7 @@ bool OpCompareColumnImpl<double, double, Op>::op_compare_column(
     const double* const __restrict right, 
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    return true;
+    return op_compare_column_impl<double, Op>(res_u8, left, right, size);
 }
 
 //
@@ -1067,6 +1094,67 @@ ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_SVE, double)
 
 ///////////////////////////////////////////////////////////////////////////
 
+template<typename T, RangeType Op>
+bool op_within_range_column_impl(
+    uint8_t* const __restrict res_u8,
+    const T* const __restrict lower,
+    const T* const __restrict upper,
+    const T* const __restrict values,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+
+    //
+    using sve_t = SVEVector<T>;
+
+    // SVE width in bytes
+    const size_t sve_width = sve_t::width();
+    assert((sve_width % 8) == 0);
+
+    // Only 512 bits are implemented for now. This is because 
+    //   512 bits hold 8 64-bit values. If the width is lower, then
+    //   a different code is needed, just like for AVX2.
+    if (sve_width * 8 * sizeof(T) != 512) {
+        return false;
+    }
+
+    //
+    const svbool_t pred_all = sve_t::pred_all();
+
+    // process big blocks
+    const size_t size_sve = (size / sve_width) * sve_width;
+    for (size_t i = 0; i < size_sve; i += sve_width) {
+        const auto lower_v = sve_t::load(pred_all, lower + i);
+        const auto upper_v = sve_t::load(pred_all, upper + i);
+        const auto values_v = sve_t::load(pred_all, values + i);
+
+        const svbool_t cmpl = CmpHelper<Range2Compare<Op>::lower>::compare(pred_all, lower_v, values_v);
+        const svbool_t cmpu = CmpHelper<Range2Compare<Op>::upper>::compare(pred_all, values_v, upper_v);
+        const svbool_t cmp = svand_b_z(pred_all, cmpl, cmpu);
+
+        MaskWriter<T, 512>::write_full(res_u8 + i / 8, cmp);
+    }
+
+    // process leftovers
+    if (size_sve != size) {
+        const svbool_t pred_op = get_pred_op<T>(size - size_sve);
+        const svbool_t pred_write = get_pred_write(size - size_sve);
+
+        const auto lower_v = sve_t::load(pred_op, lower + size_sve);
+        const auto upper_v = sve_t::load(pred_op, upper + size_sve);
+        const auto values_v = sve_t::load(pred_op, values + size_sve);
+
+        const svbool_t cmpl = CmpHelper<Range2Compare<Op>::lower>::compare(pred_op, lower_v, values_v);
+        const svbool_t cmpu = CmpHelper<Range2Compare<Op>::upper>::compare(pred_op, values_v, upper_v);
+        const svbool_t cmp = svand_b_z(pred_op, cmpl, cmpu);
+
+        MaskWriter<T, 512>::write_partial(res_u8 + size_sve / 8, cmp, pred_write);
+    }
+
+    return true;
+}
+
 //
 template<RangeType Op>
 bool OpWithinRangeColumnImpl<int8_t, Op>::op_within_range_column(
@@ -1076,10 +1164,7 @@ bool OpWithinRangeColumnImpl<int8_t, Op>::op_within_range_column(
     const int8_t* const __restrict values,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    return true;
+    return op_within_range_column_impl<int8_t, Op>(res_u8, lower, upper, values, size);
 }
 
 template<RangeType Op>
@@ -1090,10 +1175,7 @@ bool OpWithinRangeColumnImpl<int16_t, Op>::op_within_range_column(
     const int16_t* const __restrict values,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    return true;
+    return op_within_range_column_impl<int16_t, Op>(res_u8, lower, upper, values, size);
 }
 
 template<RangeType Op>
@@ -1104,10 +1186,7 @@ bool OpWithinRangeColumnImpl<int32_t, Op>::op_within_range_column(
     const int32_t* const __restrict values,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    return true;
+    return op_within_range_column_impl<int32_t, Op>(res_u8, lower, upper, values, size);
 }
 
 template<RangeType Op>
@@ -1118,10 +1197,7 @@ bool OpWithinRangeColumnImpl<int64_t, Op>::op_within_range_column(
     const int64_t* const __restrict values,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    return true;
+    return op_within_range_column_impl<int64_t, Op>(res_u8, lower, upper, values, size);
 }
 
 template<RangeType Op>
@@ -1132,10 +1208,7 @@ bool OpWithinRangeColumnImpl<float, Op>::op_within_range_column(
     const float* const __restrict values,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    return true;
+    return op_within_range_column_impl<float, Op>(res_u8, lower, upper, values, size);
 }
 
 template<RangeType Op>
@@ -1146,10 +1219,7 @@ bool OpWithinRangeColumnImpl<double, Op>::op_within_range_column(
     const double* const __restrict values,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    return true;
+    return op_within_range_column_impl<double, Op>(res_u8, lower, upper, values, size);
 }
 
 #define INSTANTIATE_WITHIN_RANGE_COLUMN_SVE(TTYPE,OP) \
@@ -1173,6 +1243,65 @@ ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_SVE, double)
 
 ///////////////////////////////////////////////////////////////////////////
 
+template<typename T, RangeType Op>
+bool op_within_range_val_impl(
+    uint8_t* const __restrict res_u8,
+    const T& lower,
+    const T& upper,
+    const T* const __restrict values,
+    const size_t size
+) {
+    // the restriction of the API
+    assert((size % 8) == 0);
+
+    //
+    using sve_t = SVEVector<T>;
+
+    // SVE width in bytes
+    const size_t sve_width = sve_t::width();
+    assert((sve_width % 8) == 0);
+
+    // Only 512 bits are implemented for now. This is because 
+    //   512 bits hold 8 64-bit values. If the width is lower, then
+    //   a different code is needed, just like for AVX2.
+    if (sve_width * 8 * sizeof(T) != 512) {
+        return false;
+    }
+
+    //
+    const svbool_t pred_all = sve_t::pred_all();
+    const auto lower_v = sve_t::set1(lower);
+    const auto upper_v = sve_t::set1(upper);
+
+    // process big blocks
+    const size_t size_sve = (size / sve_width) * sve_width;
+    for (size_t i = 0; i < size_sve; i += sve_width) {
+        const auto values_v = sve_t::load(pred_all, values + i);
+
+        const svbool_t cmpl = CmpHelper<Range2Compare<Op>::lower>::compare(pred_all, lower_v, values_v);
+        const svbool_t cmpu = CmpHelper<Range2Compare<Op>::upper>::compare(pred_all, values_v, upper_v);
+        const svbool_t cmp = svand_b_z(pred_all, cmpl, cmpu);
+
+        MaskWriter<T, 512>::write_full(res_u8 + i / 8, cmp);
+    }
+
+    // process leftovers
+    if (size_sve != size) {
+        const svbool_t pred_op = get_pred_op<T>(size - size_sve);
+        const svbool_t pred_write = get_pred_write(size - size_sve);
+
+        const auto values_v = sve_t::load(pred_op, values + size_sve);
+
+        const svbool_t cmpl = CmpHelper<Range2Compare<Op>::lower>::compare(pred_op, lower_v, values_v);
+        const svbool_t cmpu = CmpHelper<Range2Compare<Op>::upper>::compare(pred_op, values_v, upper_v);
+        const svbool_t cmp = svand_b_z(pred_op, cmpl, cmpu);
+
+        MaskWriter<T, 512>::write_partial(res_u8 + size_sve / 8, cmp, pred_write);
+    }
+
+    return true;
+}
+
 //
 template<RangeType Op>
 bool OpWithinRangeValImpl<int8_t, Op>::op_within_range_val(
@@ -1182,10 +1311,7 @@ bool OpWithinRangeValImpl<int8_t, Op>::op_within_range_val(
     const int8_t* const __restrict values,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    return true;
+    return op_within_range_val_impl<int8_t, Op>(res_u8, lower, upper, values, size);
 }
 
 template<RangeType Op>
@@ -1196,10 +1322,7 @@ bool OpWithinRangeValImpl<int16_t, Op>::op_within_range_val(
     const int16_t* const __restrict values,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    return true;
+    return op_within_range_val_impl<int16_t, Op>(res_u8, lower, upper, values, size);
 }
 
 template<RangeType Op>
@@ -1210,10 +1333,7 @@ bool OpWithinRangeValImpl<int32_t, Op>::op_within_range_val(
     const int32_t* const __restrict values,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    return true;
+    return op_within_range_val_impl<int32_t, Op>(res_u8, lower, upper, values, size);
 }
 
 template<RangeType Op>
@@ -1224,10 +1344,7 @@ bool OpWithinRangeValImpl<int64_t, Op>::op_within_range_val(
     const int64_t* const __restrict values,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    return true;
+    return op_within_range_val_impl<int64_t, Op>(res_u8, lower, upper, values, size);
 }
 
 template<RangeType Op>
@@ -1238,10 +1355,7 @@ bool OpWithinRangeValImpl<float, Op>::op_within_range_val(
     const float* const __restrict values,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    return true;
+    return op_within_range_val_impl<float, Op>(res_u8, lower, upper, values, size);
 }
 
 template<RangeType Op>
@@ -1252,10 +1366,7 @@ bool OpWithinRangeValImpl<double, Op>::op_within_range_val(
     const double* const __restrict values,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-
-    return true;
+    return op_within_range_val_impl<double, Op>(res_u8, lower, upper, values, size);
 }
 
 //

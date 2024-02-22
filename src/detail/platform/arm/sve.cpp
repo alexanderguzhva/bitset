@@ -316,6 +316,8 @@ inline void write_bitmask_partial_512_32(
     svst1_u8(valid, bitmask, svreinterpret_u8_u16(bits));
 }
 
+todo: use svaddv_u64
+
 // 512 bit width, 64 bit elements
 inline void write_bitmask_full_512_64(
     uint8_t* const bitmask,
@@ -841,7 +843,7 @@ bool op_compare_val_impl(
     //
     using sve_t = SVEVector<T>;
 
-    // SVE width in bytes
+    // SVE width in elements
     const size_t sve_width = sve_t::width();
     assert((sve_width % 8) == 0);
 
@@ -973,7 +975,7 @@ bool op_compare_column_impl(
     //
     using sve_t = SVEVector<T>;
 
-    // SVE width in bytes
+    // SVE width in elements
     const size_t sve_width = sve_t::width();
     assert((sve_width % 8) == 0);
 
@@ -1108,7 +1110,7 @@ bool op_within_range_column_impl(
     //
     using sve_t = SVEVector<T>;
 
-    // SVE width in bytes
+    // SVE width in elements
     const size_t sve_width = sve_t::width();
     assert((sve_width % 8) == 0);
 
@@ -1257,7 +1259,7 @@ bool op_within_range_val_impl(
     //
     using sve_t = SVEVector<T>;
 
-    // SVE width in bytes
+    // SVE width in elements
     const size_t sve_width = sve_t::width();
     assert((sve_width % 8) == 0);
 
@@ -1390,7 +1392,42 @@ ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_SVE, double)
 
 ///////////////////////////////////////////////////////////////////////////
 
-// todo: Mul, Div, Mod
+template<ArithOpType AOp, CompareOpType CmpOp>
+struct ArithHelperI64 {};
+
+template<CompareOpType CmpOp>
+struct ArithHelperI64<ArithOpType::Add, CmpOp> {
+    static inline svbool_t op(const svbool_t pred, const svint64_t left, const svint64_t right, const svint64_t value) {
+        // left + right == value
+        return CmpHelper<CmpOp>::compare(pred, svadd_s64_z(pred, left, right), value);
+    }
+};
+
+template<CompareOpType CmpOp>
+struct ArithHelperI64<ArithOpType::Sub, CmpOp> {
+    static inline svbool_t op(const svbool_t pred, const svint64_t left, const svint64_t right, const svint64_t value) {
+        // left - right == value
+        return CmpHelper<CmpOp>::compare(pred, svsub_s64_z(pred, left, right), value);
+    }
+};
+
+template<CompareOpType CmpOp>
+struct ArithHelperI64<ArithOpType::Mul, CmpOp> {
+    static inline svbool_t op(const svbool_t pred, const svint64_t left, const svint64_t right, const svint64_t value) {
+        // left * right == value
+        return CmpHelper<CmpOp>::compare(pred, svmul_s64_z(pred, left, right), value);
+    }
+};
+
+template<CompareOpType CmpOp>
+struct ArithHelperI64<ArithOpType::Div, CmpOp> {
+    static inline svbool_t op(const svbool_t pred, const svint64_t left, const svint64_t right, const svint64_t value) {
+        // left / right == value
+        return CmpHelper<CmpOp>::compare(pred, svdiv_s64_z(pred, left, right), value);
+    }
+};
+
+// todo: Mod
 
 #define NOT_IMPLEMENTED_OP_ARITH_COMPARE(TTYPE, AOP, CMPOP) \
     template<> \
@@ -1405,10 +1442,6 @@ ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_SVE, double)
     }
 
 //
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mul, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mul, NEQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, NEQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, NEQ)
 
@@ -1423,6 +1456,114 @@ bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
     // the restriction of the API
     assert((size % 8) == 0);
     static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+
+    // SVE width in elements
+    const size_t sve_width = svcntb();
+    assert((sve_width % 8) == 0);
+
+    // Only 512 bits are implemented for now. This is because 
+    //   512 bits hold 8 64-bit values. If the width is lower, then
+    //   a different code is needed, just like for AVX2.
+    if (sve_width * 8 * sizeof(int8_t) != 512) {
+        return false;
+    }
+
+    //
+    const svbool_t pred_all = svptrue_b8();
+    const auto right_v = svdup_n_s64(right_operand);
+    const auto value_v = svdup_n_s64(value);
+
+    // process big blocks
+    const size_t size_sve = (size / sve_width) * sve_width;
+    for (size_t i = 0; i < size_sve; i += sve_width) {
+        const svint8_t src_v = svld1_s8(pred_all, src + i);
+        const svint16x2_t src_v_2 = svcreate2_s16(
+            svmovlb_s16(src_v), svmovlt_s16(src_v));
+        const svint32x4_t src_v_4 = svcreate4_s32(
+            svmovlb_s32(src_v_2.val[0]), svmovlt_s32(src_v_2.val[0]),
+            svmovlb_s32(src_v_2.val[1]), svmovlt_s32(src_v_2.val[1])
+        );
+        const svint64x4_t src_v_8a = svcreate4_s64(
+            svmovlb_s64(src_v_4.val[0]), svmovlt_s64(src_v_4.val[0]),
+            svmovlb_s64(src_v_4.val[1]), svmovlt_s64(src_v_4.val[1]),
+        );
+        const svint64x4_t src_v_8b = svcreate4_s64(
+            svmovlb_s64(src_v_4.val[2]), svmovlt_s64(src_v_4.val[2]),
+            svmovlb_s64(src_v_4.val[3]), svmovlt_s64(src_v_4.val[3]),
+        );
+
+        const svbool_t cmp0 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8a.val[0], right_v, value_v);
+        MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 0, cmp0);
+        const svbool_t cmp1 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8a.val[1], right_v, value_v);
+        MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 1, cmp1);
+        const svbool_t cmp2 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8a.val[2], right_v, value_v);
+        MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 2, cmp2);
+        const svbool_t cmp3 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8a.val[3], right_v, value_v);
+        MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 3, cmp3);
+        const svbool_t cmp4 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8b.val[0], right_v, value_v);
+        MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 4, cmp4);
+        const svbool_t cmp5 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8b.val[1], right_v, value_v);
+        MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 5, cmp5);
+        const svbool_t cmp6 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8b.val[2], right_v, value_v);
+        MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 6, cmp6);
+        const svbool_t cmp7 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8b.val[3], right_v, value_v);
+        MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 7, cmp7);
+    }
+
+    // process leftovers
+    if (size_sve != size) {
+        const svbool_t pred_op = get_pred_op<int8_t>(size - size_sve);
+        const svbool_t pred_write = get_pred_write(size - size_sve);
+
+        const svint8_t src_v = svld1_s8(pred_op, src + size_sve);
+        const svint16x2_t src_v_2 = svcreate2_s16(
+            svmovlb_s16(src_v), svmovlt_s16(src_v));
+        const svint32x4_t src_v_4 = svcreate4_s32(
+            svmovlb_s32(src_v_2.val[0]), svmovlt_s32(src_v_2.val[0]),
+            svmovlb_s32(src_v_2.val[1]), svmovlt_s32(src_v_2.val[1])
+        );
+        const svint64x4_t src_v_8a = svcreate4_s64(
+            svmovlb_s64(src_v_4.val[0]), svmovlt_s64(src_v_4.val[0]),
+            svmovlb_s64(src_v_4.val[1]), svmovlt_s64(src_v_4.val[1]),
+        );
+        const svint64x4_t src_v_8b = svcreate4_s64(
+            svmovlb_s64(src_v_4.val[2]), svmovlt_s64(src_v_4.val[2]),
+            svmovlb_s64(src_v_4.val[3]), svmovlt_s64(src_v_4.val[3]),
+        );
+
+        if (size - size_sve >= 8) {
+            const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8a.val[0], right_v, value_v);
+            MaskWriter<int64_t, 512>::write_full(res_u8 + size_sve / 8 + 0, cmp);
+        }
+        if (size - size_sve >= 16) {
+            const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8a.val[1], right_v, value_v);
+            MaskWriter<int64_t, 512>::write_full(res_u8 + size_sve / 8 + 1, cmp);
+        }
+        if (size - size_sve >= 24) {
+            const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8a.val[2], right_v, value_v);
+            MaskWriter<int64_t, 512>::write_full(res_u8 + size_sve / 8 + 2, cmp);
+        }
+        if (size - size_sve >= 32) {
+            const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8a.val[3], right_v, value_v);
+            MaskWriter<int64_t, 512>::write_full(res_u8 + size_sve / 8 + 3, cmp);
+        }
+        if (size - size_sve >= 40) {
+            const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8b.val[0], right_v, value_v);
+            MaskWriter<int64_t, 512>::write_full(res_u8 + size_sve / 8 + 4, cmp);
+        }
+        if (size - size_sve >= 48) {
+            const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8b.val[1], right_v, value_v);
+            MaskWriter<int64_t, 512>::write_full(res_u8 + size_sve / 8 + 5, cmp);
+        }
+        if (size - size_sve >= 56) {
+            const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8b.val[2], right_v, value_v);
+            MaskWriter<int64_t, 512>::write_full(res_u8 + size_sve / 8 + 6, cmp);
+        }
+        if (size - size_sve >= 64) {
+            const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8b.val[3], right_v, value_v);
+            MaskWriter<int64_t, 512>::write_full(res_u8 + size_sve / 8 + 7, cmp);
+        }
+    }
 
     return true;
 }

@@ -1,7 +1,9 @@
+Basically, a clone of boost::dynamic_bitset with views and SIMD (AVX2/AVX512/NEON/SVE).
+
 An incomplete bitset library for Milvus (https://github.com/milvus-io/milvus).
 The work is still in progress.
 
-Clang-17 produces faster code for SIMD than GCC-9.
+Clang produces faster code for SIMD than GCC for x86, but may produce slower code for ARM.
 
 ===========================================================================
 

@@ -758,7 +758,7 @@ struct MaskHelper<2> {
         *((volatile svbool_t*)(pred_buf + 6 * sve_width / 4)) = pred6;
         *((volatile svbool_t*)(pred_buf + 7 * sve_width / 4)) = pred7;
 
-        const svbool_t pred_op_8 = get_pred_op_8(size);
+        const svbool_t pred_op_8 = get_pred_op_8(size / 4);
         const svbool_t pred_write_8 = get_pred_op_8(size / 8);
         write_bitmask_16_8x(bitmask, pred_op_8, pred_write_8, pred_buf);
     }
@@ -787,7 +787,7 @@ struct MaskHelper<4> {
         *((volatile svbool_t*)(pred_buf + 6 * sve_width / 2)) = pred6;
         *((volatile svbool_t*)(pred_buf + 7 * sve_width / 2)) = pred7;
 
-        const svbool_t pred_op_8 = get_pred_op_8(size);
+        const svbool_t pred_op_8 = get_pred_op_8(size / 2);
         const svbool_t pred_write_8 = get_pred_op_8(size / 8);
         write_bitmask_32_8x(bitmask, pred_op_8, pred_write_8, pred_buf);
     }
@@ -816,7 +816,7 @@ struct MaskHelper<8> {
         *((volatile svbool_t*)(pred_buf + 6 * sve_width)) = pred6;
         *((volatile svbool_t*)(pred_buf + 7 * sve_width)) = pred7;
 
-        const svbool_t pred_op_8 = get_pred_op_8(size);
+        const svbool_t pred_op_8 = get_pred_op_8(size / 1);
         const svbool_t pred_write_8 = get_pred_op_8(size / 8);
         write_bitmask_64_8x(bitmask, pred_op_8, pred_write_8, pred_buf);
     }

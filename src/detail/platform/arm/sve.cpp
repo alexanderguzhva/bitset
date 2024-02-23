@@ -581,6 +581,7 @@ void write_bitmask_full_16_8x(
     svst1b_u16(pred, res_u8, mask_16b);
 }
 
+/*
 template<uint32_t mask, uint32_t shift>
 inline svuint32_t write_bitmask_32b_helper(
     const svbool_t pred,
@@ -630,6 +631,45 @@ void write_bitmask_full_32_8x(
     // store the results
     svst1b_u32(pred, res_u8, mask_32b);
 }
+*/
+
+void write_bitmask_full_32_8x(
+    uint8_t* const __restrict res_u8,
+    const svbool_t pred_op,
+    const svbool_t pred_write,
+    const uint8_t* const __restrict pred_buf
+) {
+    // todo: replace with pext whenever available
+
+    // perform parallel pext
+    // 2048b -> 32 bytes mask -> 256 bytes total, 64 uint32_t values
+    // 512b -> 8 bytes mask -> 64 bytes total, 16 uint32_t values
+    // 256b -> 4 bytes mask -> 32 bytes total, 8 uint32_t values
+    // 128b -> 2 bytes mask -> 16 bytes total, 4 uint32_t values
+
+    // we need to operate in uint8_t
+    const svuint8_t mask_8b = svld1_u8(pred_op, pred_buf);
+
+    const svuint8_t mask_024_8b = svand_n_u8_z(pred_op, mask_8b, 0x01);
+    const svuint8_t mask_135_8b = svand_n_u8_z(pred_op, mask_8b, 0x10);
+    const svuint8_t mask_135s_8b = svlsr_n_u8_z(pred_op, mask_135_8b, 3);
+    const svuint8_t mask_cmb_8b = svorr_u8_z(pred_op, mask_024_8b, mask_135s_8b);
+
+    //
+    const svuint32_t shifts_32b = svdup_u32(0x06040200UL);
+    const svuint8_t shifts_8b = svreinterpret_u8_u32(shifts_32b);
+    const svuint8_t shifted_8b_m0 = svlsl_u8_z(pred_op, mask_cmb_8b, shifts_8b);
+
+    const svuint8_t zero_8b = svdup_n_u8(0);
+
+    const svuint8_t shifted_8b_m2 = svorr_u8_z(pred_op, svuzp1_u8(shifted_8b_m0, zero_8b), svuzp2_u8(shifted_8b_m0, zero_8b));
+    const svuint8_t shifted_8b_m3 = svorr_u8_z(pred_op, svuzp1_u8(shifted_8b_m2, zero_8b), svuzp2_u8(shifted_8b_m2, zero_8b));
+
+    svst1_u8(pred_write, res_u8, shifted_8b_m3);
+}
+
+
+
 
 /*
 // writes uint8_t'd 8x svbool_t as a mask
@@ -1481,7 +1521,10 @@ bool OpCompareValImpl<int32_t, Op>::op_compare_val(
                 *((volatile svbool_t*)(pred_buf + j * sve_width / 2)) = cmp;
             }
 
-            write_bitmask_full_32_8x(res_u8 + i / 8, pred_all, pred_buf);
+            const svbool_t pred_op_8 = get_pred_op_8(sve_width * 8);
+            const svbool_t pred_write_8 = get_pred_op_8(sve_width);
+            write_bitmask_full_32_8x(res_u8 + i / 8, pred_op_8, pred_write_8, pred_buf);
+
         }
     }
 
@@ -1503,8 +1546,9 @@ bool OpCompareValImpl<int32_t, Op>::op_compare_val(
             *((volatile svbool_t*)(pred_buf + j * sve_width / 2)) = cmp;
         }
 
-        const svbool_t pred_write = get_pred_op_32((size - size_sve8) / 8);
-        write_bitmask_full_32_8x(res_u8 + size_sve8 / 8, pred_write, pred_buf);
+        const svbool_t pred_op_8 = get_pred_op_8(size - size_sve8);
+        const svbool_t pred_write_8 = get_pred_op_8((size - size_sve8) / 8);
+        write_bitmask_full_32_8x(res_u8 + size_sve8 / 8, pred_op_8, pred_write_8, pred_buf);
     }
 
     return true;
@@ -1609,7 +1653,9 @@ bool OpCompareValImpl<float, Op>::op_compare_val(
                 *((volatile svbool_t*)(pred_buf + j * sve_width / 2)) = cmp;
             }
 
-            write_bitmask_full_32_8x(res_u8 + i / 8, pred_all, pred_buf);
+            const svbool_t pred_op_8 = get_pred_op_8(sve_width * 8);
+            const svbool_t pred_write_8 = get_pred_op_8(sve_width);
+            write_bitmask_full_32_8x(res_u8 + i / 8, pred_op_8, pred_write_8, pred_buf);
         }
     }
 
@@ -1631,8 +1677,9 @@ bool OpCompareValImpl<float, Op>::op_compare_val(
             *((volatile svbool_t*)(pred_buf + j * sve_width / 2)) = cmp;
         }
 
-        const svbool_t pred_write = get_pred_op_32((size - size_sve8) / 8);
-        write_bitmask_full_32_8x(res_u8 + size_sve8 / 8, pred_write, pred_buf);
+        const svbool_t pred_op_8 = get_pred_op_8(size - size_sve8);
+        const svbool_t pred_write_8 = get_pred_op_8((size - size_sve8) / 8);
+        write_bitmask_full_32_8x(res_u8 + size_sve8 / 8, pred_op_8, pred_write_8, pred_buf);
     }
 
     return true;

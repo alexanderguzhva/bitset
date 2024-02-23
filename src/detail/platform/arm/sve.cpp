@@ -1379,6 +1379,78 @@ struct ArithHelperI64<ArithOpType::Div, CmpOp> {
     }
 };
 
+//
+template<ArithOpType AOp, CompareOpType CmpOp>
+struct ArithHelperF32 {};
+
+template<CompareOpType CmpOp>
+struct ArithHelperF32<ArithOpType::Add, CmpOp> {
+    static inline svbool_t op(const svbool_t pred, const svfloat32_t left, const svfloat32_t right, const svfloat32_t value) {
+        // left + right == value
+        return CmpHelper<CmpOp>::compare(pred, svadd_f32_z(pred, left, right), value);
+    }
+};
+
+template<CompareOpType CmpOp>
+struct ArithHelperF32<ArithOpType::Sub, CmpOp> {
+    static inline svbool_t op(const svbool_t pred, const svfloat32_t left, const svfloat32_t right, const svfloat32_t value) {
+        // left - right == value
+        return CmpHelper<CmpOp>::compare(pred, svsub_f32_z(pred, left, right), value);
+    }
+};
+
+template<CompareOpType CmpOp>
+struct ArithHelperF32<ArithOpType::Mul, CmpOp> {
+    static inline svbool_t op(const svbool_t pred, const svfloat32_t left, const svfloat32_t right, const svfloat32_t value) {
+        // left * right == value
+        return CmpHelper<CmpOp>::compare(pred, svmul_f32_z(pred, left, right), value);
+    }
+};
+
+template<CompareOpType CmpOp>
+struct ArithHelperF32<ArithOpType::Div, CmpOp> {
+    static inline svbool_t op(const svbool_t pred, const svfloat32_t left, const svfloat32_t right, const svfloat32_t value) {
+        // left == right * value
+        return CmpHelper<CmpOp>::compare(pred, left, svmul_f32_z(pred, right, value));
+    }
+};
+
+//
+template<ArithOpType AOp, CompareOpType CmpOp>
+struct ArithHelperF64 {};
+
+template<CompareOpType CmpOp>
+struct ArithHelperF64<ArithOpType::Add, CmpOp> {
+    static inline svbool_t op(const svbool_t pred, const svfloat64_t left, const svfloat64_t right, const svfloat64_t value) {
+        // left + right == value
+        return CmpHelper<CmpOp>::compare(pred, svadd_f64_z(pred, left, right), value);
+    }
+};
+
+template<CompareOpType CmpOp>
+struct ArithHelperF64<ArithOpType::Sub, CmpOp> {
+    static inline svbool_t op(const svbool_t pred, const svfloat64_t left, const svfloat64_t right, const svfloat64_t value) {
+        // left - right == value
+        return CmpHelper<CmpOp>::compare(pred, svsub_f64_z(pred, left, right), value);
+    }
+};
+
+template<CompareOpType CmpOp>
+struct ArithHelperF64<ArithOpType::Mul, CmpOp> {
+    static inline svbool_t op(const svbool_t pred, const svfloat64_t left, const svfloat64_t right, const svfloat64_t value) {
+        // left * right == value
+        return CmpHelper<CmpOp>::compare(pred, svmul_f64_z(pred, left, right), value);
+    }
+};
+
+template<CompareOpType CmpOp>
+struct ArithHelperF64<ArithOpType::Div, CmpOp> {
+    static inline svbool_t op(const svbool_t pred, const svfloat64_t left, const svfloat64_t right, const svfloat64_t value) {
+        // left == right * value
+        return CmpHelper<CmpOp>::compare(pred, left, svmul_f64_z(pred, right, value));
+    }
+};
+
 // todo: Mod
 
 #define NOT_IMPLEMENTED_OP_ARITH_COMPARE(TTYPE, AOP, CMPOP) \
@@ -1405,177 +1477,27 @@ bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<int8_t>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+    using T = int64_t;
 
-    return true;
+    auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
+        using sve_t = SVEVector<T>;
 
-// //     // SVE width in elements
-// //     const size_t sve_width = svcntd();
-// //     assert((sve_width % 8) == 0);
+        const auto right_v = svdup_n_s64(right_operand);
+        const auto value_v = svdup_n_s64(value);
+        const svint64_t src_v = svld1sb_s64(pred, src + idx);
 
-// //     // Only 512 bits are implemented for now. This is because 
-// //     //   512 bits hold 8 64-bit values. If the width is lower, then
-// //     //   a different code is needed, just like for AVX2.
-// //     if (sve_width * 8 * sizeof(int8_t) != 512) {
-// //         return false;
-// //     }
+        const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
+        return cmp;
+    };
 
-// //     //
-// //     const svbool_t pred_all = svptrue_b8();
-// //     const auto right_v = svdup_n_s64(right_operand);
-// //     const auto value_v = svdup_n_s64(value);
-
-// //     // process big blocks
-// //     const size_t size_sve = (size / sve_width) * sve_width;
-// //     for (size_t i = 0; i < size_sve; i += sve_width) {
-// //         const svint64_t src_v = svld1sb_s64(pred_all, src + i);
-// //         const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v, right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 0, cmp);
-
-// // /*
-// //         const svint8_t src_v = svld1_s8(pred_all, src + i);
-// //         const svint16x2_t src_v_2 = svcreate2_s16(
-// //             svmovlb_s16(src_v), svmovlt_s16(src_v));
-// //         const svint32x4_t src_v_4 = svcreate4_s32(
-// //             svmovlb_s32(src_v_2.val[0]), svmovlt_s32(src_v_2.val[0]),
-// //             svmovlb_s32(src_v_2.val[1]), svmovlt_s32(src_v_2.val[1])
-// //         );
-// //         const svint64x4_t src_v_8a = svcreate4_s64(
-// //             svmovlb_s64(src_v_4.val[0]), svmovlt_s64(src_v_4.val[0]),
-// //             svmovlb_s64(src_v_4.val[1]), svmovlt_s64(src_v_4.val[1]),
-// //         );
-// //         const svint64x4_t src_v_8b = svcreate4_s64(
-// //             svmovlb_s64(src_v_4.val[2]), svmovlt_s64(src_v_4.val[2]),
-// //             svmovlb_s64(src_v_4.val[3]), svmovlt_s64(src_v_4.val[3]),
-// //         );
-
-// //         const svbool_t cmp0 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8a.val[0], right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 0, cmp0);
-// //         const svbool_t cmp1 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8a.val[1], right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 1, cmp1);
-// //         const svbool_t cmp2 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8a.val[2], right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 2, cmp2);
-// //         const svbool_t cmp3 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8a.val[3], right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 3, cmp3);
-// //         const svbool_t cmp4 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8b.val[0], right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 4, cmp4);
-// //         const svbool_t cmp5 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8b.val[1], right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 5, cmp5);
-// //         const svbool_t cmp6 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8b.val[2], right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 6, cmp6);
-// //         const svbool_t cmp7 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_8b.val[3], right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 7, cmp7);
-// // */
-
-// // /*
-// //         const svint8_t src_v = svld1_s8(pred_all, src + i);
-// //         const svint16_t src_v_20 = svmovlb_s16(src_v);
-// //         const svint16_t src_v_21 = svmovlt_s16(src_v);
-// //         const svint32_t src_v_40 = svmovlb_s32(src_v_20);
-// //         const svint32_t src_v_41 = svmovlt_s32(src_v_20);
-// //         const svint32_t src_v_42 = svmovlb_s32(src_v_21);
-// //         const svint32_t src_v_43 = svmovlt_s32(src_v_21);
-
-// //         const svint64_t src_v_80 = svmovlb_s64(src_v_40);
-// //         const svint64_t src_v_81 = svmovlt_s64(src_v_40);
-// //         const svint64_t src_v_82 = svmovlb_s64(src_v_41);
-// //         const svint64_t src_v_83 = svmovlt_s64(src_v_41);
-// //         const svint64_t src_v_84 = svmovlb_s64(src_v_42);
-// //         const svint64_t src_v_85 = svmovlt_s64(src_v_42);
-// //         const svint64_t src_v_86 = svmovlb_s64(src_v_43);
-// //         const svint64_t src_v_87 = svmovlt_s64(src_v_43);
-
-// //         const svbool_t cmp0 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_80, right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 0, cmp0);
-// //         const svbool_t cmp1 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_81, right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 1, cmp1);
-// //         const svbool_t cmp2 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_82, right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 2, cmp2);
-// //         const svbool_t cmp3 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_83, right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 3, cmp3);
-// //         const svbool_t cmp4 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_84, right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 4, cmp4);
-// //         const svbool_t cmp5 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_85, right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 5, cmp5);
-// //         const svbool_t cmp6 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_86, right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 6, cmp6);
-// //         const svbool_t cmp7 = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_87, right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_full(res_u8 + i / 8 + 7, cmp7);
-// // */
-// //     }
-
-// //     // process leftovers
-// //     if (size_sve != size) {
-// //         const svbool_t pred_op = get_pred_op<int8_t>(size - size_sve);
-// //         const svbool_t pred_write = get_pred_write(size - size_sve);
-
-// //         const svint64_t src_v = svld1sb_s64(pred_op, src + size_sve);
-// //         const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_op, src_v, right_v, value_v);
-// //         MaskWriter<int64_t, 512>::write_partial(res_u8 + size_sve / 8 + 0, cmp, pred_write);
-
-// // /*
-// //         const svint8_t src_v = svld1_s8(pred_op, src + size_sve);
-// //         const svint16_t src_v_20 = svmovlb_s16(src_v);
-// //         const svint16_t src_v_21 = svmovlt_s16(src_v);
-// //         const svint32_t src_v_40 = svmovlb_s32(src_v_20);
-// //         const svint32_t src_v_41 = svmovlt_s32(src_v_20);
-// //         const svint32_t src_v_42 = svmovlb_s32(src_v_21);
-// //         const svint32_t src_v_43 = svmovlt_s32(src_v_21);
-
-// //         const svint64_t src_v_80 = svmovlb_s64(src_v_40);
-// //         const svint64_t src_v_81 = svmovlt_s64(src_v_40);
-// //         const svint64_t src_v_82 = svmovlb_s64(src_v_41);
-// //         const svint64_t src_v_83 = svmovlt_s64(src_v_41);
-// //         const svint64_t src_v_84 = svmovlb_s64(src_v_42);
-// //         const svint64_t src_v_85 = svmovlt_s64(src_v_42);
-// //         const svint64_t src_v_86 = svmovlb_s64(src_v_43);
-// //         const svint64_t src_v_87 = svmovlt_s64(src_v_43);
-
-// //         if (size - size_sve >= 8) {
-// //             const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_80, right_v, value_v);
-// //             MaskWriter<int64_t, 512>::write_full(res_u8 + size_sve / 8 + 0, cmp);
-// //         }
-// //         if (size - size_sve >= 16) {
-// //             const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_81, right_v, value_v);
-// //             MaskWriter<int64_t, 512>::write_full(res_u8 + size_sve / 8 + 1, cmp);
-// //         }
-// //         if (size - size_sve >= 24) {
-// //             const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_82, right_v, value_v);
-// //             MaskWriter<int64_t, 512>::write_full(res_u8 + size_sve / 8 + 2, cmp);
-// //         }
-// //         if (size - size_sve >= 32) {
-// //             const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_83, right_v, value_v);
-// //             MaskWriter<int64_t, 512>::write_full(res_u8 + size_sve / 8 + 3, cmp);
-// //         }
-// //         if (size - size_sve >= 40) {
-// //             const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_84, right_v, value_v);
-// //             MaskWriter<int64_t, 512>::write_full(res_u8 + size_sve / 8 + 4, cmp);
-// //         }
-// //         if (size - size_sve >= 48) {
-// //             const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_85, right_v, value_v);
-// //             MaskWriter<int64_t, 512>::write_full(res_u8 + size_sve / 8 + 5, cmp);
-// //         }
-// //         if (size - size_sve >= 56) {
-// //             const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_86, right_v, value_v);
-// //             MaskWriter<int64_t, 512>::write_full(res_u8 + size_sve / 8 + 6, cmp);
-// //         }
-// //         if (size - size_sve >= 64) {
-// //             const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred_all, src_v_87, right_v, value_v);
-// //             MaskWriter<int64_t, 512>::write_full(res_u8 + size_sve / 8 + 7, cmp);
-// //         }
-// // */
-// //     }
-
-// //     return true;
+    return op_mask_helper<T, decltype(handler)>(
+        res_u8,
+        size,
+        handler
+    );
 }
 
 //
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mul, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mul, NEQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, NEQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, NEQ)
 
@@ -1587,18 +1509,27 @@ bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<int16_t>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+    using T = int64_t;
+    
+    auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
+        using sve_t = SVEVector<T>;
 
-    return true;
+        const auto right_v = svdup_n_s64(right_operand);
+        const auto value_v = svdup_n_s64(value);
+        const svint64_t src_v = svld1sh_s64(pred, src + idx);
+
+        const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
+        return cmp;
+    };
+
+    return op_mask_helper<T, decltype(handler)>(
+        res_u8,
+        size,
+        handler
+    );
 }
 
 //
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mul, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mul, NEQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, NEQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, NEQ)
 
@@ -1610,18 +1541,27 @@ bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<int32_t>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+    using T = int64_t;
+    
+    auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
+        using sve_t = SVEVector<T>;
 
-    return true;
+        const auto right_v = svdup_n_s64(right_operand);
+        const auto value_v = svdup_n_s64(value);
+        const svint64_t src_v = svld1sw_s64(pred, src + idx);
+
+        const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
+        return cmp;
+    };
+
+    return op_mask_helper<T, decltype(handler)>(
+        res_u8,
+        size,
+        handler
+    );
 }
 
 //
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mul, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mul, NEQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, NEQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, EQ)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, NEQ)
 
@@ -1633,11 +1573,24 @@ bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<int64_t>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+    using T = int64_t;
+    
+    auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
+        using sve_t = SVEVector<T>;
 
-    return true;
+        const auto right_v = svdup_n_s64(right_operand);
+        const auto value_v = svdup_n_s64(value);
+        const svint64_t src_v = svld1_s64(pred, src + idx);
+
+        const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
+        return cmp;
+    };
+
+    return op_mask_helper<T, decltype(handler)>(
+        res_u8,
+        size,
+        handler
+    );
 }
 
 //
@@ -1652,10 +1605,24 @@ bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<float>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
+    using T = float;
+    
+    auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
+        using sve_t = SVEVector<T>;
 
-    return true;
+        const auto right_v = svdup_n_f32(right_operand);
+        const auto value_v = svdup_n_f32(value);
+        const svfloat32_t src_v = svld1_f32(pred, src + idx);
+
+        const svbool_t cmp = ArithHelperF32<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
+        return cmp;
+    };
+
+    return op_mask_helper<T, decltype(handler)>(
+        res_u8,
+        size,
+        handler
+    );
 }
 
 //
@@ -1670,10 +1637,24 @@ bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<double>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
+    using T = double;
+    
+    auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
+        using sve_t = SVEVector<T>;
 
-    return true;
+        const auto right_v = svdup_n_f64(right_operand);
+        const auto value_v = svdup_n_f64(value);
+        const svfloat64_t src_v = svld1_f64(pred, src + idx);
+
+        const svbool_t cmp = ArithHelperF64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
+        return cmp;
+    };
+
+    return op_mask_helper<T, decltype(handler)>(
+        res_u8,
+        size,
+        handler
+    );
 }
 
 //

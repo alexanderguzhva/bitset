@@ -863,12 +863,13 @@ bool op_mask_helper(
 
     // process leftovers
     if (size_sve8 != size) {
-        auto get_partial_pred = [sve_width, size_sve8](const size_t j){
+        auto get_partial_pred = [sve_width, size, size_sve8](const size_t j){
             const size_t start = size_sve8 + j * sve_width;
             const size_t end = size_sve8 + (j + 1) * sve_width;
 
-            const size_t amount = (end < size_sve8) ? sve_width : (end - size_sve8);
+            const size_t amount = (end < size) ? sve_width : (size - start);
             const svbool_t pred_op = get_pred_op<T>(amount);
+
             return pred_op;
         };
 

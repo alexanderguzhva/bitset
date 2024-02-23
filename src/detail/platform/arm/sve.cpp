@@ -581,6 +581,48 @@ void write_bitmask_full_16_8x(
     svst1b_u16(pred, res_u8, mask_16b);
 }
 
+void write_bitmask_full_16_8x(
+    uint8_t* const __restrict res_u8,
+    const svbool_t pred_op,
+    const svbool_t pred_write,
+    const uint8_t* const __restrict pred_buf
+) {
+    // todo: replace with pext whenever available
+
+    // perform parallel pext
+    // 2048b -> 32 bytes mask -> 256 bytes total, 128 uint16_t values
+    // 512b -> 8 bytes mask -> 64 bytes total, 32 uint16_t values
+    // 256b -> 4 bytes mask -> 32 bytes total, 16 uint16_t values
+    // 128b -> 2 bytes mask -> 16 bytes total, 8 uint16_t values
+
+    // we need to operate in uint8_t
+    const svuint8_t mask_8b = svld1_u8(pred_op, pred_buf);
+
+    const svuint8_t mask_04_8b = svand_n_u8_z(pred_op, mask_8b, 0x01);
+    const svuint8_t mask_15_8b = svand_n_u8_z(pred_op, mask_8b, 0x04);
+    const svuint8_t mask_15s_8b = svlsr_n_u8_z(pred_op, mask_15_8b, 1);
+    const svuint8_t mask_26_8b = svand_n_u8_z(pred_op, mask_8b, 0x10);
+    const svuint8_t mask_26s_8b = svlsr_n_u8_z(pred_op, mask_26_8b, 2);
+    const svuint8_t mask_37_8b = svand_n_u8_z(pred_op, mask_8b, 0x40);
+    const svuint8_t mask_37s_8b = svlsr_n_u8_z(pred_op, mask_37_8b, 3);
+
+    const svuint8_t mask_0347_8b = svorr_u8_z(pred_op, mask_04_8b, mask_37s_8b);
+    const svuint8_t mask_1256_8b = svorr_u8_z(pred_op, mask_15s_8b, mask_26s_8b);
+    const svuint8_t mask_cmb_8b = svorr_u8_z(pred_op, mask_0347_8b, mask_1256_8b);
+
+    //
+    const svuint16_t shifts_16b = svdup_u16(0x0400UL);
+    const svuint8_t shifts_8b = svreinterpret_u8_u16(shifts_16b);
+    const svuint8_t shifted_8b_m0 = svlsl_u8_z(pred_op, mask_cmb_8b, shifts_8b);
+
+    const svuint8_t zero_8b = svdup_n_u8(0);
+
+    const svuint8_t shifted_8b_m3 = svorr_u8_z(pred_op, svuzp1_u8(shifted_8b_m0, zero_8b), svuzp2_u8(shifted_8b_m0, zero_8b));
+
+    svst1_u8(pred_write, res_u8, shifted_8b_m3);
+}
+
+
 /*
 template<uint32_t mask, uint32_t shift>
 inline svuint32_t write_bitmask_32b_helper(
@@ -651,8 +693,7 @@ void write_bitmask_full_32_8x(
     const svuint8_t mask_8b = svld1_u8(pred_op, pred_buf);
 
     const svuint8_t mask_024_8b = svand_n_u8_z(pred_op, mask_8b, 0x01);
-    const svuint8_t mask_135_8b = svand_n_u8_z(pred_op, mask_8b, 0x10);
-    const svuint8_t mask_135s_8b = svlsr_n_u8_z(pred_op, mask_135_8b, 3);
+    const svuint8_t mask_135s_8b = svlsr_n_u8_z(pred_op, mask_8b, 3);
     const svuint8_t mask_cmb_8b = svorr_u8_z(pred_op, mask_024_8b, mask_135s_8b);
 
     //

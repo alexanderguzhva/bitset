@@ -525,7 +525,7 @@ struct CustomBitsetPolicy2 {
             const data_type existing_mask =
                 get_shift_mask_end(start_shift) & get_shift_mask_begin(end_shift);
 
-            return PopCountHelper<size_type>::count(existing_v & existing_mask);
+            return PopCountHelper<data_type>::count(existing_v & existing_mask);
         }
 
         // process the first element
@@ -533,14 +533,14 @@ struct CustomBitsetPolicy2 {
             const data_type existing_v = data[start_element];
             const data_type existing_mask = get_shift_mask_end(start_shift);
 
-            count = PopCountHelper<size_type>::count(existing_v & existing_mask);
+            count = PopCountHelper<data_type>::count(existing_v & existing_mask);
 
             start_element += 1;
         }
 
         // process the middle
         for (size_type i = start_element; i < end_element; i++) {
-            count += PopCountHelper<size_type>::count(data[i]);
+            count += PopCountHelper<data_type>::count(data[i]);
         }
 
         // process the last element
@@ -548,7 +548,7 @@ struct CustomBitsetPolicy2 {
             const data_type existing_v = data[end_element];
             const data_type existing_mask = get_shift_mask_begin(end_shift);
 
-            count += PopCountHelper<size_type>::count(existing_v & existing_mask);
+            count += PopCountHelper<data_type>::count(existing_v & existing_mask);
         }
 
         return count;
@@ -808,6 +808,49 @@ struct CustomBitsetPolicy2 {
         }
     }
 
+    //
+    static inline size_t op_and_with_count(
+        data_type* const left, 
+        const data_type* const right, 
+        const size_t start_left,
+        const size_t start_right, 
+        const size_t size
+    ) {
+        size_t active = 0;
+
+        op_func(left, right, start_left, start_right, size, 
+            [&active](const data_type left_v, const data_type right_v) { 
+                const data_type result = left_v & right_v;
+                active += PopCountHelper<data_type>::count(result);
+
+                return result; 
+            });
+
+        return active;
+    }
+
+    static inline size_t op_or_with_count(
+        data_type* const left, 
+        const data_type* const right, 
+        const size_t start_left,
+        const size_t start_right, 
+        const size_t size
+    ) {
+        size_t inactive = 0;
+
+        op_func(left, right, start_left, start_right, size, 
+            [&inactive](const data_type left_v, const data_type right_v) { 
+                const data_type result = left_v | right_v;
+                inactive += (data_bits - PopCountHelper<data_type>::count(result));
+
+                return result; 
+            });
+
+        return inactive;
+    }
+
+
+    //
     template<typename Func>
     static inline void op_func(
         data_type* const left, 

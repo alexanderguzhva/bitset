@@ -612,6 +612,32 @@ struct CustomBitsetVectorizedPolicy {
             );
         }
     }
+
+    //
+    static inline size_t op_and_with_count(
+        data_type* const left, 
+        const data_type* const right, 
+        const size_t start_left,
+        const size_t start_right, 
+        const size_t size
+    ) {
+        return CustomBitsetPolicy2<ElementT>::op_and_with_count(
+            left, right, start_left, start_right, size
+        );
+    }
+
+    static inline size_t op_or_with_count(
+        data_type* const left, 
+        const data_type* const right, 
+        const size_t start_left,
+        const size_t start_right, 
+        const size_t size
+    ) {
+        return CustomBitsetPolicy2<ElementT>::op_or_with_count(
+            left, right, start_left, start_right, size
+        );
+    }
+
 };
 
 

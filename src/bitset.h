@@ -640,6 +640,38 @@ public:
         );
     }
 
+    //
+    // Inplace and. Also, counts the number of active bits.
+    template<typename I, bool R>
+    inline size_type inplace_and_with_count(const CustomBitsetBase<PolicyT, I, R>& other, const size_type size) {
+        range_checker::le(size, this->size());
+        range_checker::le(size, other.size());
+
+        return policy_type::op_and_with_count(
+            this->data(),
+            other.data(),
+            this->offset(),
+            other.offset(),
+            size
+        );
+    }
+
+    // Inplace or. Also, counts the number of inactive bits.
+    template<typename I, bool R>
+    inline size_type inplace_or_with_count(const CustomBitsetBase<PolicyT, I, R>& other, const size_type size) {
+        range_checker::le(size, this->size());
+        range_checker::le(size, other.size());
+
+        policy_type::op_or(
+            this->data(),
+            other.data(),
+            this->offset(),
+            other.offset(),
+            size
+        );
+    }
+
+
 private:
     // Return the starting bit offset in our container.
     inline size_type offset() const {

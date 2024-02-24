@@ -366,6 +366,53 @@ struct CustomBitsetPolicy {
             get_proxy(data, start + i) = ArithCompareOperator<AOp, CmpOp>::compare(src[i], right_operand, value);
         }
     }
+
+    //
+    static inline size_t op_and_with_count(
+        data_type* const left, 
+        const data_type* const right, 
+        const size_t start_left,
+        const size_t start_right, 
+        const size_t size
+    ) {
+        // todo: check if intersect
+
+        size_t active = 0;
+        for (size_type i = 0; i < size; i++) {
+            auto proxy_left = get_proxy(left, start_left + i);
+            auto proxy_right = get_proxy(right, start_right + i);
+
+            const bool b = proxy_left & proxy_right;
+            proxy_left = b;
+
+            active += b ? 1 : 0;
+        }
+
+        return active;
+    }
+
+    static inline size_t op_or_with_count(
+        data_type* const left, 
+        const data_type* const right, 
+        const size_t start_left,
+        const size_t start_right, 
+        const size_t size
+    ) {
+        // todo: check if intersect
+
+        size_t inactive = 0;
+        for (size_type i = 0; i < size; i++) {
+            auto proxy_left = get_proxy(left, start_left + i);
+            auto proxy_right = get_proxy(right, start_right + i);
+
+            const bool b = proxy_left | proxy_right;
+            proxy_left = b;
+
+            inactive += b ? 0 : 1;
+        }
+
+        return inactive;
+    }
 };
 
 }

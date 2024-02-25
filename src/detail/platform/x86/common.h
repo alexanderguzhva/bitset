@@ -46,37 +46,9 @@ struct ComparePredicate<T, CompareOpType::GE> {
 };
 
 template<typename T>
-struct ComparePredicate<T, CompareOpType::NEQ> {
+struct ComparePredicate<T, CompareOpType::NE> {
     static inline constexpr int value = 
         std::is_floating_point_v<T> ? _CMP_NEQ_OQ : _MM_CMPINT_NE; 
-};
-
-//
-template<RangeType Op>
-struct Range2Compare {};
-
-template<>
-struct Range2Compare<RangeType::IncInc> {
-    static constexpr inline CompareOpType lower = CompareOpType::LE;  
-    static constexpr inline CompareOpType upper = CompareOpType::LE;  
-};
-
-template<>
-struct Range2Compare<RangeType::IncExc> {
-    static constexpr inline CompareOpType lower = CompareOpType::LE;  
-    static constexpr inline CompareOpType upper = CompareOpType::LT;  
-};
-
-template<>
-struct Range2Compare<RangeType::ExcInc> {
-    static constexpr inline CompareOpType lower = CompareOpType::LT;  
-    static constexpr inline CompareOpType upper = CompareOpType::LE;  
-};
-
-template<>
-struct Range2Compare<RangeType::ExcExc> {
-    static constexpr inline CompareOpType lower = CompareOpType::LT;  
-    static constexpr inline CompareOpType upper = CompareOpType::LT;  
 };
 
 }

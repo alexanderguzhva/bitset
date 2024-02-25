@@ -13,15 +13,15 @@ namespace milvus {
 namespace bitset {
 namespace detail {
 
-//
+// This one is similar to boost::dynamic_bitset
 template<typename ElementT>
-struct CustomBitsetPolicy2 {
+struct ElementWiseBitsetPolicy {
     using data_type = ElementT;
     constexpr static auto data_bits = sizeof(data_type) * 8;
 
     using size_type = size_t;
 
-    using self_type = CustomBitsetPolicy2<ElementT>;
+    using self_type = ElementWiseBitsetPolicy<ElementT>;
 
     using proxy_type = Proxy<self_type>;
     using const_proxy_type = ConstProxy<self_type>;

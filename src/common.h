@@ -8,76 +8,43 @@
 namespace milvus {
 namespace bitset {
 
-#define CHECK_SUPPORTED_TYPE(T, Message)                                     \
-    static_assert(                                                           \
-        std::is_same<T, bool>::value || std::is_same<T, int8_t>::value ||    \
-            std::is_same<T, int16_t>::value ||                               \
-            std::is_same<T, int32_t>::value ||                               \
-            std::is_same<T, int64_t>::value ||                               \
-            std::is_same<T, float>::value || std::is_same<T, double>::value, \
-        Message);
+// a supporting utility
+template<class> inline constexpr bool always_false_v = false;
 
+// a ? b
 enum class CompareOpType {
     GT = 1,
     GE = 2,
     LT = 3,
     LE = 4,
     EQ = 5,
-    NEQ = 6,
+    NE = 6,
 };
 
 template<CompareOpType Op>
-struct CompareOperator {};
-
-template<>
-struct CompareOperator<CompareOpType::EQ> {
+struct CompareOperator {
     template<typename T, typename U>
     static inline bool compare(const T& t, const U& u) {
-        return (t == u);
+        if constexpr (Op == CompareOpType::EQ) {
+            return (t == u);
+        } else if constexpr (Op == CompareOpType::GE) {
+            return (t >= u);
+        } else if constexpr (Op == CompareOpType::GT) {
+            return (t > u);
+        } else if constexpr (Op == CompareOpType::LE) {
+            return (t <= u);
+        } else if constexpr (Op == CompareOpType::LT) {
+            return (t < u);
+        } else if constexpr (Op != CompareOpType::NE) {
+            return (t == u);
+        } else {
+            // unimplemented
+            static_assert(always_false_v<Op>, "unimplemented");
+        }
     }
 };
 
-template<>
-struct CompareOperator<CompareOpType::GE> {
-    template<typename T, typename U>
-    static inline bool compare(const T& t, const U& u) {
-        return (t >= u);
-    }
-};
-
-template<>
-struct CompareOperator<CompareOpType::GT> {
-    template<typename T, typename U>
-    static inline bool compare(const T& t, const U& u) {
-        return (t > u);
-    }
-};
-
-template<>
-struct CompareOperator<CompareOpType::LE> {
-    template<typename T, typename U>
-    static inline bool compare(const T& t, const U& u) {
-        return (t <= u);
-    }
-};
-
-template<>
-struct CompareOperator<CompareOpType::LT> {
-    template<typename T, typename U>
-    static inline bool compare(const T& t, const U& u) {
-        return (t < u);
-    }
-};
-
-template<>
-struct CompareOperator<CompareOpType::NEQ> {
-    template<typename T, typename U>
-    static inline bool compare(const T& t, const U& u) {
-        return (t != u);
-    }
-};
-
-//
+// a ? v && v ? b
 enum class RangeType {
     // [a, b]
     IncInc,
@@ -90,38 +57,33 @@ enum class RangeType {
 };
 
 template<RangeType Op>
-struct RangeOperator {};
-
-template<>
-struct RangeOperator<RangeType::IncInc> {
+struct RangeOperator {
     template<typename T>
     static inline bool within_range(const T& lower, const T& upper, const T& value) {
-        return (lower <= value && value <= upper);
+        if constexpr (Op == RangeType::IncInc) {
+            return (lower <= value && value <= upper);
+        } else if constexpr (Op == RangeType::ExcInc) {
+            return (lower < value && value <= upper);
+        } else if constexpr (Op == RangeType::IncExc) {
+            return (lower <= value && value < upper);
+        } else if constexpr (Op == RangeType::ExcExc) {
+            return (lower < value && value < upper);
+        } else {
+            // unimplemented
+            static_assert(always_false_v<Op>, "unimplemented");
+        }
     }
 };
 
-template<>
-struct RangeOperator<RangeType::IncExc> {
-    template<typename T>
-    static inline bool within_range(const T& lower, const T& upper, const T& value) {
-        return (lower <= value && value < upper);
-    }
-};
-
-template<>
-struct RangeOperator<RangeType::ExcInc> {
-    template<typename T>
-    static inline bool within_range(const T& lower, const T& upper, const T& value) {
-        return (lower < value && value <= upper);
-    }
-};
-
-template<>
-struct RangeOperator<RangeType::ExcExc> {
-    template<typename T>
-    static inline bool within_range(const T& lower, const T& upper, const T& value) {
-        return (lower < value && value < upper);
-    }
+//
+template<RangeType Op>
+struct Range2Compare {
+    static constexpr inline CompareOpType lower = 
+        (Op == RangeType::IncInc || Op == RangeType::IncExc) ? 
+            CompareOpType::LE : CompareOpType::LT;
+    static constexpr inline CompareOpType upper = 
+        (Op == RangeType::IncExc || Op == RangeType::ExcExc) ? 
+            CompareOpType::LE : CompareOpType::LT;
 };
 
 // The following operation is Milvus-specific
@@ -138,45 +100,23 @@ using ArithHighPrecisionType =
     std::conditional_t<std::is_integral_v<T> && !std::is_same_v<bool, T>, int64_t, T>;
 
 template<ArithOpType AOp, CompareOpType CmpOp>
-struct ArithCompareOperator {};
-
-template<CompareOpType CmpOp>
-struct ArithCompareOperator<ArithOpType::Add, CmpOp> {
+struct ArithCompareOperator {
     template<typename T>
     static inline bool compare(const T& left, const ArithHighPrecisionType<T>& right, const ArithHighPrecisionType<T>& value) {
-        return CompareOperator<CmpOp>::compare(left + right, value);
-    }
-};
-
-template<CompareOpType CmpOp>
-struct ArithCompareOperator<ArithOpType::Sub, CmpOp> {
-    template<typename T>
-    static inline bool compare(const T& left, const ArithHighPrecisionType<T>& right, const ArithHighPrecisionType<T>& value) {
-        return CompareOperator<CmpOp>::compare(left - right, value);
-    }
-};
-
-template<CompareOpType CmpOp>
-struct ArithCompareOperator<ArithOpType::Mul, CmpOp> {
-    template<typename T>
-    static inline bool compare(const T& left, const ArithHighPrecisionType<T>& right, const ArithHighPrecisionType<T>& value) {
-        return CompareOperator<CmpOp>::compare(left * right, value);
-    }
-};
-
-template<CompareOpType CmpOp>
-struct ArithCompareOperator<ArithOpType::Div, CmpOp> {
-    template<typename T>
-    static inline bool compare(const T& left, const ArithHighPrecisionType<T>& right, const ArithHighPrecisionType<T>& value) {
-        return CompareOperator<CmpOp>::compare(left / right, value);
-    }
-};
-
-template<CompareOpType CmpOp>
-struct ArithCompareOperator<ArithOpType::Mod, CmpOp> {
-    template<typename T>
-    static inline bool compare(const T& left, const ArithHighPrecisionType<T>& right, const ArithHighPrecisionType<T>& value) {
-        return CompareOperator<CmpOp>::compare(fmod(left, right), value);
+        if constexpr (AOp == ArithOpType::Add) {
+            return CompareOperator<CmpOp>::compare(left + right, value);
+        } else if constexpr (AOp == ArithOpType::Sub) {
+            return CompareOperator<CmpOp>::compare(left - right, value);
+        } else if constexpr (AOp == ArithOpType::Mul) {
+            return CompareOperator<CmpOp>::compare(left * right, value);
+        } else if constexpr (AOp == ArithOpType::Div) {
+            return CompareOperator<CmpOp>::compare(left / right, value);
+        } else if constexpr (AOp == ArithOpType::Mod) {
+            return CompareOperator<CmpOp>::compare(fmod(left, right), value);
+        } else {
+            // unimplemented
+            static_assert(always_false_v<AOp>, "unimplemented");
+        }
     }
 };
 

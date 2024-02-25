@@ -14,13 +14,13 @@ namespace detail {
 // No optimizations are applied.
 // This is little-endian based.
 template<typename ElementT>
-struct CustomBitsetPolicy {
+struct BitWiseBitsetPolicy {
     using data_type = ElementT;
     constexpr static auto data_bits = sizeof(data_type) * 8;
 
     using size_type = size_t;
 
-    using self_type = CustomBitsetPolicy<ElementT>;
+    using self_type = BitWiseBitsetPolicy<ElementT>;
 
     using proxy_type = Proxy<self_type>;
     using const_proxy_type = ConstProxy<self_type>;

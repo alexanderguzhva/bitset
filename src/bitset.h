@@ -66,20 +66,20 @@ struct RangeChecker<true> {
 
 // Bitset view, which does not own the data.
 template<typename PolicyT, bool IsRangeCheckEnabled>
-class CustomBitsetNonOwning;
+class BitsetView;
 
 // Bitset, which owns the data.
 template<typename PolicyT, typename ContainerT, bool IsRangeCheckEnabled>
-class CustomBitsetOwning;
+class Bitset;
 
 // This is the base CRTP class.
 template<typename PolicyT, typename ImplT, bool IsRangeCheckEnabled>
-class CustomBitsetBase {
+class BitsetBase {
    template<typename, bool>
-   friend class CustomBitsetNonOwning;
+   friend class BitsetView;
 
    template<typename, typename, bool>
-   friend class CustomBitsetOwning;
+   friend class Bitset;
 
 public:
     using policy_type = PolicyT;
@@ -176,7 +176,7 @@ public:
 
     // Inplace and.
     template<typename I, bool R>
-    inline void inplace_and(const CustomBitsetBase<PolicyT, I, R>& other, const size_type size) {
+    inline void inplace_and(const BitsetBase<PolicyT, I, R>& other, const size_type size) {
         range_checker::le(size, this->size());
         range_checker::le(size, other.size());
 
@@ -191,7 +191,7 @@ public:
 
     // Inplace and. A given bitset / bitset view is expected to have the same size.
     template<typename I, bool R>
-    inline ImplT& operator&=(const CustomBitsetBase<PolicyT, I, R>& other) {
+    inline ImplT& operator&=(const BitsetBase<PolicyT, I, R>& other) {
         range_checker::eq(other.size(), this->size());
 
         this->inplace_and(other, this->size());
@@ -200,7 +200,7 @@ public:
 
     // Inplace or.
     template<typename I, bool R>
-    inline void inplace_or(const CustomBitsetBase<PolicyT, I, R>& other, const size_type size) {
+    inline void inplace_or(const BitsetBase<PolicyT, I, R>& other, const size_type size) {
         range_checker::le(size, this->size());
         range_checker::le(size, other.size());
 
@@ -215,7 +215,7 @@ public:
 
     // Inplace or. A given bitset / bitset view is expected to have the same size.
     template<typename I, bool R>
-    inline ImplT& operator|=(const CustomBitsetBase<PolicyT, I, R>& other) {
+    inline ImplT& operator|=(const BitsetBase<PolicyT, I, R>& other) {
         range_checker::eq(other.size(), this->size());
 
         this->inplace_or(other, this->size());
@@ -228,16 +228,16 @@ public:
     }
 
     //
-    inline CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled> operator+(const size_type offset) {
+    inline BitsetView<PolicyT, IsRangeCheckEnabled> operator+(const size_type offset) {
         return this->view(offset);
     }
 
     // Create a view of a given size from the given position.
-    inline CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled> view(const size_type offset, const size_type size) {
+    inline BitsetView<PolicyT, IsRangeCheckEnabled> view(const size_type offset, const size_type size) {
         range_checker::le(offset, this->size());
         range_checker::le(offset + size, this->size());
 
-        return CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled>(
+        return BitsetView<PolicyT, IsRangeCheckEnabled>(
             this->data(),
             this->offset() + offset,
             size
@@ -245,11 +245,11 @@ public:
     }
 
     // Create a const view of a given size from the given position.
-    inline CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled> view(const size_type offset, const size_type size) const {
+    inline BitsetView<PolicyT, IsRangeCheckEnabled> view(const size_type offset, const size_type size) const {
         range_checker::le(offset, this->size());
         range_checker::le(offset + size, this->size());
 
-        return CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled>(
+        return BitsetView<PolicyT, IsRangeCheckEnabled>(
             const_cast<data_type*>(this->data()),
             this->offset() + offset,
             size
@@ -257,10 +257,10 @@ public:
     }
 
     // Create a view from the given position, which uses all available size.
-    inline CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled> view(const size_type offset) {
+    inline BitsetView<PolicyT, IsRangeCheckEnabled> view(const size_type offset) {
         range_checker::le(offset, this->size());
 
-        return CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled>(
+        return BitsetView<PolicyT, IsRangeCheckEnabled>(
             this->data(),
             this->offset() + offset,
             this->size() - offset
@@ -268,10 +268,10 @@ public:
     }
 
     // Create a const view from the given position, which uses all available size.
-    inline const CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled> view(const size_type offset) const {
+    inline const BitsetView<PolicyT, IsRangeCheckEnabled> view(const size_type offset) const {
         range_checker::le(offset, this->size());
 
-        return CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled>(
+        return BitsetView<PolicyT, IsRangeCheckEnabled>(
             const_cast<data_type*>(this->data()),
             this->offset() + offset,
             this->size() - offset
@@ -279,12 +279,12 @@ public:
     }
 
     // Create a view.
-    inline CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled> view() {
+    inline BitsetView<PolicyT, IsRangeCheckEnabled> view() {
         return this->view(0);
     }
 
     // Create a const view.
-    inline const CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled> view() const {
+    inline const BitsetView<PolicyT, IsRangeCheckEnabled> view() const {
         return this->view(0);
     }
 
@@ -295,7 +295,7 @@ public:
 
     // Compare the current bitset with another bitset / bitset view.
     template<typename I, bool R>
-    inline bool operator==(const CustomBitsetBase<PolicyT, I, R>& other) {
+    inline bool operator==(const BitsetBase<PolicyT, I, R>& other) {
         if (this->size() != other.size()) {
             return false;
         }
@@ -311,13 +311,13 @@ public:
 
     // Compare the current bitset with another bitset / bitset view.
     template<typename I, bool R>
-    inline bool operator!=(const CustomBitsetBase<PolicyT, I, R>& other) {
+    inline bool operator!=(const BitsetBase<PolicyT, I, R>& other) {
         return (!(*this == other));
     }
 
     // Inplace xor.
     template<typename I, bool R>
-    inline void inplace_xor(const CustomBitsetBase<PolicyT, I, R>& other, const size_type size) {
+    inline void inplace_xor(const BitsetBase<PolicyT, I, R>& other, const size_type size) {
         range_checker::le(size, this->size());
         range_checker::le(size, other.size());
     
@@ -332,7 +332,7 @@ public:
 
     // Inplace xor. A given bitset / bitset view is expected to have the same size.
     template<typename I, bool R>
-    inline ImplT& operator^=(const CustomBitsetBase<PolicyT, I, R>& other) {
+    inline ImplT& operator^=(const BitsetBase<PolicyT, I, R>& other) {
         range_checker::eq(other.size(), this->size());
 
         this->inplace_xor(other, this->size());
@@ -341,7 +341,7 @@ public:
 
     // Inplace sub.
     template<typename I, bool R>
-    inline void inplace_sub(const CustomBitsetBase<PolicyT, I, R>& other, const size_type size) {
+    inline void inplace_sub(const BitsetBase<PolicyT, I, R>& other, const size_type size) {
         range_checker::le(size, this->size());
         range_checker::le(size, other.size());
     
@@ -356,7 +356,7 @@ public:
 
     // Inplace sub. A given bitset / bitset view is expected to have the same size.
     template<typename I, bool R>
-    inline ImplT& operator-=(const CustomBitsetBase<PolicyT, I, R>& other) {
+    inline ImplT& operator-=(const BitsetBase<PolicyT, I, R>& other) {
         range_checker::eq(other.size(), this->size());
 
         this->inplace_sub(other, this->size());
@@ -431,8 +431,8 @@ public:
         else if (op == CompareOpType::LT) {
             this->inplace_compare_column<T, U, CompareOpType::LT>(t, u, size);
         }
-        else if (op == CompareOpType::NEQ) {
-            this->inplace_compare_column<T, U, CompareOpType::NEQ>(t, u, size);
+        else if (op == CompareOpType::NE) {
+            this->inplace_compare_column<T, U, CompareOpType::NE>(t, u, size);
         }
         else {
             // unimplemented
@@ -479,8 +479,8 @@ public:
         else if (op == CompareOpType::LT) {
             this->inplace_compare_val<T, CompareOpType::LT>(t, size, value);
         }
-        else if (op == CompareOpType::NEQ) {
-            this->inplace_compare_val<T, CompareOpType::NEQ>(t, size, value);
+        else if (op == CompareOpType::NE) {
+            this->inplace_compare_val<T, CompareOpType::NE>(t, size, value);
         }
         else {
             // unimplemented
@@ -598,24 +598,24 @@ public:
     ) {
         if (a_op == ArithOpType::Add && cmp_op == CompareOpType::EQ) {
             this->inplace_arith_compare<T, ArithOpType::Add, CompareOpType::EQ>(src, right_operand, value, size);
-        } else if (a_op == ArithOpType::Add && cmp_op == CompareOpType::NEQ) {
-            this->inplace_arith_compare<T, ArithOpType::Add, CompareOpType::NEQ>(src, right_operand, value, size);
+        } else if (a_op == ArithOpType::Add && cmp_op == CompareOpType::NE) {
+            this->inplace_arith_compare<T, ArithOpType::Add, CompareOpType::NE>(src, right_operand, value, size);
         } else if (a_op == ArithOpType::Sub && cmp_op == CompareOpType::EQ) {
             this->inplace_arith_compare<T, ArithOpType::Sub, CompareOpType::EQ>(src, right_operand, value, size);
-        } else if (a_op == ArithOpType::Sub && cmp_op == CompareOpType::NEQ) {
-            this->inplace_arith_compare<T, ArithOpType::Sub, CompareOpType::NEQ>(src, right_operand, value, size);
+        } else if (a_op == ArithOpType::Sub && cmp_op == CompareOpType::NE) {
+            this->inplace_arith_compare<T, ArithOpType::Sub, CompareOpType::NE>(src, right_operand, value, size);
         } else if (a_op == ArithOpType::Mul && cmp_op == CompareOpType::EQ) {
             this->inplace_arith_compare<T, ArithOpType::Mul, CompareOpType::EQ>(src, right_operand, value, size);
-        } else if (a_op == ArithOpType::Mul && cmp_op == CompareOpType::NEQ) {
-            this->inplace_arith_compare<T, ArithOpType::Mul, CompareOpType::NEQ>(src, right_operand, value, size);
+        } else if (a_op == ArithOpType::Mul && cmp_op == CompareOpType::NE) {
+            this->inplace_arith_compare<T, ArithOpType::Mul, CompareOpType::NE>(src, right_operand, value, size);
         } else if (a_op == ArithOpType::Div && cmp_op == CompareOpType::EQ) {
             this->inplace_arith_compare<T, ArithOpType::Div, CompareOpType::EQ>(src, right_operand, value, size);
-        } else if (a_op == ArithOpType::Div && cmp_op == CompareOpType::NEQ) {
-            this->inplace_arith_compare<T, ArithOpType::Div, CompareOpType::NEQ>(src, right_operand, value, size);
+        } else if (a_op == ArithOpType::Div && cmp_op == CompareOpType::NE) {
+            this->inplace_arith_compare<T, ArithOpType::Div, CompareOpType::NE>(src, right_operand, value, size);
         } else if (a_op == ArithOpType::Mod && cmp_op == CompareOpType::EQ) {
             this->inplace_arith_compare<T, ArithOpType::Mod, CompareOpType::EQ>(src, right_operand, value, size);
-        } else if (a_op == ArithOpType::Mod && cmp_op == CompareOpType::NEQ) {
-            this->inplace_arith_compare<T, ArithOpType::Mod, CompareOpType::NEQ>(src, right_operand, value, size);
+        } else if (a_op == ArithOpType::Mod && cmp_op == CompareOpType::NE) {
+            this->inplace_arith_compare<T, ArithOpType::Mod, CompareOpType::NE>(src, right_operand, value, size);
         } else {
             // unimplemented
         }            
@@ -643,7 +643,7 @@ public:
     //
     // Inplace and. Also, counts the number of active bits.
     template<typename I, bool R>
-    inline size_type inplace_and_with_count(const CustomBitsetBase<PolicyT, I, R>& other, const size_type size) {
+    inline size_type inplace_and_with_count(const BitsetBase<PolicyT, I, R>& other, const size_type size) {
         range_checker::le(size, this->size());
         range_checker::le(size, other.size());
 
@@ -658,7 +658,7 @@ public:
 
     // Inplace or. Also, counts the number of inactive bits.
     template<typename I, bool R>
-    inline size_type inplace_or_with_count(const CustomBitsetBase<PolicyT, I, R>& other, const size_type size) {
+    inline size_type inplace_or_with_count(const BitsetBase<PolicyT, I, R>& other, const size_type size) {
         range_checker::le(size, this->size());
         range_checker::le(size, other.size());
 
@@ -691,8 +691,8 @@ private:
 
 // Bitset view
 template<typename PolicyT, bool IsRangeCheckEnabled>
-class CustomBitsetNonOwning : public CustomBitsetBase<PolicyT, CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled>, IsRangeCheckEnabled> {
-    friend class CustomBitsetBase<PolicyT, CustomBitsetNonOwning<PolicyT, IsRangeCheckEnabled>, IsRangeCheckEnabled>;
+class BitsetView : public BitsetBase<PolicyT, BitsetView<PolicyT, IsRangeCheckEnabled>, IsRangeCheckEnabled> {
+    friend class BitsetBase<PolicyT, BitsetView<PolicyT, IsRangeCheckEnabled>, IsRangeCheckEnabled>;
 
 public:
     using policy_type = PolicyT;
@@ -703,20 +703,20 @@ public:
 
     using range_checker = RangeChecker<IsRangeCheckEnabled>;
 
-    CustomBitsetNonOwning() {}
-    CustomBitsetNonOwning(const CustomBitsetNonOwning &) = default;
-    CustomBitsetNonOwning(CustomBitsetNonOwning&&) = default;
-    CustomBitsetNonOwning& operator =(const CustomBitsetNonOwning&) = default;
-    CustomBitsetNonOwning& operator =(CustomBitsetNonOwning&&) = default;
+    BitsetView() {}
+    BitsetView(const BitsetView &) = default;
+    BitsetView(BitsetView&&) = default;
+    BitsetView& operator =(const BitsetView&) = default;
+    BitsetView& operator =(BitsetView&&) = default;
 
     template<typename ImplT, bool R>
-    CustomBitsetNonOwning(CustomBitsetBase<PolicyT, ImplT, R>& bitset) :
+    BitsetView(BitsetBase<PolicyT, ImplT, R>& bitset) :
         Data{bitset.data()}, Size{bitset.size()}, Offset{bitset.offset()} {}
 
-    CustomBitsetNonOwning(void* data, const size_type size) :
+    BitsetView(void* data, const size_type size) :
         Data{reinterpret_cast<data_type*>(data)}, Size{size}, Offset{0} {}
 
-    CustomBitsetNonOwning(void* data, const size_type offset, const size_type size) :
+    BitsetView(void* data, const size_type offset, const size_type size) :
         Data{reinterpret_cast<data_type*>(data)}, Size{size}, Offset{offset} {}
 
 private:
@@ -735,8 +735,8 @@ private:
 
 // Bitset
 template<typename PolicyT, typename ContainerT, bool IsRangeCheckEnabled>
-class CustomBitsetOwning : public CustomBitsetBase<PolicyT, CustomBitsetOwning<PolicyT, ContainerT, IsRangeCheckEnabled>, IsRangeCheckEnabled> {
-    friend class CustomBitsetBase<PolicyT, CustomBitsetOwning<PolicyT, ContainerT, IsRangeCheckEnabled>, IsRangeCheckEnabled>;
+class Bitset : public BitsetBase<PolicyT, Bitset<PolicyT, ContainerT, IsRangeCheckEnabled>, IsRangeCheckEnabled> {
+    friend class BitsetBase<PolicyT, Bitset<PolicyT, ContainerT, IsRangeCheckEnabled>, IsRangeCheckEnabled>;
 
 public:
     using policy_type = PolicyT;
@@ -756,27 +756,27 @@ public:
     using range_checker = RangeChecker<IsRangeCheckEnabled>;
 
     // Allocate an empty one.
-    CustomBitsetOwning() {}
+    Bitset() {}
     // Allocate the given number of bits.
-    CustomBitsetOwning(const size_type size) : 
+    Bitset(const size_type size) : 
         Data(get_required_size_in_container_elements(size)), Size{size} {}
     // Allocate the given number of bits, initialize with a given value.
-    CustomBitsetOwning(const size_type size, const bool init) : 
+    Bitset(const size_type size, const bool init) : 
         Data(
             get_required_size_in_container_elements(size), 
             init ? data_type(-1) : 0),
         Size{size} {}
     // Do not allow implicit copies (Rust style).
-    CustomBitsetOwning(const CustomBitsetOwning &) = delete;
+    Bitset(const Bitset &) = delete;
     // Allow default move.
-    CustomBitsetOwning(CustomBitsetOwning&&) = default;
+    Bitset(Bitset&&) = default;
     // Do not allow implicit copies (Rust style).
-    CustomBitsetOwning& operator =(const CustomBitsetOwning&) = delete;
+    Bitset& operator =(const Bitset&) = delete;
     // Allow default move.
-    CustomBitsetOwning& operator =(CustomBitsetOwning&&) = default;
+    Bitset& operator =(Bitset&&) = default;
 
     template<typename C, bool R>
-    CustomBitsetOwning(const CustomBitsetBase<PolicyT, C, R>& other) {
+    Bitset(const BitsetBase<PolicyT, C, R>& other) {
         Data = container_type(get_required_size_in_container_elements(other.size()));
         Size = other.size();
 
@@ -790,8 +790,8 @@ public:
     }
 
     // Clone a current bitset (Rust style).
-    CustomBitsetOwning clone() const {
-        CustomBitsetOwning cloned;
+    Bitset clone() const {
+        Bitset cloned;
         cloned.Data = Data;
         cloned.Size = Size;
         return cloned;
@@ -824,7 +824,7 @@ public:
     //   [starting_bit_idx, starting_bit_idx + count) range
     //   to the end of this bitset.
     template<typename I, bool R>
-    void append(const CustomBitsetBase<PolicyT, I, R>& other, const size_type starting_bit_idx, const size_type count) {
+    void append(const BitsetBase<PolicyT, I, R>& other, const size_type starting_bit_idx, const size_type count) {
         range_checker::le(starting_bit_idx, other.size());
         
         const size_type old_size = this->size();
@@ -842,7 +842,7 @@ public:
     // Append data from another bitset / bitset view
     //   to the end of this bitset.
     template<typename I, bool R>
-    void append(const CustomBitsetBase<PolicyT, I, R>& other) {
+    void append(const BitsetBase<PolicyT, I, R>& other) {
         this->append(
             other,
             0,
@@ -865,21 +865,21 @@ public:
 
     // Return a new bitset, equal to a | b
     template<typename I1, bool R1, typename I2, bool R2>
-    friend CustomBitsetOwning operator|(
-        const CustomBitsetBase<PolicyT, I1, R1>& a, 
-        const CustomBitsetBase<PolicyT, I2, R2>& b
+    friend Bitset operator|(
+        const BitsetBase<PolicyT, I1, R1>& a, 
+        const BitsetBase<PolicyT, I2, R2>& b
     ) {
-        CustomBitsetOwning clone(a);
+        Bitset clone(a);
         return std::move(clone |= b);
     }
 
     // Return a new bitset, equal to a - b
     template<typename I1, bool R1, typename I2, bool R2>
-    friend CustomBitsetOwning operator-(
-        const CustomBitsetBase<PolicyT, I1, R1>& a, 
-        const CustomBitsetBase<PolicyT, I2, R2>& b
+    friend Bitset operator-(
+        const BitsetBase<PolicyT, I1, R1>& a, 
+        const BitsetBase<PolicyT, I2, R2>& b
     ) {
-        CustomBitsetOwning clone(a);
+        Bitset clone(a);
         return std::move(clone -= b);
     }
 

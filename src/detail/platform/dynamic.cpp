@@ -33,7 +33,7 @@ using namespace milvus::bitset::detail::arm;
     FUNC(__VA_ARGS__,GT); \
     FUNC(__VA_ARGS__,LE); \
     FUNC(__VA_ARGS__,LT); \
-    FUNC(__VA_ARGS__,NEQ);
+    FUNC(__VA_ARGS__,NE);
 
 // a facility to run through all possible range operations
 #define ALL_RANGE_OPS(FUNC,...) \
@@ -45,15 +45,15 @@ using namespace milvus::bitset::detail::arm;
 // a facility to run through all possible arithmetic compare operations
 #define ALL_ARITH_CMP_OPS(FUNC,...) \
     FUNC(__VA_ARGS__,Add,EQ); \
-    FUNC(__VA_ARGS__,Add,NEQ); \
+    FUNC(__VA_ARGS__,Add,NE); \
     FUNC(__VA_ARGS__,Sub,EQ); \
-    FUNC(__VA_ARGS__,Sub,NEQ); \
+    FUNC(__VA_ARGS__,Sub,NE); \
     FUNC(__VA_ARGS__,Mul,EQ); \
-    FUNC(__VA_ARGS__,Mul,NEQ); \
+    FUNC(__VA_ARGS__,Mul,NE); \
     FUNC(__VA_ARGS__,Div,EQ); \
-    FUNC(__VA_ARGS__,Div,NEQ); \
+    FUNC(__VA_ARGS__,Div,NE); \
     FUNC(__VA_ARGS__,Mod,EQ); \
-    FUNC(__VA_ARGS__,Mod,NEQ);
+    FUNC(__VA_ARGS__,Mod,NE);
 
 //
 namespace milvus {

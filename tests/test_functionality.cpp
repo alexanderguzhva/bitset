@@ -38,20 +38,20 @@ using namespace milvus::bitset;
 //
 namespace ref_u64_u8 {
 
-using policy_type = milvus::bitset::detail::CustomBitsetPolicy<uint64_t>;
+using policy_type = milvus::bitset::detail::BitWiseBitsetPolicy<uint64_t>;
 using container_type = std::vector<uint8_t>;
-using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_type, false>;
-using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
+using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
+using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
 
 }
 
 //
 namespace element_u64_u8 {
 
-using policy_type = milvus::bitset::detail::CustomBitsetPolicy2<uint64_t>;
+using policy_type = milvus::bitset::detail::ElementWiseBitsetPolicy<uint64_t>;
 using container_type = std::vector<uint8_t>;
-using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_type, false>;
-using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
+using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
+using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
 
 }
 
@@ -60,10 +60,10 @@ using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 namespace avx2_u64_u8 {
 
 using vectorized_type = milvus::bitset::detail::x86::VectorizedAvx2;
-using policy_type = milvus::bitset::detail::CustomBitsetVectorizedPolicy<uint64_t, vectorized_type>;
+using policy_type = milvus::bitset::detail::VectorizedElementWiseBitsetPolicy<uint64_t, vectorized_type>;
 using container_type = std::vector<uint8_t>;
-using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_type, false>;
-using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
+using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
+using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
 
 }
 #endif
@@ -73,10 +73,10 @@ using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 namespace avx512_u64_u8 {
 
 using vectorized_type = milvus::bitset::detail::x86::VectorizedAvx512;
-using policy_type = milvus::bitset::detail::CustomBitsetVectorizedPolicy<uint64_t, vectorized_type>;
+using policy_type = milvus::bitset::detail::VectorizedElementWiseBitsetPolicy<uint64_t, vectorized_type>;
 using container_type = std::vector<uint8_t>;
-using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_type, false>;
-using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
+using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
+using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
 
 }
 #endif
@@ -86,10 +86,10 @@ using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 namespace neon_u64_u8 {
 
 using vectorized_type = milvus::bitset::detail::arm::VectorizedNeon;
-using policy_type = milvus::bitset::detail::CustomBitsetVectorizedPolicy<uint64_t, vectorized_type>;
+using policy_type = milvus::bitset::detail::VectorizedElementWiseBitsetPolicy<uint64_t, vectorized_type>;
 using container_type = std::vector<uint8_t>;
-using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_type, false>;
-using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
+using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
+using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
 
 }
 
@@ -97,10 +97,10 @@ using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 namespace sve_u64_u8 {
 
 using vectorized_type = milvus::bitset::detail::arm::VectorizedSve;
-using policy_type = milvus::bitset::detail::CustomBitsetVectorizedPolicy<uint64_t, vectorized_type>;
+using policy_type = milvus::bitset::detail::VectorizedElementWiseBitsetPolicy<uint64_t, vectorized_type>;
 using container_type = std::vector<uint8_t>;
-using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_type, false>;
-using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
+using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
+using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
 
 }
 #endif
@@ -111,10 +111,10 @@ using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
 namespace dynamic_u64_u8 {
 
 using vectorized_type = milvus::bitset::detail::VectorizedDynamic;
-using policy_type = milvus::bitset::detail::CustomBitsetVectorizedPolicy<uint64_t, vectorized_type>;
+using policy_type = milvus::bitset::detail::VectorizedElementWiseBitsetPolicy<uint64_t, vectorized_type>;
 using container_type = std::vector<uint8_t>;
-using bitset_type = milvus::bitset::CustomBitsetOwning<policy_type, container_type, false>;
-using bitset_view = milvus::bitset::CustomBitsetNonOwning<policy_type, false>;
+using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
+using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
 
 }
 
@@ -274,7 +274,7 @@ void TestInplaceCompareColumnImpl(
             ASSERT_EQ(t[i] <= u[i], bitset[i]) << i;            
         } else if (op == CompareOpType::LT) {
             ASSERT_EQ(t[i] < u[i], bitset[i]) << i;            
-        } else if (op == CompareOpType::NEQ) {
+        } else if (op == CompareOpType::NE) {
             ASSERT_EQ(t[i] != u[i], bitset[i]) << i;            
         } else {
             ASSERT_TRUE(false) << "Not implemented";
@@ -285,7 +285,7 @@ void TestInplaceCompareColumnImpl(
 template<typename BitsetT, typename T, typename U>
 void TestInplaceCompareColumnImpl() {
     for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
-        for (const auto op : {CompareOpType::EQ, CompareOpType::GE, CompareOpType::GT, CompareOpType::LE, CompareOpType::LT, CompareOpType::NEQ}) {
+        for (const auto op : {CompareOpType::EQ, CompareOpType::GE, CompareOpType::GT, CompareOpType::LE, CompareOpType::LT, CompareOpType::NE}) {
             BitsetT bitset(n);
             bitset.reset();
 
@@ -436,7 +436,7 @@ void TestInplaceCompareValImpl(
             ASSERT_EQ(t[i] <= value, bitset[i]) << i;            
         } else if (op == CompareOpType::LT) {
             ASSERT_EQ(t[i] < value, bitset[i]) << i;            
-        } else if (op == CompareOpType::NEQ) {
+        } else if (op == CompareOpType::NE) {
             ASSERT_EQ(t[i] != value, bitset[i]) << i;            
         } else {
             ASSERT_TRUE(false) << "Not implemented";
@@ -447,7 +447,7 @@ void TestInplaceCompareValImpl(
 template<typename BitsetT, typename T>
 void TestInplaceCompareValImpl() {
     for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
-        for (const auto op : {CompareOpType::EQ, CompareOpType::GE, CompareOpType::GT, CompareOpType::LE, CompareOpType::LT, CompareOpType::NEQ}) {
+        for (const auto op : {CompareOpType::EQ, CompareOpType::GE, CompareOpType::GT, CompareOpType::LE, CompareOpType::LT, CompareOpType::NE}) {
             BitsetT bitset(n);
             bitset.reset();
 
@@ -860,23 +860,23 @@ void TestInplaceArithCompareImpl(
     for (size_t i = 0; i < n; i++) {
         if (a_op == ArithOpType::Add && cmp_op == CompareOpType::EQ) {
             ASSERT_EQ((left[i] + right_operand) == value, bitset[i]) << i;
-        } else if (a_op == ArithOpType::Add && cmp_op == CompareOpType::NEQ) {
+        } else if (a_op == ArithOpType::Add && cmp_op == CompareOpType::NE) {
             ASSERT_EQ((left[i] + right_operand) != value, bitset[i]) << i;
         } else if (a_op == ArithOpType::Sub && cmp_op == CompareOpType::EQ) {
             ASSERT_EQ((left[i] - right_operand) == value, bitset[i]) << i;
-        } else if (a_op == ArithOpType::Sub && cmp_op == CompareOpType::NEQ) {
+        } else if (a_op == ArithOpType::Sub && cmp_op == CompareOpType::NE) {
             ASSERT_EQ((left[i] - right_operand) != value, bitset[i]) << i;
         } else if (a_op == ArithOpType::Mul && cmp_op == CompareOpType::EQ) {
             ASSERT_EQ((left[i] * right_operand) == value, bitset[i]) << i;
-        } else if (a_op == ArithOpType::Mul && cmp_op == CompareOpType::NEQ) {
+        } else if (a_op == ArithOpType::Mul && cmp_op == CompareOpType::NE) {
             ASSERT_EQ((left[i] * right_operand) != value, bitset[i]) << i;
         } else if (a_op == ArithOpType::Div && cmp_op == CompareOpType::EQ) {
             ASSERT_EQ((left[i] / right_operand) == value, bitset[i]) << i;
-        } else if (a_op == ArithOpType::Div && cmp_op == CompareOpType::NEQ) {
+        } else if (a_op == ArithOpType::Div && cmp_op == CompareOpType::NE) {
             ASSERT_EQ((left[i] / right_operand) != value, bitset[i]) << i;
         } else if (a_op == ArithOpType::Mod && cmp_op == CompareOpType::EQ) {
             ASSERT_EQ(fmod(left[i], right_operand) == value, bitset[i]) << i;
-        } else if (a_op == ArithOpType::Mod && cmp_op == CompareOpType::NEQ) {
+        } else if (a_op == ArithOpType::Mod && cmp_op == CompareOpType::NE) {
             ASSERT_EQ(fmod(left[i], right_operand) != value, bitset[i]) << i;
         } else {
             ASSERT_TRUE(false) << "Not implemented";
@@ -888,7 +888,7 @@ template<typename BitsetT, typename T>
 void TestInplaceArithCompareImpl() {
     for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
         for (const auto a_op : {ArithOpType::Add, ArithOpType::Sub, ArithOpType::Mul, ArithOpType::Div, ArithOpType::Mod}) {
-            for (const auto cmp_op : {CompareOpType::EQ, CompareOpType::NEQ}) {
+            for (const auto cmp_op : {CompareOpType::EQ, CompareOpType::NE}) {
                 BitsetT bitset(n);
                 bitset.reset();
 

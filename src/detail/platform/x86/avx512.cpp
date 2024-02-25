@@ -20,7 +20,7 @@ namespace avx512 {
     FUNC(__VA_ARGS__,GT); \
     FUNC(__VA_ARGS__,LE); \
     FUNC(__VA_ARGS__,LT); \
-    FUNC(__VA_ARGS__,NEQ);
+    FUNC(__VA_ARGS__,NE);
 
 // a facility to run through all possible range operations
 #define ALL_RANGE_OPS(FUNC,...) \
@@ -32,15 +32,15 @@ namespace avx512 {
 // a facility to run through all possible arithmetic compare operations
 #define ALL_ARITH_CMP_OPS(FUNC,...) \
     FUNC(__VA_ARGS__,Add,EQ); \
-    FUNC(__VA_ARGS__,Add,NEQ); \
+    FUNC(__VA_ARGS__,Add,NE); \
     FUNC(__VA_ARGS__,Sub,EQ); \
-    FUNC(__VA_ARGS__,Sub,NEQ); \
+    FUNC(__VA_ARGS__,Sub,NE); \
     FUNC(__VA_ARGS__,Mul,EQ); \
-    FUNC(__VA_ARGS__,Mul,NEQ); \
+    FUNC(__VA_ARGS__,Mul,NE); \
     FUNC(__VA_ARGS__,Div,EQ); \
-    FUNC(__VA_ARGS__,Div,NEQ); \
+    FUNC(__VA_ARGS__,Div,NE); \
     FUNC(__VA_ARGS__,Mod,EQ); \
-    FUNC(__VA_ARGS__,Mod,NEQ);
+    FUNC(__VA_ARGS__,Mod,NE);
 
 // count is expected to be in range [0, 64)
 inline uint64_t get_mask(const size_t count) {
@@ -1263,9 +1263,9 @@ struct ArithHelperF64<ArithOpType::Div, CmpOp> {
 
 //
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, NE)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
@@ -1313,9 +1313,9 @@ bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
 
 //
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, NE)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
@@ -1364,9 +1364,9 @@ bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
 
 //
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, NE)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
@@ -1415,9 +1415,9 @@ bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
 
 //
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, NE)
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
@@ -1452,7 +1452,7 @@ bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
 
 //
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
@@ -1495,7 +1495,7 @@ bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
 
 //
 NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, NEQ)
+NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(

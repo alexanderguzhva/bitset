@@ -658,7 +658,7 @@ struct VectorizedElementWiseBitsetPolicy {
 
         // same element?
         if (start_element == end_element) {
-            func_baseline(start, size);
+            func_baseline(start, 0, size);
             return;
         }
 

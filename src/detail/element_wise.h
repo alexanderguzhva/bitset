@@ -850,7 +850,7 @@ struct ElementWiseBitsetPolicy {
     }
 
 
-    //
+    // data_type Func(const data_type left_v, const data_type right_v);
     template<typename Func>
     static inline void op_func(
         data_type* const left, 

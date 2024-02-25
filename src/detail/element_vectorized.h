@@ -195,78 +195,25 @@ struct VectorizedElementWiseBitsetPolicy {
         const U* const __restrict u,
         const size_type size
     ) {
-        if (size == 0) {
-            return;
-        }
-
-        auto start_element = get_element(start);
-        const auto end_element = get_element(start + size);
-
-        const auto start_shift = get_shift(start);
-        const auto end_shift = get_shift(start + size);
-
-        // same element?
-        if (start_element == end_element) {
-            ElementWiseBitsetPolicy<ElementT>::template op_compare_column<T, U, Op>(
-                data, start, t, u, size
-            );
-
-            return;
-        }
-
-        //
-        uintptr_t ptr_offset = 0;
-
-        // process the first element
-        if (start_shift != 0) [[unlikely]] {
-            // it is possible to do vectorized masking here, but it is not worth it
-            ElementWiseBitsetPolicy<ElementT>::template op_compare_column<T, U, Op>(
-                data, start, t, u, data_bits - start_shift
-            );
-
-            //
-            start_element += 1;
-            ptr_offset += data_bits - start_shift;
-        }
-
-        // process the middle
-        {
-            const size_t starting_bit_idx = start_element * data_bits;
-            const size_t nbits = (end_element - start_element) * data_bits;
-
-            if (!VectorizedT::template op_compare_column<T, U, Op>(
-                    reinterpret_cast<uint8_t*>(data + start_element),
-                    t + ptr_offset,
-                    u + ptr_offset,
-                    nbits)
-            ) {
-                // vectorized implementation is not available, invoke the default one
+        op_func(start, size, 
+            [data, t, u](const size_type starting_bit, const size_type ptr_offset, const size_type nbits){
                 ElementWiseBitsetPolicy<ElementT>::template op_compare_column<T, U, Op>(
                     data, 
-                    start_element * data_bits, 
+                    starting_bit, 
                     t + ptr_offset,
                     u + ptr_offset,
-                    nbits 
+                    nbits
+                );
+            },
+            [data, t, u](const size_type starting_element, const size_type ptr_offset, const size_type nbits){
+                return VectorizedT::template op_compare_column<T, U, Op>(
+                    reinterpret_cast<uint8_t*>(data + starting_element),
+                    t + ptr_offset,
+                    u + ptr_offset,
+                    nbits
                 );
             }
-        
-            //
-            ptr_offset += nbits;
-        }
-
-        // process the last element
-        if (end_shift != 0) [[likely]] {
-            // it is possible to do vectorized masking here, but it is not worth it
-            const size_t starting_bit_idx = end_element * data_bits; 
-
-            ElementWiseBitsetPolicy<ElementT>::template op_compare_column<T, U, Op>(
-                data, 
-                starting_bit_idx, 
-                t + ptr_offset, 
-                u + ptr_offset, 
-                end_shift
-            );
-        }
+        );
     }
 
     //
@@ -278,78 +225,25 @@ struct VectorizedElementWiseBitsetPolicy {
         const size_type size,
         const T& value
     ) {
-        if (size == 0) {
-            return;
-        }
-
-        auto start_element = get_element(start);
-        const auto end_element = get_element(start + size);
-
-        const auto start_shift = get_shift(start);
-        const auto end_shift = get_shift(start + size);
-
-        // same element?
-        if (start_element == end_element) {
-            ElementWiseBitsetPolicy<ElementT>::template op_compare_val<T, Op>(
-                data, start, t, size, value
-            );
-
-            return;
-        }
-
-        //
-        uintptr_t ptr_offset = 0;
-
-        // process the first element
-        if (start_shift != 0) [[unlikely]] {
-            // it is possible to do vectorized masking here, but it is not worth it
-            ElementWiseBitsetPolicy<ElementT>::template op_compare_val<T, Op>(
-                data, start, t, data_bits - start_shift, value
-            );
-
-            //
-            start_element += 1;
-            ptr_offset += data_bits - start_shift;
-        }
-
-        // process the middle
-        {
-            const size_t starting_bit_idx = start_element * data_bits;
-            const size_t nbits = (end_element - start_element) * data_bits;
-
-            if (!VectorizedT::template op_compare_val<T, Op>(
-                    reinterpret_cast<uint8_t*>(data + start_element),
-                    t + ptr_offset,
-                    nbits,
-                    value)
-            ) {
-                // vectorized implementation is not available, invoke the default one
+        op_func(start, size, 
+            [data, t, value](const size_type starting_bit, const size_type ptr_offset, const size_type nbits){
                 ElementWiseBitsetPolicy<ElementT>::template op_compare_val<T, Op>(
                     data, 
-                    start_element * data_bits, 
+                    starting_bit, 
+                    t + ptr_offset,
+                    nbits, 
+                    value
+                );
+            },
+            [data, t, value](const size_type starting_element, const size_type ptr_offset, const size_type nbits){
+                return VectorizedT::template op_compare_val<T, Op>(
+                    reinterpret_cast<uint8_t*>(data + starting_element),
                     t + ptr_offset,
                     nbits,
                     value
                 );
             }
-        
-            //
-            ptr_offset += nbits;
-        }
-
-        // process the last element
-        if (end_shift != 0) [[likely]] {
-            // it is possible to do vectorized masking here, but it is not worth it
-            const size_t starting_bit_idx = end_element * data_bits; 
-
-            ElementWiseBitsetPolicy<ElementT>::template op_compare_val<T, Op>(
-                data, 
-                starting_bit_idx, 
-                t + ptr_offset,
-                end_shift,
-                value
-            );
-        }
+        );
     }
 
     //
@@ -362,81 +256,27 @@ struct VectorizedElementWiseBitsetPolicy {
         const T* const __restrict values,
         const size_type size
     ) {
-        if (size == 0) {
-            return;
-        }
-
-        auto start_element = get_element(start);
-        const auto end_element = get_element(start + size);
-
-        const auto start_shift = get_shift(start);
-        const auto end_shift = get_shift(start + size);
-
-        // same element?
-        if (start_element == end_element) {
-            ElementWiseBitsetPolicy<ElementT>::template op_within_range_column<T, Op>(
-                data, start, lower, upper, values, size
-            );
-
-            return;
-        }
-
-        //
-        uintptr_t ptr_offset = 0;
-
-        // process the first element
-        if (start_shift != 0) [[unlikely]] {
-            // it is possible to do vectorized masking here, but it is not worth it
-            ElementWiseBitsetPolicy<ElementT>::template op_within_range_column<T, Op>(
-                data, start, lower, upper, values, size
-            );
-
-            //
-            start_element += 1;
-            ptr_offset += data_bits - start_shift;
-        }
-
-        // process the middle
-        {
-            const size_t starting_bit_idx = start_element * data_bits;
-            const size_t nbits = (end_element - start_element) * data_bits;
-
-            if (!VectorizedT::template op_within_range_column<T, Op>(
-                    reinterpret_cast<uint8_t*>(data + start_element),
-                    lower + ptr_offset,
-                    upper + ptr_offset,
-                    values + ptr_offset,
-                    nbits)
-            ) {
-                // vectorized implementation is not available, invoke the default one
+        op_func(start, size, 
+            [data, lower, upper, values](const size_type starting_bit, const size_type ptr_offset, const size_type nbits){
                 ElementWiseBitsetPolicy<ElementT>::template op_within_range_column<T, Op>(
                     data, 
-                    starting_bit_idx,
+                    starting_bit, 
+                    lower + ptr_offset, 
+                    upper + ptr_offset, 
+                    values + ptr_offset, 
+                    nbits
+                );
+            },
+            [data, lower, upper, values](const size_type starting_element, const size_type ptr_offset, const size_type nbits){
+                return VectorizedT::template op_within_range_column<T, Op>(
+                    reinterpret_cast<uint8_t*>(data + starting_element),
                     lower + ptr_offset,
                     upper + ptr_offset,
                     values + ptr_offset,
                     nbits
                 );
             }
-        
-            //
-            ptr_offset += nbits;
-        }
-
-        // process the last element
-        if (end_shift != 0) [[likely]] {
-            // it is possible to do vectorized masking here, but it is not worth it
-            const size_t starting_bit_idx = end_element * data_bits; 
-
-            ElementWiseBitsetPolicy<ElementT>::template op_within_range_column<T, Op>(
-                data, 
-                starting_bit_idx,
-                lower + ptr_offset,
-                upper + ptr_offset,
-                values + ptr_offset,
-                end_shift
-            );
-        }
+        );
     }
 
     //
@@ -449,81 +289,27 @@ struct VectorizedElementWiseBitsetPolicy {
         const T* const __restrict values,
         const size_type size
     ) {
-        if (size == 0) {
-            return;
-        }
-
-        auto start_element = get_element(start);
-        const auto end_element = get_element(start + size);
-
-        const auto start_shift = get_shift(start);
-        const auto end_shift = get_shift(start + size);
-
-        // same element?
-        if (start_element == end_element) {
-            ElementWiseBitsetPolicy<ElementT>::template op_within_range_val<T, Op>(
-                data, start, lower, upper, values, size
-            );
-
-            return;
-        }
-
-        //
-        uintptr_t ptr_offset = 0;
-
-        // process the first element
-        if (start_shift != 0) [[unlikely]] {
-            // it is possible to do vectorized masking here, but it is not worth it
-            ElementWiseBitsetPolicy<ElementT>::template op_within_range_val<T, Op>(
-                data, start, lower, upper, values, size
-            );
-
-            //
-            start_element += 1;
-            ptr_offset += data_bits - start_shift;
-        }
-
-        // process the middle
-        {
-            const size_t starting_bit_idx = start_element * data_bits;
-            const size_t nbits = (end_element - start_element) * data_bits;
-
-            if (!VectorizedT::template op_within_range_val<T, Op>(
-                    reinterpret_cast<uint8_t*>(data + start_element),
-                    lower,
-                    upper,
-                    values + ptr_offset,
-                    nbits)
-            ) {
-                // vectorized implementation is not available, invoke the default one
+        op_func(start, size, 
+            [data, lower, upper, values](const size_type starting_bit, const size_type ptr_offset, const size_type nbits){
                 ElementWiseBitsetPolicy<ElementT>::template op_within_range_val<T, Op>(
                     data, 
-                    starting_bit_idx,
+                    starting_bit, 
+                    lower, 
+                    upper, 
+                    values + ptr_offset,
+                    nbits
+                );
+            },
+            [data, lower, upper, values](const size_type starting_element, const size_type ptr_offset, const size_type nbits){
+                return VectorizedT::template op_within_range_val<T, Op>(
+                    reinterpret_cast<uint8_t*>(data + starting_element),
                     lower,
                     upper,
                     values + ptr_offset,
                     nbits
                 );
             }
-        
-            //
-            ptr_offset += nbits;
-        }
-
-        // process the last element
-        if (end_shift != 0) [[likely]] {
-            // it is possible to do vectorized masking here, but it is not worth it
-            const size_t starting_bit_idx = end_element * data_bits; 
-
-            ElementWiseBitsetPolicy<ElementT>::template op_within_range_val<T, Op>(
-                data, 
-                starting_bit_idx,
-                lower,
-                upper,
-                values + ptr_offset,
-                end_shift
-            );
-        }
+        );
     }
 
     //
@@ -536,81 +322,27 @@ struct VectorizedElementWiseBitsetPolicy {
         const ArithHighPrecisionType<T>& value,
         const size_type size
     ) {
-        if (size == 0) {
-            return;
-        }
-
-        auto start_element = get_element(start);
-        const auto end_element = get_element(start + size);
-
-        const auto start_shift = get_shift(start);
-        const auto end_shift = get_shift(start + size);
-
-        // same element?
-        if (start_element == end_element) {
-            ElementWiseBitsetPolicy<ElementT>::template op_arith_compare<T, AOp, CmpOp>(
-                data, start, src, right_operand, value, size
-            );
-
-            return;
-        }
-
-        //
-        uintptr_t ptr_offset = 0;
-
-        // process the first element
-        if (start_shift != 0) [[unlikely]] {
-            // it is possible to do vectorized masking here, but it is not worth it
-            ElementWiseBitsetPolicy<ElementT>::template op_arith_compare<T, AOp, CmpOp>(
-                data, start, src, right_operand, value, size
-            );
-
-            //
-            start_element += 1;
-            ptr_offset += data_bits - start_shift;
-        }
-
-        // process the middle
-        {
-            const size_t starting_bit_idx = start_element * data_bits;
-            const size_t nbits = (end_element - start_element) * data_bits;
-
-            if (!VectorizedT::template op_arith_compare<T, AOp, CmpOp>(
-                    reinterpret_cast<uint8_t*>(data + start_element),
-                    src + ptr_offset,
-                    right_operand,
-                    value,
-                    nbits)
-            ) {
-                // vectorized implementation is not available, invoke the default one
+        op_func(start, size, 
+            [data, src, right_operand, value](const size_type starting_bit, const size_type ptr_offset, const size_type nbits){
                 ElementWiseBitsetPolicy<ElementT>::template op_arith_compare<T, AOp, CmpOp>(
                     data, 
-                    starting_bit_idx,
+                    starting_bit, 
+                    src + ptr_offset,
+                    right_operand, 
+                    value, 
+                    nbits
+                );
+            },
+            [data, src, right_operand, value](const size_type starting_element, const size_type ptr_offset, const size_type nbits){
+                return VectorizedT::template op_arith_compare<T, AOp, CmpOp>(
+                    reinterpret_cast<uint8_t*>(data + starting_element),
                     src + ptr_offset,
                     right_operand,
                     value,
                     nbits
                 );
             }
-        
-            //
-            ptr_offset += nbits;
-        }
-
-        // process the last element
-        if (end_shift != 0) [[likely]] {
-            // it is possible to do vectorized masking here, but it is not worth it
-            const size_t starting_bit_idx = end_element * data_bits; 
-
-            ElementWiseBitsetPolicy<ElementT>::template op_arith_compare<T, AOp, CmpOp>(
-                data, 
-                starting_bit_idx,
-                src + ptr_offset,
-                right_operand,
-                value,
-                end_shift
-            );
-        }
+        );
     }
 
     //
@@ -638,8 +370,9 @@ struct VectorizedElementWiseBitsetPolicy {
         );
     }
 
-    //
-    template<typename FuncBaseline, FuncVectorized>
+    // void FuncBaseline(const size_t starting_bit, const size_type ptr_offset, const size_type nbits)
+    // bool FuncVectorized(const size_type starting_element, const size_type ptr_offset, const size_type nbits)
+    template<typename FuncBaseline, typename FuncVectorized>
     static inline void op_func(
         const size_type start,
         const size_type size,

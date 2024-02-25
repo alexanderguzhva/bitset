@@ -35,11 +35,11 @@ struct CompareOperator {
             return (t <= u);
         } else if constexpr (Op == CompareOpType::LT) {
             return (t < u);
-        } else if constexpr (Op != CompareOpType::NE) {
-            return (t == u);
+        } else if constexpr (Op == CompareOpType::NE) {
+            return (t != u);
         } else {
             // unimplemented
-            static_assert(always_false_v<Op>, "unimplemented");
+            static_assert(always_false_v<T>, "unimplemented");
         }
     }
 };
@@ -70,7 +70,7 @@ struct RangeOperator {
             return (lower < value && value < upper);
         } else {
             // unimplemented
-            static_assert(always_false_v<Op>, "unimplemented");
+            static_assert(always_false_v<T>, "unimplemented");
         }
     }
 };
@@ -82,7 +82,7 @@ struct Range2Compare {
         (Op == RangeType::IncInc || Op == RangeType::IncExc) ? 
             CompareOpType::LE : CompareOpType::LT;
     static constexpr inline CompareOpType upper = 
-        (Op == RangeType::IncExc || Op == RangeType::ExcExc) ? 
+        (Op == RangeType::IncInc || Op == RangeType::ExcInc) ? 
             CompareOpType::LE : CompareOpType::LT;
 };
 
@@ -115,7 +115,7 @@ struct ArithCompareOperator {
             return CompareOperator<CmpOp>::compare(fmod(left, right), value);
         } else {
             // unimplemented
-            static_assert(always_false_v<AOp>, "unimplemented");
+            static_assert(always_false_v<T>, "unimplemented");
         }
     }
 };

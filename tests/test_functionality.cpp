@@ -152,6 +152,8 @@ void FillRandom(
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
+/*
+
 //
 template<typename BitsetT>
 void TestFindImpl(BitsetT& bitset, const size_t max_v) {
@@ -1068,6 +1070,8 @@ TEST(Append, ElementWise) {
     TestAppendImpl<element_u64_u8::bitset_type>();
 }
 
+*/
+
 //////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -1090,3 +1094,18 @@ TEST(FOO,Boo) {
 
 }
 */
+
+TEST(PPP,QQQ) {
+    constexpr size_t n = 1000000;
+
+    std::default_random_engine rng(345);
+
+    using bitset_t = avx512_u64_u8::bitset_type;
+    bitset_t bitset0(n);
+    FillRandom(bitset0, rng);
+    bitset_t bitset1(n);
+    FillRandom(bitset1, rng);
+
+    auto count = bitset0.inplace_and_with_count(bitset1, n);
+    ASSERT_EQ(count, 1000);
+}

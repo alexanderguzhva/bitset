@@ -662,7 +662,7 @@ public:
         range_checker::le(size, this->size());
         range_checker::le(size, other.size());
 
-        policy_type::op_or(
+        return policy_type::op_or_with_count(
             this->data(),
             other.data(),
             this->offset(),

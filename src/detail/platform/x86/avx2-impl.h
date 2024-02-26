@@ -1,4 +1,6 @@
-#include "avx2.h"
+// AVX2 implementation
+
+#pragma once
 
 #include <cassert>
 #include <cstddef>
@@ -7,40 +9,16 @@
 
 #include <immintrin.h>
 
+#include "avx2-decl.h"
+#include "common.h"
+
 namespace milvus {
 namespace bitset {
 namespace detail {
 namespace x86 {
 namespace avx2 {
 
-// a facility to run through all possible compare operations
-#define ALL_COMPARE_OPS(FUNC,...) \
-    FUNC(__VA_ARGS__,EQ); \
-    FUNC(__VA_ARGS__,GE); \
-    FUNC(__VA_ARGS__,GT); \
-    FUNC(__VA_ARGS__,LE); \
-    FUNC(__VA_ARGS__,LT); \
-    FUNC(__VA_ARGS__,NE);
-
-// a facility to run through all possible range operations
-#define ALL_RANGE_OPS(FUNC,...) \
-    FUNC(__VA_ARGS__,IncInc); \
-    FUNC(__VA_ARGS__,IncExc); \
-    FUNC(__VA_ARGS__,ExcInc); \
-    FUNC(__VA_ARGS__,ExcExc);
-
-// a facility to run through all possible arithmetic compare operations
-#define ALL_ARITH_CMP_OPS(FUNC,...) \
-    FUNC(__VA_ARGS__,Add,EQ); \
-    FUNC(__VA_ARGS__,Add,NE); \
-    FUNC(__VA_ARGS__,Sub,EQ); \
-    FUNC(__VA_ARGS__,Sub,NE); \
-    FUNC(__VA_ARGS__,Mul,EQ); \
-    FUNC(__VA_ARGS__,Mul,NE); \
-    FUNC(__VA_ARGS__,Div,EQ); \
-    FUNC(__VA_ARGS__,Div,NE); \
-    FUNC(__VA_ARGS__,Mod,EQ); \
-    FUNC(__VA_ARGS__,Mod,NE);
+namespace {
 
 // count is expected to be in range [0, 32)
 inline uint32_t get_mask(const size_t count) {
@@ -255,6 +233,8 @@ struct CmpHelperI64<CompareOpType::NE> {
         return _mm256_xor_si256(_mm256_cmpeq_epi64(a, b), _mm256_set1_epi32(-1));
     }
 };
+
+}
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -471,25 +451,6 @@ bool OpCompareValImpl<double, Op>::op_compare_val(
 }
 
 
-//
-#define INSTANTIATE_COMPARE_VAL_AVX2(TTYPE,OP) \
-    template bool OpCompareValImpl<TTYPE, CompareOpType::OP>::op_compare_val( \
-        uint8_t* const __restrict bitmask, \
-        const TTYPE* const __restrict src, \
-        const size_t size, \
-        const TTYPE& val \
-    );
-
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_AVX2, int8_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_AVX2, int16_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_AVX2, int32_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_AVX2, int64_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_AVX2, float)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_AVX2, double)
-
-#undef INSTANTIATE_COMPARE_VAL_AVX2
-
-
 ///////////////////////////////////////////////////////////////////////////
 
 //
@@ -699,24 +660,6 @@ bool OpCompareColumnImpl<double, double, Op>::op_compare_column(
 
     return true;
 }
-
-//
-#define INSTANTIATE_COMPARE_COLUMN_AVX2(TTYPE,OP) \
-    template bool OpCompareColumnImpl<TTYPE, TTYPE, CompareOpType::OP>::op_compare_column( \
-        uint8_t* const __restrict bitmask, \
-        const TTYPE* const __restrict left, \
-        const TTYPE* const __restrict right, \
-        const size_t size \
-    );
-
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_AVX2, int8_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_AVX2, int16_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_AVX2, int32_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_AVX2, int64_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_AVX2, float)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_AVX2, double)
-
-#undef INSTANTIATE_COMPARE_COLUMN_AVX2
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -966,24 +909,6 @@ bool OpWithinRangeColumnImpl<double, Op>::op_within_range_column(
     return true;
 }
 
-#define INSTANTIATE_WITHIN_RANGE_COLUMN_AVX2(TTYPE,OP) \
-    template bool OpWithinRangeColumnImpl<TTYPE, RangeType::OP>::op_within_range_column( \
-        uint8_t* const __restrict res_u8, \
-        const TTYPE* const __restrict lower, \
-        const TTYPE* const __restrict upper, \
-        const TTYPE* const __restrict values, \
-        const size_t size \
-    );
-
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_AVX2, int8_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_AVX2, int16_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_AVX2, int32_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_AVX2, int64_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_AVX2, float)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_AVX2, double)
-
-#undef INSTANTIATE_WITHIN_RANGE_COLUMN_AVX2
-
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -1230,27 +1155,10 @@ bool OpWithinRangeValImpl<double, Op>::op_within_range_val(
     return true;
 }
 
-//
-#define INSTANTIATE_WITHIN_RANGE_VAL_AVX2(TTYPE,OP) \
-    template bool OpWithinRangeValImpl<TTYPE, RangeType::OP>::op_within_range_val( \
-        uint8_t* const __restrict res_u8, \
-        const TTYPE& lower, \
-        const TTYPE& upper, \
-        const TTYPE* const __restrict values, \
-        const size_t size \
-    );
-
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_AVX2, int8_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_AVX2, int16_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_AVX2, int32_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_AVX2, int64_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_AVX2, float)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_AVX2, double)
-
-#undef INSTANTIATE_WITHIN_RANGE_VAL_AVX2
-
 
 ///////////////////////////////////////////////////////////////////////////
+
+namespace {
 
 //
 template<ArithOpType Op, CompareOpType CmpOp>
@@ -1401,25 +1309,9 @@ struct ArithHelperF64<ArithOpType::Div, CmpOp> {
     }
 };
 
+}
+
 // todo: Mul, Div, Mod
-
-#define NOT_IMPLEMENTED_OP_ARITH_COMPARE(TTYPE, AOP, CMPOP) \
-    template<> \
-    bool OpArithCompareImpl<TTYPE, ArithOpType::AOP, CompareOpType::CMPOP>::op_arith_compare( \
-        uint8_t* const __restrict res_u8, \
-        const TTYPE* const __restrict src, \
-        const ArithHighPrecisionType<TTYPE>& right_operand, \
-        const ArithHighPrecisionType<TTYPE>& value, \
-        const size_t size \
-    ) { \
-        return false; \
-    }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, NE)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
@@ -1429,38 +1321,36 @@ bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<int8_t>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+    if constexpr(AOp == ArithOpType::Div || AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
 
-    //
-    const __m256i right_v = _mm256_set1_epi64x(right_operand);
-    const __m256i value_v = _mm256_set1_epi64x(value);
-    const uint64_t* const __restrict src_u64 = reinterpret_cast<const uint64_t*>(src);
+        //
+        const __m256i right_v = _mm256_set1_epi64x(right_operand);
+        const __m256i value_v = _mm256_set1_epi64x(value);
+        const uint64_t* const __restrict src_u64 = reinterpret_cast<const uint64_t*>(src);
 
-    // todo: aligned reads & writes
+        // todo: aligned reads & writes
 
-    const size_t size8 = (size / 8) * 8;
-    for (size_t i = 0; i < size8; i += 8) {
-        const uint64_t v = src_u64[i / 8];
-        const __m256i v0s = _mm256_cvtepi8_epi64(_mm_set_epi64x(0, v));
-        const __m256i v1s = _mm256_cvtepi8_epi64(_mm_set_epi64x(0, v >> 32));
-        const __m256i cmp0 = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
-        const __m256i cmp1 = ArithHelperI64<AOp, CmpOp>::op(v1s, right_v, value_v);
-        const uint8_t mmask0 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp0));
-        const uint8_t mmask1 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp1));
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const uint64_t v = src_u64[i / 8];
+            const __m256i v0s = _mm256_cvtepi8_epi64(_mm_set_epi64x(0, v));
+            const __m256i v1s = _mm256_cvtepi8_epi64(_mm_set_epi64x(0, v >> 32));
+            const __m256i cmp0 = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
+            const __m256i cmp1 = ArithHelperI64<AOp, CmpOp>::op(v1s, right_v, value_v);
+            const uint8_t mmask0 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp0));
+            const uint8_t mmask1 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp1));
 
-        res_u8[i / 8] = mmask0 + mmask1 * 16;
+            res_u8[i / 8] = mmask0 + mmask1 * 16;
+        }
+
+        return true;
     }
-
-    return true;
 }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, NE)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
@@ -1470,38 +1360,36 @@ bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<int16_t>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+    if constexpr(AOp == ArithOpType::Div || AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
 
-    //
-    const __m256i right_v = _mm256_set1_epi64x(right_operand);
-    const __m256i value_v = _mm256_set1_epi64x(value);
+        //
+        const __m256i right_v = _mm256_set1_epi64x(right_operand);
+        const __m256i value_v = _mm256_set1_epi64x(value);
 
-    // todo: aligned reads & writes
+        // todo: aligned reads & writes
 
-    const size_t size8 = (size / 8) * 8;
-    for (size_t i = 0; i < size8; i += 8) {
-        const __m128i vs = _mm_loadu_si128((const __m128i*)(src + i));
-        const __m256i v0s = _mm256_cvtepi16_epi64(vs);
-        const __m128i v1sr = _mm_set_epi64x(0, _mm_extract_epi64(vs, 1));
-        const __m256i v1s = _mm256_cvtepi16_epi64(v1sr);
-        const __m256i cmp0 = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
-        const __m256i cmp1 = ArithHelperI64<AOp, CmpOp>::op(v1s, right_v, value_v);
-        const uint8_t mmask0 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp0));
-        const uint8_t mmask1 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp1));
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const __m128i vs = _mm_loadu_si128((const __m128i*)(src + i));
+            const __m256i v0s = _mm256_cvtepi16_epi64(vs);
+            const __m128i v1sr = _mm_set_epi64x(0, _mm_extract_epi64(vs, 1));
+            const __m256i v1s = _mm256_cvtepi16_epi64(v1sr);
+            const __m256i cmp0 = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
+            const __m256i cmp1 = ArithHelperI64<AOp, CmpOp>::op(v1s, right_v, value_v);
+            const uint8_t mmask0 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp0));
+            const uint8_t mmask1 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp1));
 
-        res_u8[i / 8] = mmask0 + mmask1 * 16;
+            res_u8[i / 8] = mmask0 + mmask1 * 16;
+        }
+
+        return true;
     }
-
-    return true;
 }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, NE)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
@@ -1511,37 +1399,35 @@ bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<int32_t>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+    if constexpr(AOp == ArithOpType::Div || AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
 
-    //
-    const __m256i right_v = _mm256_set1_epi64x(right_operand);
-    const __m256i value_v = _mm256_set1_epi64x(value);
+        //
+        const __m256i right_v = _mm256_set1_epi64x(right_operand);
+        const __m256i value_v = _mm256_set1_epi64x(value);
 
-    // todo: aligned reads & writes
+        // todo: aligned reads & writes
 
-    const size_t size8 = (size / 8) * 8;
-    for (size_t i = 0; i < size8; i += 8) {
-        const __m256i vs = _mm256_loadu_si256((const __m256i*)(src + i));
-        const __m256i v0s = _mm256_cvtepi32_epi64(_mm256_extracti128_si256(vs, 0));
-        const __m256i v1s = _mm256_cvtepi32_epi64(_mm256_extracti128_si256(vs, 1));
-        const __m256i cmp0 = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
-        const __m256i cmp1 = ArithHelperI64<AOp, CmpOp>::op(v1s, right_v, value_v);
-        const uint8_t mmask0 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp0));
-        const uint8_t mmask1 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp1));
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const __m256i vs = _mm256_loadu_si256((const __m256i*)(src + i));
+            const __m256i v0s = _mm256_cvtepi32_epi64(_mm256_extracti128_si256(vs, 0));
+            const __m256i v1s = _mm256_cvtepi32_epi64(_mm256_extracti128_si256(vs, 1));
+            const __m256i cmp0 = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
+            const __m256i cmp1 = ArithHelperI64<AOp, CmpOp>::op(v1s, right_v, value_v);
+            const uint8_t mmask0 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp0));
+            const uint8_t mmask1 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp1));
 
-        res_u8[i / 8] = mmask0 + mmask1 * 16;
+            res_u8[i / 8] = mmask0 + mmask1 * 16;
+        }
+
+        return true;
     }
-
-    return true;
 }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, NE)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
@@ -1551,34 +1437,34 @@ bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<int64_t>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+    if constexpr(AOp == ArithOpType::Div || AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
 
-    //
-    const __m256i right_v = _mm256_set1_epi64x(right_operand);
-    const __m256i value_v = _mm256_set1_epi64x(value);
+        //
+        const __m256i right_v = _mm256_set1_epi64x(right_operand);
+        const __m256i value_v = _mm256_set1_epi64x(value);
 
-    // todo: aligned reads & writes
+        // todo: aligned reads & writes
 
-    const size_t size8 = (size / 8) * 8;
-    for (size_t i = 0; i < size8; i += 8) {
-        const __m256i v0s = _mm256_loadu_si256((const __m256i*)(src + i));
-        const __m256i v1s = _mm256_loadu_si256((const __m256i*)(src + i + 4));
-        const __m256i cmp0 = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
-        const __m256i cmp1 = ArithHelperI64<AOp, CmpOp>::op(v1s, right_v, value_v);
-        const uint8_t mmask0 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp0));
-        const uint8_t mmask1 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp1));
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const __m256i v0s = _mm256_loadu_si256((const __m256i*)(src + i));
+            const __m256i v1s = _mm256_loadu_si256((const __m256i*)(src + i + 4));
+            const __m256i cmp0 = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
+            const __m256i cmp1 = ArithHelperI64<AOp, CmpOp>::op(v1s, right_v, value_v);
+            const uint8_t mmask0 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp0));
+            const uint8_t mmask1 = _mm256_movemask_pd(_mm256_castsi256_pd(cmp1));
 
-        res_u8[i / 8] = mmask0 + mmask1 * 16;
+            res_u8[i / 8] = mmask0 + mmask1 * 16;
+        }
+
+        return true;
     }
-
-    return true;
 }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
@@ -1588,30 +1474,30 @@ bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<float>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
+    if constexpr(AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        // the restriction of the API
+        assert((size % 8) == 0);
 
-    //
-    const __m256 right_v = _mm256_set1_ps(right_operand);
-    const __m256 value_v = _mm256_set1_ps(value);
+        //
+        const __m256 right_v = _mm256_set1_ps(right_operand);
+        const __m256 value_v = _mm256_set1_ps(value);
 
-    // todo: aligned reads & writes
+        // todo: aligned reads & writes
 
-    const size_t size8 = (size / 8) * 8;
-    for (size_t i = 0; i < size8; i += 8) {
-        const __m256 v0s = _mm256_loadu_ps(src + i);
-        const __m256 cmp = ArithHelperF32<AOp, CmpOp>::op(v0s, right_v, value_v);
-        const uint8_t mmask = _mm256_movemask_ps(cmp);
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const __m256 v0s = _mm256_loadu_ps(src + i);
+            const __m256 cmp = ArithHelperF32<AOp, CmpOp>::op(v0s, right_v, value_v);
+            const uint8_t mmask = _mm256_movemask_ps(cmp);
 
-        res_u8[i / 8] = mmask;
+            res_u8[i / 8] = mmask;
+        }
+
+        return true;
     }
-
-    return true;
 }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
@@ -1621,59 +1507,36 @@ bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<double>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
+    if constexpr(AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        // the restriction of the API
+        assert((size % 8) == 0);
 
-    //
-    const __m256d right_v = _mm256_set1_pd(right_operand);
-    const __m256d value_v = _mm256_set1_pd(value);
+        //
+        const __m256d right_v = _mm256_set1_pd(right_operand);
+        const __m256d value_v = _mm256_set1_pd(value);
 
-    // todo: aligned reads & writes
+        // todo: aligned reads & writes
 
-    const size_t size8 = (size / 8) * 8;
-    for (size_t i = 0; i < size8; i += 8) {
-        const __m256d v0s = _mm256_loadu_pd(src + i);
-        const __m256d v1s = _mm256_loadu_pd(src + i + 4);
-        const __m256d cmp0 = ArithHelperF64<AOp, CmpOp>::op(v0s, right_v, value_v);
-        const __m256d cmp1 = ArithHelperF64<AOp, CmpOp>::op(v1s, right_v, value_v);
-        const uint8_t mmask0 = _mm256_movemask_pd(cmp0);
-        const uint8_t mmask1 = _mm256_movemask_pd(cmp1);
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const __m256d v0s = _mm256_loadu_pd(src + i);
+            const __m256d v1s = _mm256_loadu_pd(src + i + 4);
+            const __m256d cmp0 = ArithHelperF64<AOp, CmpOp>::op(v0s, right_v, value_v);
+            const __m256d cmp1 = ArithHelperF64<AOp, CmpOp>::op(v1s, right_v, value_v);
+            const uint8_t mmask0 = _mm256_movemask_pd(cmp0);
+            const uint8_t mmask1 = _mm256_movemask_pd(cmp1);
 
-        res_u8[i / 8] = mmask0 + mmask1 * 16;
+            res_u8[i / 8] = mmask0 + mmask1 * 16;
+        }
+
+        return true;
     }
-
-    return true;
 }
-
-//
-#undef NOT_IMPLEMENTED_OP_ARITH_COMPARE
-
-//
-#define INSTANTIATE_ARITH_COMPARE_AVX2(TTYPE,OP,CMP) \
-    template bool OpArithCompareImpl<TTYPE, ArithOpType::OP, CompareOpType::CMP>::op_arith_compare( \
-        uint8_t* const __restrict res_u8, \
-        const TTYPE* const __restrict src, \
-        const ArithHighPrecisionType<TTYPE>& right_operand, \
-        const ArithHighPrecisionType<TTYPE>& value, \
-        const size_t size \
-    );
-
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX2, int8_t)
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX2, int16_t)
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX2, int32_t)
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX2, int64_t)
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX2, float)
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_AVX2, double)
-
-#undef INSTANTIATE_ARITH_COMPARE_AVX2
 
 
 ///////////////////////////////////////////////////////////////////////////
-
-//
-#undef ALL_COMPARE_OPS
-#undef ALL_RANGE_OPS
-#undef ALL_ARITH_CMP_OPS
 
 }
 }

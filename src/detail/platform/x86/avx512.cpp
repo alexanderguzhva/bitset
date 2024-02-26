@@ -47,49 +47,6 @@ inline uint64_t get_mask(const size_t count) {
     return (uint64_t(1) << count) - uint64_t(1);
 }
 
-void
-AndAVX512(void* const left, const void* const right, const size_t size) {
-    uint8_t* const __restrict left_u8 = reinterpret_cast<uint8_t*>(left);
-    const uint8_t* const __restrict right_u8 = reinterpret_cast<const uint8_t*>(right);
-
-    const size_t size64 = (size / 64) * 64;
-    for (size_t i = 0; i < size64; i += 64) {
-        const __m512i left_v = _mm512_loadu_si512(left_u8 + i);
-        const __m512i right_v = _mm512_loadu_si512(right_u8 + i);
-        const __m512i res = _mm512_and_si512(left_v, right_v);
-        _mm512_storeu_si512(left_u8 + i, res);
-    }
-
-    if (size64 != size) {
-        const uint64_t mask = get_mask(size - size64);
-        const __m512i left_v = _mm512_maskz_loadu_epi8(mask, left_u8 + size64);
-        const __m512i right_v = _mm512_maskz_loadu_epi8(mask, right_u8 + size64);
-        const __m512i res = _mm512_and_si512(left_v, right_v);
-        _mm512_mask_storeu_epi8(left_u8 + size64, mask, res);
-    }
-}
-
-void
-OrAVX512(void* const left, const void* const right, const size_t size) {
-    uint8_t* const __restrict left_u8 = reinterpret_cast<uint8_t*>(left);
-    const uint8_t* const __restrict right_u8 = reinterpret_cast<const uint8_t*>(right);
-
-    const size_t size64 = (size / 64) * 64;
-    for (size_t i = 0; i < size64; i += 64) {
-        const __m512i left_v = _mm512_loadu_si512(left_u8 + i);
-        const __m512i right_v = _mm512_loadu_si512(right_u8 + i);
-        const __m512i res = _mm512_or_si512(left_v, right_v);
-        _mm512_storeu_si512(left_u8 + i, res);
-    }
-
-    if (size64 != size) {
-        const uint64_t mask = get_mask(size - size64);
-        const __m512i left_v = _mm512_maskz_loadu_epi8(mask, left_u8 + size64);
-        const __m512i right_v = _mm512_maskz_loadu_epi8(mask, right_u8 + size64);
-        const __m512i res = _mm512_or_si512(left_v, right_v);
-        _mm512_mask_storeu_epi8(left_u8 + size64, mask, res);
-    }
-}
 
 ///////////////////////////////////////////////////////////////////////////
 

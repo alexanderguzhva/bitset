@@ -8,8 +8,8 @@
 namespace milvus {
 namespace bitset {
 
-// enable this to 
-#define BITSET_HEADER_ONLY
+// this option is only somewhat supported
+// #define BITSET_HEADER_ONLY
 
 // a supporting utility
 template<class> inline constexpr bool always_false_v = false;

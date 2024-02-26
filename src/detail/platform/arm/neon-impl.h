@@ -1,11 +1,17 @@
-#include "neon.h"
+// ARM NEON implementation
+
+#pragma once
+
+#include <arm_neon.h>
 
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
 
-#include <arm_neon.h>
+#include "neon-decl.h"
+
+#include "../../../common.h"
 
 namespace milvus {
 namespace bitset {
@@ -13,34 +19,7 @@ namespace detail {
 namespace arm {
 namespace neon {
 
-// a facility to run through all possible compare operations
-#define ALL_COMPARE_OPS(FUNC,...) \
-    FUNC(__VA_ARGS__,EQ); \
-    FUNC(__VA_ARGS__,GE); \
-    FUNC(__VA_ARGS__,GT); \
-    FUNC(__VA_ARGS__,LE); \
-    FUNC(__VA_ARGS__,LT); \
-    FUNC(__VA_ARGS__,NE);
-
-// a facility to run through all possible range operations
-#define ALL_RANGE_OPS(FUNC,...) \
-    FUNC(__VA_ARGS__,IncInc); \
-    FUNC(__VA_ARGS__,IncExc); \
-    FUNC(__VA_ARGS__,ExcInc); \
-    FUNC(__VA_ARGS__,ExcExc);
-
-// a facility to run through all possible arithmetic compare operations
-#define ALL_ARITH_CMP_OPS(FUNC,...) \
-    FUNC(__VA_ARGS__,Add,EQ); \
-    FUNC(__VA_ARGS__,Add,NE); \
-    FUNC(__VA_ARGS__,Sub,EQ); \
-    FUNC(__VA_ARGS__,Sub,NE); \
-    FUNC(__VA_ARGS__,Mul,EQ); \
-    FUNC(__VA_ARGS__,Mul,NE); \
-    FUNC(__VA_ARGS__,Div,EQ); \
-    FUNC(__VA_ARGS__,Div,NE); \
-    FUNC(__VA_ARGS__,Mod,EQ); \
-    FUNC(__VA_ARGS__,Mod,NE);
+namespace {
 
 // this function is missing somewhy
 inline uint64x2_t vmvnq_u64(const uint64x2_t value) {
@@ -353,6 +332,8 @@ struct CmpHelper<CompareOpType::NE> {
     }
 };
 
+}
+
 ///////////////////////////////////////////////////////////////////////////
 
 //
@@ -537,24 +518,6 @@ bool OpCompareValImpl<double, Op>::op_compare_val(
     return true;
 }
 
-//
-#define INSTANTIATE_COMPARE_VAL_NEON(TTYPE,OP) \
-    template bool OpCompareValImpl<TTYPE, CompareOpType::OP>::op_compare_val( \
-        uint8_t* const __restrict bitmask, \
-        const TTYPE* const __restrict src, \
-        const size_t size, \
-        const TTYPE& val \
-    );
-
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_NEON, int8_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_NEON, int16_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_NEON, int32_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_NEON, int64_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_NEON, float)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_NEON, double)
-
-#undef INSTANTIATE_COMPARE_VAL_NEON
-
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -733,24 +696,6 @@ bool OpCompareColumnImpl<double, double, Op>::op_compare_column(
 
     return true;
 }
-
-//
-#define INSTANTIATE_COMPARE_COLUMN_NEON(TTYPE,OP) \
-    template bool OpCompareColumnImpl<TTYPE, TTYPE, CompareOpType::OP>::op_compare_column( \
-        uint8_t* const __restrict bitmask, \
-        const TTYPE* const __restrict left, \
-        const TTYPE* const __restrict right, \
-        const size_t size \
-    );
-
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_NEON, int8_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_NEON, int16_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_NEON, int32_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_NEON, int64_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_NEON, float)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_NEON, double)
-
-#undef INSTANTIATE_COMPARE_COLUMN_NEON
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -966,24 +911,6 @@ bool OpWithinRangeColumnImpl<double, Op>::op_within_range_column(
 
     return true;
 }
-
-#define INSTANTIATE_WITHIN_RANGE_COLUMN_NEON(TTYPE,OP) \
-    template bool OpWithinRangeColumnImpl<TTYPE, RangeType::OP>::op_within_range_column( \
-        uint8_t* const __restrict res_u8, \
-        const TTYPE* const __restrict lower, \
-        const TTYPE* const __restrict upper, \
-        const TTYPE* const __restrict values, \
-        const size_t size \
-    );
-
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_NEON, int8_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_NEON, int16_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_NEON, int32_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_NEON, int64_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_NEON, float)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_NEON, double)
-
-#undef INSTANTIATE_WITHIN_RANGE_COLUMN_NEON
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1206,26 +1133,10 @@ bool OpWithinRangeValImpl<double, Op>::op_within_range_val(
     return true;
 }
 
-//
-#define INSTANTIATE_WITHIN_RANGE_VAL_NEON(TTYPE,OP) \
-    template bool OpWithinRangeValImpl<TTYPE, RangeType::OP>::op_within_range_val( \
-        uint8_t* const __restrict res_u8, \
-        const TTYPE& lower, \
-        const TTYPE& upper, \
-        const TTYPE* const __restrict values, \
-        const size_t size \
-    );
-
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_NEON, int8_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_NEON, int16_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_NEON, int32_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_NEON, int64_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_NEON, float)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_NEON, double)
-
-#undef INSTANTIATE_WITHIN_RANGE_VAL_NEON
 
 ///////////////////////////////////////////////////////////////////////////
+
+namespace {
 
 //
 template<ArithOpType AOp, CompareOpType CmpOp>
@@ -1396,28 +1307,9 @@ struct ArithHelperF64<ArithOpType::Div, CmpOp> {
     }
 };
 
+}
 
 // todo: Mul, Div, Mod
-
-#define NOT_IMPLEMENTED_OP_ARITH_COMPARE(TTYPE, AOP, CMPOP) \
-    template<> \
-    bool OpArithCompareImpl<TTYPE, ArithOpType::AOP, CompareOpType::CMPOP>::op_arith_compare( \
-        uint8_t* const __restrict res_u8, \
-        const TTYPE* const __restrict src, \
-        const ArithHighPrecisionType<TTYPE>& right_operand, \
-        const ArithHighPrecisionType<TTYPE>& value, \
-        const size_t size \
-    ) { \
-        return false; \
-    }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mul, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mul, NE)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Div, NE)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
@@ -1427,47 +1319,43 @@ bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<int8_t>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+    if constexpr(AOp == ArithOpType::Mul || AOp == ArithOpType::Div || AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
 
-    //
-    const int64x2x4_t right_v = {vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand)};
-    const int64x2x4_t value_v = {vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value)};
+        //
+        const int64x2x4_t right_v = {vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand)};
+        const int64x2x4_t value_v = {vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value)};
 
-    // todo: aligned reads & writes
+        // todo: aligned reads & writes
 
-    const size_t size8 = (size / 8) * 8;
-    for (size_t i = 0; i < size8; i += 8) {
-        const int8x8_t v0v_i8 = vld1_s8(src + i);
-        const int16x8_t v0v_i16 = vmovl_s8(v0v_i8);
-        const int32x4x2_t v0v_i32 = {
-            vmovl_s16(vget_low_s16(v0v_i16)),
-            vmovl_s16(vget_high_s16(v0v_i16))
-        };
-        const int64x2x4_t v0v_i64 = {
-            vmovl_s32(vget_low_s32(v0v_i32.val[0])), 
-            vmovl_s32(vget_high_s32(v0v_i32.val[0])),
-            vmovl_s32(vget_low_s32(v0v_i32.val[1])), 
-            vmovl_s32(vget_high_s32(v0v_i32.val[1]))
-        };
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const int8x8_t v0v_i8 = vld1_s8(src + i);
+            const int16x8_t v0v_i16 = vmovl_s8(v0v_i8);
+            const int32x4x2_t v0v_i32 = {
+                vmovl_s16(vget_low_s16(v0v_i16)),
+                vmovl_s16(vget_high_s16(v0v_i16))
+            };
+            const int64x2x4_t v0v_i64 = {
+                vmovl_s32(vget_low_s32(v0v_i32.val[0])), 
+                vmovl_s32(vget_high_s32(v0v_i32.val[0])),
+                vmovl_s32(vget_low_s32(v0v_i32.val[1])), 
+                vmovl_s32(vget_high_s32(v0v_i32.val[1]))
+            };
 
-        const uint64x2x4_t cmp = ArithHelperI64<AOp, CmpOp>::op(v0v_i64, right_v, value_v);
+            const uint64x2x4_t cmp = ArithHelperI64<AOp, CmpOp>::op(v0v_i64, right_v, value_v);
 
-        const uint8_t mmask = movemask(cmp);
-        res_u8[i / 8] = mmask;
+            const uint8_t mmask = movemask(cmp);
+            res_u8[i / 8] = mmask;
+        }
+
+        return true;
     }
-
-    return true;
 }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mul, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mul, NE)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Div, NE)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
@@ -1477,46 +1365,42 @@ bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<int16_t>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+    if constexpr(AOp == ArithOpType::Mul || AOp == ArithOpType::Div || AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
 
-    //
-    const int64x2x4_t right_v = {vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand)};
-    const int64x2x4_t value_v = {vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value)};
+        //
+        const int64x2x4_t right_v = {vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand)};
+        const int64x2x4_t value_v = {vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value)};
 
-    // todo: aligned reads & writes
+        // todo: aligned reads & writes
 
-    const size_t size8 = (size / 8) * 8;
-    for (size_t i = 0; i < size8; i += 8) {
-        const int16x8_t v0v_i16 = vld1q_s16(src + i);
-        const int32x4x2_t v0v_i32 = {
-            vmovl_s16(vget_low_s16(v0v_i16)),
-            vmovl_s16(vget_high_s16(v0v_i16))
-        };
-        const int64x2x4_t v0v_i64 = {
-            vmovl_s32(vget_low_s32(v0v_i32.val[0])), 
-            vmovl_s32(vget_high_s32(v0v_i32.val[0])),
-            vmovl_s32(vget_low_s32(v0v_i32.val[1])), 
-            vmovl_s32(vget_high_s32(v0v_i32.val[1]))
-        };
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const int16x8_t v0v_i16 = vld1q_s16(src + i);
+            const int32x4x2_t v0v_i32 = {
+                vmovl_s16(vget_low_s16(v0v_i16)),
+                vmovl_s16(vget_high_s16(v0v_i16))
+            };
+            const int64x2x4_t v0v_i64 = {
+                vmovl_s32(vget_low_s32(v0v_i32.val[0])), 
+                vmovl_s32(vget_high_s32(v0v_i32.val[0])),
+                vmovl_s32(vget_low_s32(v0v_i32.val[1])), 
+                vmovl_s32(vget_high_s32(v0v_i32.val[1]))
+            };
 
-        const uint64x2x4_t cmp = ArithHelperI64<AOp, CmpOp>::op(v0v_i64, right_v, value_v);
+            const uint64x2x4_t cmp = ArithHelperI64<AOp, CmpOp>::op(v0v_i64, right_v, value_v);
 
-        const uint8_t mmask = movemask(cmp);
-        res_u8[i / 8] = mmask;
+            const uint8_t mmask = movemask(cmp);
+            res_u8[i / 8] = mmask;
+        }
+
+        return true;
     }
-
-    return true;
 }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mul, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mul, NE)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Div, NE)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
@@ -1526,42 +1410,38 @@ bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<int32_t>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+    if constexpr(AOp == ArithOpType::Mul || AOp == ArithOpType::Div || AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
 
-    //
-    const int64x2x4_t right_v = {vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand)};
-    const int64x2x4_t value_v = {vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value)};
+        //
+        const int64x2x4_t right_v = {vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand)};
+        const int64x2x4_t value_v = {vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value)};
 
-    // todo: aligned reads & writes
+        // todo: aligned reads & writes
 
-    const size_t size8 = (size / 8) * 8;
-    for (size_t i = 0; i < size8; i += 8) {
-        const int32x4x2_t v0v_i32 = {vld1q_s32(src + i), vld1q_s32(src + i + 4)};
-        const int64x2x4_t v0v_i64 = {
-            vmovl_s32(vget_low_s32(v0v_i32.val[0])), 
-            vmovl_s32(vget_high_s32(v0v_i32.val[0])),
-            vmovl_s32(vget_low_s32(v0v_i32.val[1])), 
-            vmovl_s32(vget_high_s32(v0v_i32.val[1]))
-        };
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const int32x4x2_t v0v_i32 = {vld1q_s32(src + i), vld1q_s32(src + i + 4)};
+            const int64x2x4_t v0v_i64 = {
+                vmovl_s32(vget_low_s32(v0v_i32.val[0])), 
+                vmovl_s32(vget_high_s32(v0v_i32.val[0])),
+                vmovl_s32(vget_low_s32(v0v_i32.val[1])), 
+                vmovl_s32(vget_high_s32(v0v_i32.val[1]))
+            };
 
-        const uint64x2x4_t cmp = ArithHelperI64<AOp, CmpOp>::op(v0v_i64, right_v, value_v);
+            const uint64x2x4_t cmp = ArithHelperI64<AOp, CmpOp>::op(v0v_i64, right_v, value_v);
 
-        const uint8_t mmask = movemask(cmp);
-        res_u8[i / 8] = mmask;
+            const uint8_t mmask = movemask(cmp);
+            res_u8[i / 8] = mmask;
+        }
+
+        return true;
     }
-
-    return true;
 }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mul, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mul, NE)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Div, NE)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
@@ -1571,31 +1451,31 @@ bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<int64_t>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
-    static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
+    if constexpr(AOp == ArithOpType::Mul || AOp == ArithOpType::Div || AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        // the restriction of the API
+        assert((size % 8) == 0);
+        static_assert(std::is_same_v<int64_t, ArithHighPrecisionType<int64_t>>);
 
-    //
-    const int64x2x4_t right_v = {vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand)};
-    const int64x2x4_t value_v = {vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value)};
+        //
+        const int64x2x4_t right_v = {vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand), vdupq_n_s64(right_operand)};
+        const int64x2x4_t value_v = {vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value), vdupq_n_s64(value)};
 
-    // todo: aligned reads & writes
+        // todo: aligned reads & writes
 
-    const size_t size8 = (size / 8) * 8;
-    for (size_t i = 0; i < size8; i += 8) {
-        const int64x2x4_t v0v = {vld1q_s64(src + i), vld1q_s64(src + i + 2), vld1q_s64(src + i + 4), vld1q_s64(src + i + 6)};
-        const uint64x2x4_t cmp = ArithHelperI64<AOp, CmpOp>::op(v0v, right_v, value_v);
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const int64x2x4_t v0v = {vld1q_s64(src + i), vld1q_s64(src + i + 2), vld1q_s64(src + i + 4), vld1q_s64(src + i + 6)};
+            const uint64x2x4_t cmp = ArithHelperI64<AOp, CmpOp>::op(v0v, right_v, value_v);
 
-        const uint8_t mmask = movemask(cmp);
-        res_u8[i / 8] = mmask;
+            const uint8_t mmask = movemask(cmp);
+            res_u8[i / 8] = mmask;
+        }
+
+        return true;
     }
-
-    return true;
 }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
@@ -1605,30 +1485,30 @@ bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<float>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
+    if constexpr(AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        // the restriction of the API
+        assert((size % 8) == 0);
 
-    //
-    const float32x4x2_t right_v = {vdupq_n_f32(right_operand), vdupq_n_f32(right_operand)};
-    const float32x4x2_t value_v = {vdupq_n_f32(value), vdupq_n_f32(value)};
+        //
+        const float32x4x2_t right_v = {vdupq_n_f32(right_operand), vdupq_n_f32(right_operand)};
+        const float32x4x2_t value_v = {vdupq_n_f32(value), vdupq_n_f32(value)};
 
-    // todo: aligned reads & writes
+        // todo: aligned reads & writes
 
-    const size_t size8 = (size / 8) * 8;
-    for (size_t i = 0; i < size8; i += 8) {
-        const float32x4x2_t v0v = {vld1q_f32(src + i), vld1q_f32(src + i + 4)};
-        const uint32x4x2_t cmp = ArithHelperF32<AOp, CmpOp>::op(v0v, right_v, value_v);
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const float32x4x2_t v0v = {vld1q_f32(src + i), vld1q_f32(src + i + 4)};
+            const uint32x4x2_t cmp = ArithHelperF32<AOp, CmpOp>::op(v0v, right_v, value_v);
 
-        const uint8_t mmask = movemask(cmp);
-        res_u8[i / 8] = mmask;
+            const uint8_t mmask = movemask(cmp);
+            res_u8[i / 8] = mmask;
+        }
+
+        return true;
     }
-
-    return true;
 }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
@@ -1638,59 +1518,36 @@ bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<double>& value,
     const size_t size
 ) {
-    // the restriction of the API
-    assert((size % 8) == 0);
+    if constexpr(AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        // the restriction of the API
+        assert((size % 8) == 0);
 
-    //
-    const float64x2x4_t right_v = {vdupq_n_f64(right_operand), vdupq_n_f64(right_operand), vdupq_n_f64(right_operand), vdupq_n_f64(right_operand)};
-    const float64x2x4_t value_v = {vdupq_n_f64(value), vdupq_n_f64(value), vdupq_n_f64(value), vdupq_n_f64(value)};
+        //
+        const float64x2x4_t right_v = {vdupq_n_f64(right_operand), vdupq_n_f64(right_operand), vdupq_n_f64(right_operand), vdupq_n_f64(right_operand)};
+        const float64x2x4_t value_v = {vdupq_n_f64(value), vdupq_n_f64(value), vdupq_n_f64(value), vdupq_n_f64(value)};
 
-    // todo: aligned reads & writes
+        // todo: aligned reads & writes
 
-    const size_t size8 = (size / 8) * 8;
-    for (size_t i = 0; i < size8; i += 8) {
-        const float64x2x4_t v0v = {vld1q_f64(src + i), vld1q_f64(src + i + 2), vld1q_f64(src + i + 4), vld1q_f64(src + i + 6)};
-        const uint64x2x4_t cmp = ArithHelperF64<AOp, CmpOp>::op(v0v, right_v, value_v);
+        const size_t size8 = (size / 8) * 8;
+        for (size_t i = 0; i < size8; i += 8) {
+            const float64x2x4_t v0v = {vld1q_f64(src + i), vld1q_f64(src + i + 2), vld1q_f64(src + i + 4), vld1q_f64(src + i + 6)};
+            const uint64x2x4_t cmp = ArithHelperF64<AOp, CmpOp>::op(v0v, right_v, value_v);
 
-        const uint8_t mmask = movemask(cmp);
-        res_u8[i / 8] = mmask;
+            const uint8_t mmask = movemask(cmp);
+            res_u8[i / 8] = mmask;
+        }
+
+        return true;
     }
-
-    return true;
 }
 
-//
-#undef NOT_IMPLEMENTED_OP_ARITH_COMPARE
-
-//
-#define INSTANTIATE_ARITH_COMPARE_NEON(TTYPE,OP,CMP) \
-    template bool OpArithCompareImpl<TTYPE, ArithOpType::OP, CompareOpType::CMP>::op_arith_compare( \
-        uint8_t* const __restrict res_u8, \
-        const TTYPE* const __restrict src, \
-        const ArithHighPrecisionType<TTYPE>& right_operand, \
-        const ArithHighPrecisionType<TTYPE>& value, \
-        const size_t size \
-    );
-
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_NEON, int8_t)
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_NEON, int16_t)
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_NEON, int32_t)
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_NEON, int64_t)
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_NEON, float)
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_NEON, double)
-
-#undef INSTANTIATE_ARITH_COMPARE_NEON
 
 ///////////////////////////////////////////////////////////////////////////
 
-//
-#undef ALL_COMPARE_OPS
-#undef ALL_RANGE_OPS
-#undef ALL_ARITH_CMP_OPS
-
 }
 }
 }
 }
 }
-

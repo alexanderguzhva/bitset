@@ -1,14 +1,19 @@
-#include "sve.h"
+// ARM SVE implementation
+
+#pragma once
+
+#include <arm_sve.h>
 
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <type_traits>
 
-#include <stdio.h>
+#include "sve-decl.h"
 
-#include <arm_sve.h>
+#include "../../../common.h"
+
+// #include <stdio.h>
 
 namespace milvus {
 namespace bitset {
@@ -16,34 +21,7 @@ namespace detail {
 namespace arm {
 namespace sve {
 
-// a facility to run through all possible compare operations
-#define ALL_COMPARE_OPS(FUNC,...) \
-    FUNC(__VA_ARGS__,EQ); \
-    FUNC(__VA_ARGS__,GE); \
-    FUNC(__VA_ARGS__,GT); \
-    FUNC(__VA_ARGS__,LE); \
-    FUNC(__VA_ARGS__,LT); \
-    FUNC(__VA_ARGS__,NE);
-
-// a facility to run through all possible range operations
-#define ALL_RANGE_OPS(FUNC,...) \
-    FUNC(__VA_ARGS__,IncInc); \
-    FUNC(__VA_ARGS__,IncExc); \
-    FUNC(__VA_ARGS__,ExcInc); \
-    FUNC(__VA_ARGS__,ExcExc);
-
-// a facility to run through all possible arithmetic compare operations
-#define ALL_ARITH_CMP_OPS(FUNC,...) \
-    FUNC(__VA_ARGS__,Add,EQ); \
-    FUNC(__VA_ARGS__,Add,NE); \
-    FUNC(__VA_ARGS__,Sub,EQ); \
-    FUNC(__VA_ARGS__,Sub,NE); \
-    FUNC(__VA_ARGS__,Mul,EQ); \
-    FUNC(__VA_ARGS__,Mul,NE); \
-    FUNC(__VA_ARGS__,Div,EQ); \
-    FUNC(__VA_ARGS__,Div,NE); \
-    FUNC(__VA_ARGS__,Mod,EQ); \
-    FUNC(__VA_ARGS__,Mod,NE);
+namespace {
 
 //
 constexpr size_t MAX_SVE_WIDTH = 2048;
@@ -153,7 +131,6 @@ void print_svuint8_t(const svuint8_t value) {
 }
 
 */
-
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -899,8 +876,11 @@ bool op_mask_helper(
     return true;
 }
 
+}
 
 ///////////////////////////////////////////////////////////////////////////
+
+namespace {
 
 template<typename T, CompareOpType CmpOp>
 bool op_compare_val_impl(
@@ -923,6 +903,8 @@ bool op_compare_val_impl(
         size,
         handler
     );
+}
+
 }
 
 //
@@ -986,26 +968,11 @@ bool OpCompareValImpl<double, Op>::op_compare_val(
     return op_compare_val_impl<double, Op>(res_u8, src, size, val);
 }
 
-//
-#define INSTANTIATE_COMPARE_VAL_SVE(TTYPE,OP) \
-    template bool OpCompareValImpl<TTYPE, CompareOpType::OP>::op_compare_val( \
-        uint8_t* const __restrict bitmask, \
-        const TTYPE* const __restrict src, \
-        const size_t size, \
-        const TTYPE& val \
-    );
-
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_SVE, int8_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_SVE, int16_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_SVE, int32_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_SVE, int64_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_SVE, float)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_VAL_SVE, double)
-
-#undef INSTANTIATE_COMPARE_VAL_SVE
-
 
 ///////////////////////////////////////////////////////////////////////////
+
+namespace {
+
 template<typename T, CompareOpType CmpOp>
 bool op_compare_column_impl(
     uint8_t* const __restrict res_u8,
@@ -1027,6 +994,8 @@ bool op_compare_column_impl(
         size,
         handler
     );
+}
+
 }
 
 //
@@ -1090,26 +1059,10 @@ bool OpCompareColumnImpl<double, double, Op>::op_compare_column(
     return op_compare_column_impl<double, Op>(res_u8, left, right, size);
 }
 
-//
-#define INSTANTIATE_COMPARE_COLUMN_SVE(TTYPE,OP) \
-    template bool OpCompareColumnImpl<TTYPE, TTYPE, CompareOpType::OP>::op_compare_column( \
-        uint8_t* const __restrict bitmask, \
-        const TTYPE* const __restrict left, \
-        const TTYPE* const __restrict right, \
-        const size_t size \
-    );
-
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_SVE, int8_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_SVE, int16_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_SVE, int32_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_SVE, int64_t)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_SVE, float)
-ALL_COMPARE_OPS(INSTANTIATE_COMPARE_COLUMN_SVE, double)
-
-#undef INSTANTIATE_COMPARE_COLUMN_SVE
-
 
 ///////////////////////////////////////////////////////////////////////////
+
+namespace {
 
 template<typename T, RangeType Op>
 bool op_within_range_column_impl(
@@ -1138,6 +1091,8 @@ bool op_within_range_column_impl(
         size,
         handler
     );
+}
+
 }
 
 //
@@ -1207,26 +1162,10 @@ bool OpWithinRangeColumnImpl<double, Op>::op_within_range_column(
     return op_within_range_column_impl<double, Op>(res_u8, lower, upper, values, size);
 }
 
-#define INSTANTIATE_WITHIN_RANGE_COLUMN_SVE(TTYPE,OP) \
-    template bool OpWithinRangeColumnImpl<TTYPE, RangeType::OP>::op_within_range_column( \
-        uint8_t* const __restrict res_u8, \
-        const TTYPE* const __restrict lower, \
-        const TTYPE* const __restrict upper, \
-        const TTYPE* const __restrict values, \
-        const size_t size \
-    );
-
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_SVE, int8_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_SVE, int16_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_SVE, int32_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_SVE, int64_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_SVE, float)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_COLUMN_SVE, double)
-
-#undef INSTANTIATE_WITHIN_RANGE_COLUMN_SVE
-
 
 ///////////////////////////////////////////////////////////////////////////
+
+namespace {
 
 template<typename T, RangeType Op>
 bool op_within_range_val_impl(
@@ -1255,6 +1194,8 @@ bool op_within_range_val_impl(
         size,
         handler
     );
+}
+
 }
 
 //
@@ -1324,26 +1265,10 @@ bool OpWithinRangeValImpl<double, Op>::op_within_range_val(
     return op_within_range_val_impl<double, Op>(res_u8, lower, upper, values, size);
 }
 
-//
-#define INSTANTIATE_WITHIN_RANGE_VAL_SVE(TTYPE,OP) \
-    template bool OpWithinRangeValImpl<TTYPE, RangeType::OP>::op_within_range_val( \
-        uint8_t* const __restrict res_u8, \
-        const TTYPE& lower, \
-        const TTYPE& upper, \
-        const TTYPE* const __restrict values, \
-        const size_t size \
-    );
-
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_SVE, int8_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_SVE, int16_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_SVE, int32_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_SVE, int64_t)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_SVE, float)
-ALL_RANGE_OPS(INSTANTIATE_WITHIN_RANGE_VAL_SVE, double)
-
-#undef INSTANTIATE_WITHIN_RANGE_VAL_SVE
 
 ///////////////////////////////////////////////////////////////////////////
+
+namespace {
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 struct ArithHelperI64 {};
@@ -1452,23 +1377,10 @@ struct ArithHelperF64<ArithOpType::Div, CmpOp> {
     }
 };
 
+}
+
 // todo: Mod
 
-#define NOT_IMPLEMENTED_OP_ARITH_COMPARE(TTYPE, AOP, CMPOP) \
-    template<> \
-    bool OpArithCompareImpl<TTYPE, ArithOpType::AOP, CompareOpType::CMPOP>::op_arith_compare( \
-        uint8_t* const __restrict res_u8, \
-        const TTYPE* const __restrict src, \
-        const ArithHighPrecisionType<TTYPE>& right_operand, \
-        const ArithHighPrecisionType<TTYPE>& value, \
-        const size_t size \
-    ) { \
-        return false; \
-    }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int8_t, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
@@ -1478,29 +1390,29 @@ bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<int8_t>& value,
     const size_t size
 ) {
-    using T = int64_t;
+    if constexpr(AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        using T = int64_t;
 
-    auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
-        using sve_t = SVEVector<T>;
+        auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
+            using sve_t = SVEVector<T>;
 
-        const auto right_v = svdup_n_s64(right_operand);
-        const auto value_v = svdup_n_s64(value);
-        const svint64_t src_v = svld1sb_s64(pred, src + idx);
+            const auto right_v = svdup_n_s64(right_operand);
+            const auto value_v = svdup_n_s64(value);
+            const svint64_t src_v = svld1sb_s64(pred, src + idx);
 
-        const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
-        return cmp;
-    };
+            const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
+            return cmp;
+        };
 
-    return op_mask_helper<T, decltype(handler)>(
-        res_u8,
-        size,
-        handler
-    );
+        return op_mask_helper<T, decltype(handler)>(
+            res_u8,
+            size,
+            handler
+        );
+    }
 }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int16_t, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
@@ -1510,29 +1422,29 @@ bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<int16_t>& value,
     const size_t size
 ) {
-    using T = int64_t;
-    
-    auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
-        using sve_t = SVEVector<T>;
+    if constexpr(AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        using T = int64_t;
+        
+        auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
+            using sve_t = SVEVector<T>;
 
-        const auto right_v = svdup_n_s64(right_operand);
-        const auto value_v = svdup_n_s64(value);
-        const svint64_t src_v = svld1sh_s64(pred, src + idx);
+            const auto right_v = svdup_n_s64(right_operand);
+            const auto value_v = svdup_n_s64(value);
+            const svint64_t src_v = svld1sh_s64(pred, src + idx);
 
-        const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
-        return cmp;
-    };
+            const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
+            return cmp;
+        };
 
-    return op_mask_helper<T, decltype(handler)>(
-        res_u8,
-        size,
-        handler
-    );
+        return op_mask_helper<T, decltype(handler)>(
+            res_u8,
+            size,
+            handler
+        );
+    }
 }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int32_t, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
@@ -1542,29 +1454,29 @@ bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<int32_t>& value,
     const size_t size
 ) {
-    using T = int64_t;
-    
-    auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
-        using sve_t = SVEVector<T>;
+    if constexpr(AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        using T = int64_t;
+        
+        auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
+            using sve_t = SVEVector<T>;
 
-        const auto right_v = svdup_n_s64(right_operand);
-        const auto value_v = svdup_n_s64(value);
-        const svint64_t src_v = svld1sw_s64(pred, src + idx);
+            const auto right_v = svdup_n_s64(right_operand);
+            const auto value_v = svdup_n_s64(value);
+            const svint64_t src_v = svld1sw_s64(pred, src + idx);
 
-        const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
-        return cmp;
-    };
+            const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
+            return cmp;
+        };
 
-    return op_mask_helper<T, decltype(handler)>(
-        res_u8,
-        size,
-        handler
-    );
+        return op_mask_helper<T, decltype(handler)>(
+            res_u8,
+            size,
+            handler
+        );
+    }
 }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(int64_t, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
@@ -1574,29 +1486,29 @@ bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<int64_t>& value,
     const size_t size
 ) {
-    using T = int64_t;
-    
-    auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
-        using sve_t = SVEVector<T>;
+    if constexpr(AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        using T = int64_t;
+        
+        auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
+            using sve_t = SVEVector<T>;
 
-        const auto right_v = svdup_n_s64(right_operand);
-        const auto value_v = svdup_n_s64(value);
-        const svint64_t src_v = svld1_s64(pred, src + idx);
+            const auto right_v = svdup_n_s64(right_operand);
+            const auto value_v = svdup_n_s64(value);
+            const svint64_t src_v = svld1_s64(pred, src + idx);
 
-        const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
-        return cmp;
-    };
+            const svbool_t cmp = ArithHelperI64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
+            return cmp;
+        };
 
-    return op_mask_helper<T, decltype(handler)>(
-        res_u8,
-        size,
-        handler
-    );
+        return op_mask_helper<T, decltype(handler)>(
+            res_u8,
+            size,
+            handler
+        );
+    }
 }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(float, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
@@ -1606,29 +1518,29 @@ bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<float>& value,
     const size_t size
 ) {
-    using T = float;
-    
-    auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
-        using sve_t = SVEVector<T>;
+    if constexpr(AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        using T = float;
+        
+        auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
+            using sve_t = SVEVector<T>;
 
-        const auto right_v = svdup_n_f32(right_operand);
-        const auto value_v = svdup_n_f32(value);
-        const svfloat32_t src_v = svld1_f32(pred, src + idx);
+            const auto right_v = svdup_n_f32(right_operand);
+            const auto value_v = svdup_n_f32(value);
+            const svfloat32_t src_v = svld1_f32(pred, src + idx);
 
-        const svbool_t cmp = ArithHelperF32<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
-        return cmp;
-    };
+            const svbool_t cmp = ArithHelperF32<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
+            return cmp;
+        };
 
-    return op_mask_helper<T, decltype(handler)>(
-        res_u8,
-        size,
-        handler
-    );
+        return op_mask_helper<T, decltype(handler)>(
+            res_u8,
+            size,
+            handler
+        );
+    }
 }
-
-//
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, EQ)
-NOT_IMPLEMENTED_OP_ARITH_COMPARE(double, Mod, NE)
 
 template<ArithOpType AOp, CompareOpType CmpOp>
 bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
@@ -1638,54 +1550,32 @@ bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
     const ArithHighPrecisionType<double>& value,
     const size_t size
 ) {
-    using T = double;
-    
-    auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
-        using sve_t = SVEVector<T>;
+    if constexpr(AOp == ArithOpType::Mod) {
+        return false;
+    } else {
+        using T = double;
+        
+        auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
+            using sve_t = SVEVector<T>;
 
-        const auto right_v = svdup_n_f64(right_operand);
-        const auto value_v = svdup_n_f64(value);
-        const svfloat64_t src_v = svld1_f64(pred, src + idx);
+            const auto right_v = svdup_n_f64(right_operand);
+            const auto value_v = svdup_n_f64(value);
+            const svfloat64_t src_v = svld1_f64(pred, src + idx);
 
-        const svbool_t cmp = ArithHelperF64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
-        return cmp;
-    };
+            const svbool_t cmp = ArithHelperF64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
+            return cmp;
+        };
 
-    return op_mask_helper<T, decltype(handler)>(
-        res_u8,
-        size,
-        handler
-    );
+        return op_mask_helper<T, decltype(handler)>(
+            res_u8,
+            size,
+            handler
+        );
+    }
 }
 
-//
-#undef NOT_IMPLEMENTED_OP_ARITH_COMPARE
-
-//
-#define INSTANTIATE_ARITH_COMPARE_SVE(TTYPE,OP,CMP) \
-    template bool OpArithCompareImpl<TTYPE, ArithOpType::OP, CompareOpType::CMP>::op_arith_compare( \
-        uint8_t* const __restrict res_u8, \
-        const TTYPE* const __restrict src, \
-        const ArithHighPrecisionType<TTYPE>& right_operand, \
-        const ArithHighPrecisionType<TTYPE>& value, \
-        const size_t size \
-    );
-
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_SVE, int8_t)
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_SVE, int16_t)
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_SVE, int32_t)
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_SVE, int64_t)
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_SVE, float)
-ALL_ARITH_CMP_OPS(INSTANTIATE_ARITH_COMPARE_SVE, double)
-
-#undef INSTANTIATE_ARITH_COMPARE_SVE
 
 ///////////////////////////////////////////////////////////////////////////
-
-//
-#undef ALL_COMPARE_OPS
-#undef ALL_RANGE_OPS
-#undef ALL_ARITH_CMP_OPS
 
 }
 }

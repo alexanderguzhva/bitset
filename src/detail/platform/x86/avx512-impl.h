@@ -2,14 +2,16 @@
 
 #pragma once
 
+#include <immintrin.h>
+
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
 
-#include <immintrin.h>
-
 #include "avx512-decl.h"
+
+#include "../../../common.h"
 #include "common.h"
 
 namespace milvus {

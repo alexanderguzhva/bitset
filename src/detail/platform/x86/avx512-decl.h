@@ -1,4 +1,4 @@
-// AVX2 declaration
+// AVX512 declaration
 
 #pragma once
 
@@ -11,7 +11,7 @@ namespace milvus {
 namespace bitset {
 namespace detail {
 namespace x86 {
-namespace avx2 {
+namespace avx512 {
 
 ///////////////////////////////////////////////////////////////////////////
 // a facility to run through all acceptable data types
@@ -198,4 +198,3 @@ ALL_DATATYPES_1(DECLARE_PARTIAL_OP_ARITH_COMPARE)
 }
 }
 }
-

@@ -15,6 +15,7 @@
 #include <detail/element_wise.h>
 #include <detail/element_vectorized.h>
 #include <detail/platform/dynamic.h>
+#include <detail/platform/vectorized_ref.h>
 
 #if defined(__x86_64__)
 #include <detail/platform/x86/avx2.h>
@@ -35,94 +36,180 @@
 
 using namespace milvus::bitset;
 
-//
-namespace ref_u64_u8 {
-
-using policy_type = milvus::bitset::detail::BitWiseBitsetPolicy<uint64_t>;
-using container_type = std::vector<uint8_t>;
-using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
-using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
-
-}
-
-//
-namespace element_u64_u8 {
-
-using policy_type = milvus::bitset::detail::ElementWiseBitsetPolicy<uint64_t>;
-using container_type = std::vector<uint8_t>;
-using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
-using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
-
-}
-
-//
-#if defined(__x86_64__)
-namespace avx2_u64_u8 {
-
-using vectorized_type = milvus::bitset::detail::x86::VectorizedAvx2;
-using policy_type = milvus::bitset::detail::VectorizedElementWiseBitsetPolicy<uint64_t, vectorized_type>;
-using container_type = std::vector<uint8_t>;
-using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
-using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
-
-}
-#endif
-
-//
-#if defined(__x86_64__)
-namespace avx512_u64_u8 {
-
-using vectorized_type = milvus::bitset::detail::x86::VectorizedAvx512;
-using policy_type = milvus::bitset::detail::VectorizedElementWiseBitsetPolicy<uint64_t, vectorized_type>;
-using container_type = std::vector<uint8_t>;
-using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
-using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
-
-}
-#endif
-
-//
-#if defined(__aarch64__)
-namespace neon_u64_u8 {
-
-using vectorized_type = milvus::bitset::detail::arm::VectorizedNeon;
-using policy_type = milvus::bitset::detail::VectorizedElementWiseBitsetPolicy<uint64_t, vectorized_type>;
-using container_type = std::vector<uint8_t>;
-using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
-using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
-
-}
-
-#ifdef __ARM_FEATURE_SVE
-namespace sve_u64_u8 {
-
-using vectorized_type = milvus::bitset::detail::arm::VectorizedSve;
-using policy_type = milvus::bitset::detail::VectorizedElementWiseBitsetPolicy<uint64_t, vectorized_type>;
-using container_type = std::vector<uint8_t>;
-using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
-using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
-
-}
-#endif
-
-#endif
-
-//
-namespace dynamic_u64_u8 {
-
-using vectorized_type = milvus::bitset::detail::VectorizedDynamic;
-using policy_type = milvus::bitset::detail::VectorizedElementWiseBitsetPolicy<uint64_t, vectorized_type>;
-using container_type = std::vector<uint8_t>;
-using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
-using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
-
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-//
+// * The data is processed using ElementT,
+// * A container stores the data using ContainerValueT elements,
+// * VectorizerT defines the vectorization.
+
+template<typename ElementT, typename ContainerValueT>
+struct RefImplTraits {
+    using policy_type = milvus::bitset::detail::BitWiseBitsetPolicy<ElementT>;
+    using container_type = std::vector<ContainerValueT>;
+    using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
+    using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
+};
+
+template<typename ElementT, typename ContainerValueT>
+struct ElementImplTraits {
+    using policy_type = milvus::bitset::detail::ElementWiseBitsetPolicy<ElementT>;
+    using container_type = std::vector<ContainerValueT>;
+    using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
+    using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
+};
+
+template<typename ElementT, typename ContainerValueT, typename VectorizerT>
+struct VectorizedImplTraits {
+    using policy_type = milvus::bitset::detail::VectorizedElementWiseBitsetPolicy<ElementT, VectorizerT>;
+    using container_type = std::vector<ContainerValueT>;
+    using bitset_type = milvus::bitset::Bitset<policy_type, container_type, false>;
+    using bitset_view = milvus::bitset::BitsetView<policy_type, false>;
+};
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
+// set running mode to 1 to run a subset of tests
+// set running mode to 2 to run benchmarks
+// otherwise, all of the tests are run
+
+#define RUNNING_MODE 1
+
+#if RUNNING_MODE == 1
+// short tests
 static constexpr bool print_log = false;
 static constexpr bool print_timing = false;
+
+static constexpr size_t typical_sizes[] = 
+    { 0, 1, 10, 100, 1000, 10000 };
+static constexpr size_t typical_offsets[] = 
+    { 0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703 };
+static constexpr CompareOpType typical_compare_ops[] = 
+    { CompareOpType::EQ, CompareOpType::GE, CompareOpType::GT, CompareOpType::LE, CompareOpType::LT, CompareOpType::NE };
+static constexpr RangeType typical_range_types[] =
+    { RangeType::IncInc, RangeType::IncExc, RangeType::ExcInc, RangeType::ExcExc };
+static constexpr ArithOpType typical_arith_ops[] = 
+    { ArithOpType::Add, ArithOpType::Sub, ArithOpType::Mul, ArithOpType::Div, ArithOpType::Mod };
+static constexpr CompareOpType typical_arith_compare_ops[] =
+    { CompareOpType::EQ, CompareOpType::NE };
+
+#elif RUNNING_MODE == 2
+
+// benchmarks
+static constexpr bool print_log = false;
+static constexpr bool print_timing = true;
+
+static constexpr size_t typical_sizes[] = 
+    { 10000000 };
+static constexpr size_t typical_offsets[] = 
+    { };
+static constexpr CompareOpType typical_compare_ops[] = 
+    { CompareOpType::EQ, CompareOpType::GE, CompareOpType::GT, CompareOpType::LE, CompareOpType::LT, CompareOpType::NE };
+static constexpr RangeType typical_range_types[] =
+    { RangeType::IncInc, RangeType::IncExc, RangeType::ExcInc, RangeType::ExcExc };
+static constexpr ArithOpType typical_arith_ops[] = 
+    { ArithOpType::Add, ArithOpType::Sub, ArithOpType::Mul, ArithOpType::Div, ArithOpType::Mod };
+static constexpr CompareOpType typical_arith_compare_ops[] =
+    { CompareOpType::EQ, CompareOpType::NE };
+
+#else
+
+// full tests, mostly used for code coverage
+static constexpr bool print_log = false;
+static constexpr bool print_timing = false;
+
+static constexpr size_t typical_sizes[] = 
+    { 0, 1, 10, 100, 1000, 10000, 2048, 2056, 2064, 2072, 2080, 2088, 2096, 2104, 2112 };
+static constexpr size_t typical_offsets[] = 
+    { 0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 512, 520, 528, 536, 544, 556, 564, 572, 580, 703 };
+static constexpr CompareOpType typical_compare_ops[] = 
+    { CompareOpType::EQ, CompareOpType::GE, CompareOpType::GT, CompareOpType::LE, CompareOpType::LT, CompareOpType::NE };
+static constexpr RangeType typical_range_types[] =
+    { RangeType::IncInc, RangeType::IncExc, RangeType::ExcInc, RangeType::ExcExc };
+static constexpr ArithOpType typical_arith_ops[] = 
+    { ArithOpType::Add, ArithOpType::Sub, ArithOpType::Mul, ArithOpType::Div, ArithOpType::Mod };
+static constexpr CompareOpType typical_arith_compare_ops[] =
+    { CompareOpType::EQ, CompareOpType::NE };
+
+#define FULL_TESTS 1
+#endif
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
+// combinations to run
+using Ttypes2 = ::testing::Types<
+#if FULL_TESTS == 1
+    std::tuple<int8_t, int8_t, uint8_t, uint8_t>,
+    std::tuple<int16_t, int16_t, uint8_t, uint8_t>,
+    std::tuple<int32_t, int32_t, uint8_t, uint8_t>, 
+    std::tuple<int64_t, int64_t, uint8_t, uint8_t>, 
+    std::tuple<float, float, uint8_t, uint8_t>,
+    std::tuple<double, double, uint8_t, uint8_t>,
+#endif
+
+    std::tuple<int8_t, int8_t, uint64_t, uint8_t>,
+    std::tuple<int16_t, int16_t, uint64_t, uint8_t>,
+    std::tuple<int32_t, int32_t, uint64_t, uint8_t>, 
+    std::tuple<int64_t, int64_t, uint64_t, uint8_t>, 
+    std::tuple<float, float, uint64_t, uint8_t>,
+    std::tuple<double, double, uint64_t, uint8_t>
+
+#if FULL_TESTS == 1
+    ,
+    std::tuple<int8_t, int8_t, uint8_t, uint64_t>,
+    std::tuple<int16_t, int16_t, uint8_t, uint64_t>,
+    std::tuple<int32_t, int32_t, uint8_t, uint64_t>, 
+    std::tuple<int64_t, int64_t, uint8_t, uint64_t>, 
+    std::tuple<float, float, uint8_t, uint64_t>,
+    std::tuple<double, double, uint8_t, uint64_t>,
+
+    std::tuple<int8_t, int8_t, uint64_t, uint64_t>,
+    std::tuple<int16_t, int16_t, uint64_t, uint64_t>,
+    std::tuple<int32_t, int32_t, uint64_t, uint64_t>, 
+    std::tuple<int64_t, int64_t, uint64_t, uint64_t>, 
+    std::tuple<float, float, uint64_t, uint64_t>,
+    std::tuple<double, double, uint64_t, uint64_t>
+#endif
+>;
+
+// combinations to run
+using Ttypes1 = ::testing::Types<
+#if FULL_TESTS == 1
+    std::tuple<int8_t, uint8_t, uint8_t>,
+    std::tuple<int16_t, uint8_t, uint8_t>,
+    std::tuple<int32_t, uint8_t, uint8_t>, 
+    std::tuple<int64_t, uint8_t, uint8_t>, 
+    std::tuple<float, uint8_t, uint8_t>,
+    std::tuple<double, uint8_t, uint8_t>,
+#endif
+
+    std::tuple<int8_t, uint64_t, uint8_t>,
+    std::tuple<int16_t, uint64_t, uint8_t>,
+    std::tuple<int32_t, uint64_t, uint8_t>, 
+    std::tuple<int64_t, uint64_t, uint8_t>, 
+    std::tuple<float, uint64_t, uint8_t>,
+    std::tuple<double, uint64_t, uint8_t>
+
+#if FULL_TESTS == 1
+    ,
+    std::tuple<int8_t, uint8_t, uint64_t>,
+    std::tuple<int16_t, uint8_t, uint64_t>,
+    std::tuple<int32_t, uint8_t, uint64_t>, 
+    std::tuple<int64_t, uint8_t, uint64_t>, 
+    std::tuple<float, uint8_t, uint64_t>,
+    std::tuple<double, uint8_t, uint64_t>,
+
+    std::tuple<int8_t, uint64_t, uint64_t>,
+    std::tuple<int16_t, uint64_t, uint64_t>,
+    std::tuple<int32_t, uint64_t, uint64_t>, 
+    std::tuple<int64_t, uint64_t, uint64_t>, 
+    std::tuple<float, uint64_t, uint64_t>,
+    std::tuple<double, uint64_t, uint64_t>
+#endif
+>;
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -192,7 +279,7 @@ void TestFindImpl(BitsetT& bitset, const size_t max_v) {
 
 template<typename BitsetT>
 void TestFindImpl() {
-    for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
+    for (const size_t n : typical_sizes) {
         for (const size_t pr : {1, 100}) {
             BitsetT bitset(n);
             bitset.reset();
@@ -203,7 +290,7 @@ void TestFindImpl() {
             
             TestFindImpl(bitset, pr);
 
-            for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
+            for (const size_t offset : typical_offsets) {
                 if (offset >= n) {
                     continue;
                 }
@@ -223,12 +310,14 @@ void TestFindImpl() {
 
 //
 TEST(FindRef, f) {
-    TestFindImpl<ref_u64_u8::bitset_type>();
+    using impl_traits = RefImplTraits<uint64_t, uint8_t>;
+    TestFindImpl<typename impl_traits::bitset_type>();
 }
 
 //
 TEST(FindElement, f) {
-    TestFindImpl<element_u64_u8::bitset_type>();
+    using impl_traits = ElementImplTraits<uint64_t, uint8_t>;
+    TestFindImpl<typename impl_traits::bitset_type>();
 }
 
 // //
@@ -282,8 +371,8 @@ void TestInplaceCompareColumnImpl(
 
 template<typename BitsetT, typename T, typename U>
 void TestInplaceCompareColumnImpl() {
-    for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
-        for (const auto op : {CompareOpType::EQ, CompareOpType::GE, CompareOpType::GT, CompareOpType::LE, CompareOpType::LT, CompareOpType::NE}) {
+    for (const size_t n : typical_sizes) {
+        for (const auto op : typical_compare_ops) {
             BitsetT bitset(n);
             bitset.reset();
 
@@ -293,7 +382,7 @@ void TestInplaceCompareColumnImpl() {
             
             TestInplaceCompareColumnImpl<BitsetT, T, U>(bitset, op);
 
-            for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
+            for (const size_t offset : typical_offsets) {
                 if (offset >= n) {
                     continue;
                 }
@@ -317,88 +406,140 @@ class InplaceCompareColumnSuite : public ::testing::Test {};
 
 TYPED_TEST_SUITE_P(InplaceCompareColumnSuite);
 
+//
 TYPED_TEST_P(InplaceCompareColumnSuite, BitWise) {
+    using impl_traits = 
+        RefImplTraits<
+            std::tuple_element_t<2, TypeParam>, 
+            std::tuple_element_t<3, TypeParam>
+        >;
     TestInplaceCompareColumnImpl<
-        ref_u64_u8::bitset_type, 
+        typename impl_traits::bitset_type,
         std::tuple_element_t<0, TypeParam>,
         std::tuple_element_t<1, TypeParam>>();
 }
 
+//
 TYPED_TEST_P(InplaceCompareColumnSuite, ElementWise) {
+    using impl_traits = 
+        ElementImplTraits<
+            std::tuple_element_t<2, TypeParam>, 
+            std::tuple_element_t<3, TypeParam>
+        >;
     TestInplaceCompareColumnImpl<
-        element_u64_u8::bitset_type, 
+        typename impl_traits::bitset_type,
         std::tuple_element_t<0, TypeParam>,
         std::tuple_element_t<1, TypeParam>>();
 }
 
+//
 TYPED_TEST_P(InplaceCompareColumnSuite, Avx2) {
 #if defined(__x86_64__)
     using namespace milvus::bitset::detail::x86;
 
     if (cpu_support_avx2()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<2, TypeParam>, 
+                std::tuple_element_t<3, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx2
+            >;
         TestInplaceCompareColumnImpl<
-            avx2_u64_u8::bitset_type, 
+            typename impl_traits::bitset_type,
             std::tuple_element_t<0, TypeParam>,
             std::tuple_element_t<1, TypeParam>>();
     }
 #endif
 }
 
+//
 TYPED_TEST_P(InplaceCompareColumnSuite, Avx512) {
 #if defined(__x86_64__)
     using namespace milvus::bitset::detail::x86;
 
     if (cpu_support_avx512()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<2, TypeParam>, 
+                std::tuple_element_t<3, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx512
+            >;
         TestInplaceCompareColumnImpl<
-            avx512_u64_u8::bitset_type, 
+            typename impl_traits::bitset_type,
             std::tuple_element_t<0, TypeParam>,
             std::tuple_element_t<1, TypeParam>>();
     }
 #endif
 }
 
+//
 TYPED_TEST_P(InplaceCompareColumnSuite, Neon) {
 #if defined(__aarch64__)
     using namespace milvus::bitset::detail::arm;
 
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<2, TypeParam>, 
+            std::tuple_element_t<3, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedNeon
+        >;
     TestInplaceCompareColumnImpl<
-        neon_u64_u8::bitset_type, 
+        typename impl_traits::bitset_type,
         std::tuple_element_t<0, TypeParam>,
         std::tuple_element_t<1, TypeParam>>();
 #endif
 }
 
+//
 TYPED_TEST_P(InplaceCompareColumnSuite, Sve) {
 #if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
     using namespace milvus::bitset::detail::arm;
 
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<2, TypeParam>, 
+            std::tuple_element_t<3, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedSve
+        >;
     TestInplaceCompareColumnImpl<
-        sve_u64_u8::bitset_type, 
+        typename impl_traits::bitset_type,
         std::tuple_element_t<0, TypeParam>,
         std::tuple_element_t<1, TypeParam>>();
 #endif
 }
 
+//
 TYPED_TEST_P(InplaceCompareColumnSuite, Dynamic) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<2, TypeParam>, 
+            std::tuple_element_t<3, TypeParam>,
+            milvus::bitset::detail::VectorizedDynamic
+        >;
     TestInplaceCompareColumnImpl<
-        dynamic_u64_u8::bitset_type, 
+        typename impl_traits::bitset_type,
         std::tuple_element_t<0, TypeParam>,
         std::tuple_element_t<1, TypeParam>>();
 }
 
+//
+TYPED_TEST_P(InplaceCompareColumnSuite, VecRef) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<2, TypeParam>, 
+            std::tuple_element_t<3, TypeParam>,
+            milvus::bitset::detail::VectorizedRef
+        >;
+    TestInplaceCompareColumnImpl<
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>,
+        std::tuple_element_t<1, TypeParam>>();
+}
 
-using InplaceCompareColumnTtypes = ::testing::Types<
-    std::tuple<int8_t, int8_t>,
-    std::tuple<int16_t, int16_t>,
-    std::tuple<int32_t, int32_t>, 
-    std::tuple<int64_t, int64_t>, 
-    std::tuple<float, float>,
-    std::tuple<double, double>
->;
+//
+REGISTER_TYPED_TEST_SUITE_P(InplaceCompareColumnSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Sve, Dynamic, VecRef);
 
-REGISTER_TYPED_TEST_SUITE_P(InplaceCompareColumnSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Sve, Dynamic);
-
-INSTANTIATE_TYPED_TEST_SUITE_P(InplaceCompareColumnTest, InplaceCompareColumnSuite, InplaceCompareColumnTtypes);
+INSTANTIATE_TYPED_TEST_SUITE_P(InplaceCompareColumnTest, InplaceCompareColumnSuite, Ttypes2);
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -444,8 +585,8 @@ void TestInplaceCompareValImpl(
 
 template<typename BitsetT, typename T>
 void TestInplaceCompareValImpl() {
-    for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
-        for (const auto op : {CompareOpType::EQ, CompareOpType::GE, CompareOpType::GT, CompareOpType::LE, CompareOpType::LT, CompareOpType::NE}) {
+    for (const size_t n : typical_sizes) {
+        for (const auto op : typical_compare_ops) {
             BitsetT bitset(n);
             bitset.reset();
 
@@ -455,7 +596,7 @@ void TestInplaceCompareValImpl() {
             
             TestInplaceCompareValImpl<BitsetT, T>(bitset, op);
 
-            for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
+            for (const size_t offset : typical_offsets) {
                 if (offset >= n) {
                     continue;
                 }
@@ -479,16 +620,27 @@ class InplaceCompareValSuite : public ::testing::Test {};
 
 TYPED_TEST_SUITE_P(InplaceCompareValSuite);
 
+
 TYPED_TEST_P(InplaceCompareValSuite, BitWise) {
+    using impl_traits = 
+        RefImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>
+        >;
     TestInplaceCompareValImpl<
-        ref_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
 }
 
 TYPED_TEST_P(InplaceCompareValSuite, ElementWise) {
+    using impl_traits = 
+        ElementImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>
+        >;
     TestInplaceCompareValImpl<
-        element_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
 }
 
 TYPED_TEST_P(InplaceCompareValSuite, Avx2) {
@@ -496,9 +648,15 @@ TYPED_TEST_P(InplaceCompareValSuite, Avx2) {
     using namespace milvus::bitset::detail::x86;
 
     if (cpu_support_avx2()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<1, TypeParam>, 
+                std::tuple_element_t<2, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx2
+            >;
         TestInplaceCompareValImpl<
-            avx2_u64_u8::bitset_type, 
-            TypeParam>();
+            typename impl_traits::bitset_type,
+            std::tuple_element_t<0, TypeParam>>();
     }
 #endif
 }
@@ -508,9 +666,15 @@ TYPED_TEST_P(InplaceCompareValSuite, Avx512) {
     using namespace milvus::bitset::detail::x86;
 
     if (cpu_support_avx512()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<1, TypeParam>, 
+                std::tuple_element_t<2, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx512
+            >;
         TestInplaceCompareValImpl<
-            avx512_u64_u8::bitset_type, 
-            TypeParam>();
+            typename impl_traits::bitset_type,
+            std::tuple_element_t<0, TypeParam>>();
     }
 #endif
 }
@@ -519,9 +683,15 @@ TYPED_TEST_P(InplaceCompareValSuite, Neon) {
 #if defined(__aarch64__)
     using namespace milvus::bitset::detail::arm;
 
+    using impl_traits =
+        VectorizedImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedNeon
+        >;
     TestInplaceCompareValImpl<
-        neon_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
 #endif
 }
 
@@ -529,23 +699,46 @@ TYPED_TEST_P(InplaceCompareValSuite, Sve) {
 #if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
     using namespace milvus::bitset::detail::arm;
 
+    using impl_traits =
+        VectorizedImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedSve
+        >;
     TestInplaceCompareValImpl<
-        sve_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
 #endif
 }
 
 TYPED_TEST_P(InplaceCompareValSuite, Dynamic) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>,
+            milvus::bitset::detail::VectorizedDynamic
+        >;
     TestInplaceCompareValImpl<
-        dynamic_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
 }
 
-using InplaceCompareValTtypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t, float, double>;
+TYPED_TEST_P(InplaceCompareValSuite, VecRef) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>,
+            milvus::bitset::detail::VectorizedRef
+        >;
+    TestInplaceCompareValImpl<
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
+}
 
-REGISTER_TYPED_TEST_SUITE_P(InplaceCompareValSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Sve, Dynamic);
+//
+REGISTER_TYPED_TEST_SUITE_P(InplaceCompareValSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Sve, Dynamic, VecRef);
 
-INSTANTIATE_TYPED_TEST_SUITE_P(InplaceCompareValTest, InplaceCompareValSuite, InplaceCompareValTtypes);
+INSTANTIATE_TYPED_TEST_SUITE_P(InplaceCompareValTest, InplaceCompareValSuite, Ttypes1);
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -597,8 +790,8 @@ void TestInplaceWithinRangeColumnImpl(
 
 template<typename BitsetT, typename T>
 void TestInplaceWithinRangeColumnImpl() {
-    for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
-        for (const auto op : {RangeType::IncInc, RangeType::IncExc, RangeType::ExcInc, RangeType::ExcExc}) {
+    for (const size_t n : typical_sizes) {
+        for (const auto op : typical_range_types) {
             BitsetT bitset(n);
             bitset.reset();
 
@@ -608,7 +801,7 @@ void TestInplaceWithinRangeColumnImpl() {
             
             TestInplaceWithinRangeColumnImpl<BitsetT, T>(bitset, op);
 
-            for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
+            for (const size_t offset : typical_offsets) {
                 if (offset >= n) {
                     continue;
                 }
@@ -634,15 +827,25 @@ class InplaceWithinRangeColumnSuite : public ::testing::Test {};
 TYPED_TEST_SUITE_P(InplaceWithinRangeColumnSuite);
 
 TYPED_TEST_P(InplaceWithinRangeColumnSuite, BitWise) {
+    using impl_traits = 
+        RefImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>
+        >;
     TestInplaceWithinRangeColumnImpl<
-        ref_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
 }
 
 TYPED_TEST_P(InplaceWithinRangeColumnSuite, ElementWise) {
+    using impl_traits = 
+        ElementImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>
+        >;
     TestInplaceWithinRangeColumnImpl<
-        element_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
 }
 
 TYPED_TEST_P(InplaceWithinRangeColumnSuite, Avx2) {
@@ -650,9 +853,15 @@ TYPED_TEST_P(InplaceWithinRangeColumnSuite, Avx2) {
     using namespace milvus::bitset::detail::x86;
 
     if (cpu_support_avx2()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<1, TypeParam>, 
+                std::tuple_element_t<2, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx2
+            >;
         TestInplaceWithinRangeColumnImpl<
-            avx2_u64_u8::bitset_type, 
-            TypeParam>();
+            typename impl_traits::bitset_type,
+            std::tuple_element_t<0, TypeParam>>();
     }
 #endif
 }
@@ -662,9 +871,15 @@ TYPED_TEST_P(InplaceWithinRangeColumnSuite, Avx512) {
     using namespace milvus::bitset::detail::x86;
 
     if (cpu_support_avx512()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<1, TypeParam>, 
+                std::tuple_element_t<2, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx512
+            >;
         TestInplaceWithinRangeColumnImpl<
-            avx512_u64_u8::bitset_type, 
-            TypeParam>();
+            typename impl_traits::bitset_type,
+            std::tuple_element_t<0, TypeParam>>();
     }
 #endif
 }
@@ -673,23 +888,62 @@ TYPED_TEST_P(InplaceWithinRangeColumnSuite, Neon) {
 #if defined(__aarch64__)
     using namespace milvus::bitset::detail::arm;
 
+    using impl_traits =
+        VectorizedImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedNeon
+        >;
     TestInplaceWithinRangeColumnImpl<
-        neon_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
+#endif
+}
+
+TYPED_TEST_P(InplaceWithinRangeColumnSuite, Sve) {
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+    using namespace milvus::bitset::detail::arm;
+
+    using impl_traits =
+        VectorizedImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedSve
+        >;
+    TestInplaceWithinRangeColumnImpl<
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
 #endif
 }
 
 TYPED_TEST_P(InplaceWithinRangeColumnSuite, Dynamic) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>,
+            milvus::bitset::detail::VectorizedDynamic
+        >;
     TestInplaceWithinRangeColumnImpl<
-        dynamic_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
 }
 
-using InplaceWithinRangeColumnTtypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t, float, double>;
+TYPED_TEST_P(InplaceWithinRangeColumnSuite, VecRef) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>,
+            milvus::bitset::detail::VectorizedRef
+        >;
+    TestInplaceWithinRangeColumnImpl<
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
+}
 
-REGISTER_TYPED_TEST_SUITE_P(InplaceWithinRangeColumnSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Dynamic);
+//
+REGISTER_TYPED_TEST_SUITE_P(InplaceWithinRangeColumnSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Sve, Dynamic, VecRef);
 
-INSTANTIATE_TYPED_TEST_SUITE_P(InplaceWithinRangeColumnTest, InplaceWithinRangeColumnSuite, InplaceWithinRangeColumnTtypes);
+INSTANTIATE_TYPED_TEST_SUITE_P(InplaceWithinRangeColumnTest, InplaceWithinRangeColumnSuite, Ttypes1);
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -734,8 +988,8 @@ void TestInplaceWithinRangeValImpl(
 
 template<typename BitsetT, typename T>
 void TestInplaceWithinRangeValImpl() {
-    for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
-        for (const auto op : {RangeType::IncInc, RangeType::IncExc, RangeType::ExcInc, RangeType::ExcExc}) {
+    for (const size_t n : typical_sizes) {
+        for (const auto op : typical_range_types) {
             BitsetT bitset(n);
             bitset.reset();
 
@@ -745,7 +999,7 @@ void TestInplaceWithinRangeValImpl() {
             
             TestInplaceWithinRangeValImpl<BitsetT, T>(bitset, op);
 
-            for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
+            for (const size_t offset : typical_offsets) {
                 if (offset >= n) {
                     continue;
                 }
@@ -771,15 +1025,25 @@ class InplaceWithinRangeValSuite : public ::testing::Test {};
 TYPED_TEST_SUITE_P(InplaceWithinRangeValSuite);
 
 TYPED_TEST_P(InplaceWithinRangeValSuite, BitWise) {
+    using impl_traits = 
+        RefImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>
+        >;
     TestInplaceWithinRangeValImpl<
-        ref_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
 }
 
 TYPED_TEST_P(InplaceWithinRangeValSuite, ElementWise) {
+    using impl_traits = 
+        ElementImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>
+        >;
     TestInplaceWithinRangeValImpl<
-        element_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
 }
 
 TYPED_TEST_P(InplaceWithinRangeValSuite, Avx2) {
@@ -787,9 +1051,15 @@ TYPED_TEST_P(InplaceWithinRangeValSuite, Avx2) {
     using namespace milvus::bitset::detail::x86;
 
     if (cpu_support_avx2()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<1, TypeParam>, 
+                std::tuple_element_t<2, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx2
+            >;
         TestInplaceWithinRangeValImpl<
-            avx2_u64_u8::bitset_type, 
-            TypeParam>();
+            typename impl_traits::bitset_type,
+            std::tuple_element_t<0, TypeParam>>();
     }
 #endif
 }
@@ -799,9 +1069,15 @@ TYPED_TEST_P(InplaceWithinRangeValSuite, Avx512) {
     using namespace milvus::bitset::detail::x86;
 
     if (cpu_support_avx512()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<1, TypeParam>, 
+                std::tuple_element_t<2, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx512
+            >;
         TestInplaceWithinRangeValImpl<
-            avx512_u64_u8::bitset_type, 
-            TypeParam>();
+            typename impl_traits::bitset_type,
+            std::tuple_element_t<0, TypeParam>>();
     }
 #endif
 }
@@ -810,23 +1086,62 @@ TYPED_TEST_P(InplaceWithinRangeValSuite, Neon) {
 #if defined(__aarch64__)
     using namespace milvus::bitset::detail::arm;
 
+    using impl_traits =
+        VectorizedImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedNeon
+        >;
     TestInplaceWithinRangeValImpl<
-        neon_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
+#endif
+}
+
+TYPED_TEST_P(InplaceWithinRangeValSuite, Sve) {
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+    using namespace milvus::bitset::detail::arm;
+
+    using impl_traits =
+        VectorizedImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedSve
+        >;
+    TestInplaceWithinRangeValImpl<
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
 #endif
 }
 
 TYPED_TEST_P(InplaceWithinRangeValSuite, Dynamic) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>,
+            milvus::bitset::detail::VectorizedDynamic
+        >;
     TestInplaceWithinRangeValImpl<
-        dynamic_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
 }
 
-using InplaceWithinRangeValTtypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t, float, double>;
+TYPED_TEST_P(InplaceWithinRangeValSuite, VecRef) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>,
+            milvus::bitset::detail::VectorizedRef
+        >;
+    TestInplaceWithinRangeValImpl<
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
+}
 
-REGISTER_TYPED_TEST_SUITE_P(InplaceWithinRangeValSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Dynamic);
+//
+REGISTER_TYPED_TEST_SUITE_P(InplaceWithinRangeValSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Sve, Dynamic, VecRef);
 
-INSTANTIATE_TYPED_TEST_SUITE_P(InplaceWithinRangeValTest, InplaceWithinRangeValSuite, InplaceWithinRangeValTtypes);
+INSTANTIATE_TYPED_TEST_SUITE_P(InplaceWithinRangeValTest, InplaceWithinRangeValSuite, Ttypes1);
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -884,9 +1199,9 @@ void TestInplaceArithCompareImpl(
 
 template<typename BitsetT, typename T>
 void TestInplaceArithCompareImpl() {
-    for (const size_t n : {0, 1, 10, 100, 1000, 10000}) {
-        for (const auto a_op : {ArithOpType::Add, ArithOpType::Sub, ArithOpType::Mul, ArithOpType::Div, ArithOpType::Mod}) {
-            for (const auto cmp_op : {CompareOpType::EQ, CompareOpType::NE}) {
+    for (const size_t n : typical_sizes) {
+        for (const auto a_op : typical_arith_ops) {
+            for (const auto cmp_op : typical_arith_compare_ops) {
                 BitsetT bitset(n);
                 bitset.reset();
 
@@ -896,7 +1211,7 @@ void TestInplaceArithCompareImpl() {
                 
                 TestInplaceArithCompareImpl<BitsetT, T>(bitset, a_op, cmp_op);
 
-                for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
+                for (const size_t offset : typical_offsets) {
                     if (offset >= n) {
                         continue;
                     }
@@ -923,15 +1238,25 @@ TYPED_TEST_SUITE_P(InplaceArithCompareSuite);
 
 
 TYPED_TEST_P(InplaceArithCompareSuite, BitWise) {
+    using impl_traits = 
+        RefImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>
+        >;
     TestInplaceArithCompareImpl<
-        ref_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
 }
 
 TYPED_TEST_P(InplaceArithCompareSuite, ElementWise) {
+    using impl_traits = 
+        ElementImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>
+        >;
     TestInplaceArithCompareImpl<
-        element_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
 }
 
 TYPED_TEST_P(InplaceArithCompareSuite, Avx2) {
@@ -939,9 +1264,15 @@ TYPED_TEST_P(InplaceArithCompareSuite, Avx2) {
     using namespace milvus::bitset::detail::x86;
 
     if (cpu_support_avx2()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<1, TypeParam>, 
+                std::tuple_element_t<2, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx2
+            >;
         TestInplaceArithCompareImpl<
-            avx2_u64_u8::bitset_type, 
-            TypeParam>();
+            typename impl_traits::bitset_type,
+            std::tuple_element_t<0, TypeParam>>();
     }
 #endif
 }
@@ -952,9 +1283,15 @@ TYPED_TEST_P(InplaceArithCompareSuite, Avx512) {
     using namespace milvus::bitset::detail::x86;
 
     if (cpu_support_avx512()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<1, TypeParam>, 
+                std::tuple_element_t<2, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx512
+            >;
         TestInplaceArithCompareImpl<
-            avx512_u64_u8::bitset_type, 
-            TypeParam>();
+            typename impl_traits::bitset_type,
+            std::tuple_element_t<0, TypeParam>>();
     }
 #endif
 }
@@ -963,24 +1300,63 @@ TYPED_TEST_P(InplaceArithCompareSuite, Neon) {
 #if defined(__aarch64__)
     using namespace milvus::bitset::detail::arm;
 
+    using impl_traits =
+        VectorizedImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedNeon
+        >;
     TestInplaceArithCompareImpl<
-        neon_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
 #endif
 }
 
+TYPED_TEST_P(InplaceArithCompareSuite, Sve) {
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+    using namespace milvus::bitset::detail::arm;
 
-TYPED_TEST_P(InplaceArithCompareSuite, Dynamic) {
+    using impl_traits =
+        VectorizedImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedSve
+        >;
     TestInplaceArithCompareImpl<
-        dynamic_u64_u8::bitset_type, 
-        TypeParam>();
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
+#endif
 }
 
-using InplaceArithCompareTtypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t, float, double>;
+TYPED_TEST_P(InplaceArithCompareSuite, Dynamic) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>,
+            milvus::bitset::detail::VectorizedDynamic
+        >;
+    TestInplaceArithCompareImpl<
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
+}
 
-REGISTER_TYPED_TEST_SUITE_P(InplaceArithCompareSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Dynamic);
+TYPED_TEST_P(InplaceArithCompareSuite, VecRef) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<1, TypeParam>, 
+            std::tuple_element_t<2, TypeParam>,
+            milvus::bitset::detail::VectorizedRef
+        >;
+    TestInplaceArithCompareImpl<
+        typename impl_traits::bitset_type,
+        std::tuple_element_t<0, TypeParam>>();
+}
 
-INSTANTIATE_TYPED_TEST_SUITE_P(InplaceArithCompareTest, InplaceArithCompareSuite, InplaceArithCompareTtypes);
+//
+REGISTER_TYPED_TEST_SUITE_P(InplaceArithCompareSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Sve, Dynamic, VecRef);
+
+INSTANTIATE_TYPED_TEST_SUITE_P(InplaceArithCompareTest, InplaceArithCompareSuite, Ttypes1);
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1016,17 +1392,15 @@ template<typename BitsetT>
 void TestAppendImpl() {
     std::default_random_engine rng(345);
 
-    const auto sizes = {0, 1, 10, 100, 1000, 10000};
-
     std::vector<BitsetT> bt0;
-    for (const size_t n : sizes) {
+    for (const size_t n : typical_sizes) {
         BitsetT bitset(n);
         FillRandom(bitset, rng);
         bt0.push_back(std::move(bitset));
     }
 
     std::vector<BitsetT> bt1;
-    for (const size_t n : sizes) {
+    for (const size_t n : typical_sizes) {
         BitsetT bitset(n);
         FillRandom(bitset, rng);
         bt1.push_back(std::move(bitset));
@@ -1042,7 +1416,7 @@ void TestAppendImpl() {
 
             TestAppendImpl(bt, bt_b);
 
-            for (const size_t offset : {0, 1, 2, 3, 4, 5, 6, 7, 11, 21, 35, 45, 55, 63, 127, 703}) {
+            for (const size_t offset : typical_offsets) {
                 if (offset >= bt_b.size()) {
                     continue;
                 }
@@ -1061,16 +1435,87 @@ void TestAppendImpl() {
 }
 
 TEST(Append, BitWise) {
-    TestAppendImpl<ref_u64_u8::bitset_type>();
+    using impl_traits = RefImplTraits<uint64_t, uint8_t>;
+    TestAppendImpl<typename impl_traits::bitset_type>();
 }
 
 TEST(Append, ElementWise) {
-    TestAppendImpl<element_u64_u8::bitset_type>();
+    using impl_traits = ElementImplTraits<uint64_t, uint8_t>;
+    TestAppendImpl<typename impl_traits::bitset_type>();
 }
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
+//
+template<typename BitsetT>
+void TestCountImpl(BitsetT& bitset, const size_t max_v) {
+    const size_t n = bitset.size();
+
+    std::default_random_engine rng(123);
+    std::uniform_int_distribution<int8_t> u(0, max_v);
+
+    std::vector<size_t> one_pos;
+    for (size_t i = 0; i < n; i++) {
+        bool enabled = (u(rng) == 0);
+        if (enabled) {
+            one_pos.push_back(i);
+            bitset[i] = true;
+        }
+    }
+
+    StopWatch sw;
+
+    auto count = bitset.count();
+    ASSERT_EQ(count, one_pos.size());
+
+    if (print_timing) {
+        printf("elapsed %f\n", sw.elapsed());
+    }
+}
+
+template<typename BitsetT>
+void TestCountImpl() {
+    for (const size_t n : typical_sizes) {
+        for (const size_t pr : {1, 100}) {
+            BitsetT bitset(n);
+            bitset.reset();
+
+            if (print_log) {
+                printf("Testing bitset, n=%zd, pr=%zd\n", n, pr);
+            }
+            
+            TestCountImpl(bitset, pr);
+
+            for (const size_t offset : typical_offsets) {
+                if (offset >= n) {
+                    continue;
+                }
+
+                bitset.reset();
+                auto view = bitset.view(offset);
+
+                if (print_log) {
+                    printf("Testing bitset view, n=%zd, offset=%zd, pr=%zd\n", n, offset, pr);
+                }
+                
+                TestCountImpl(view, pr);
+            }
+        }
+    }
+}
+
+//
+TEST(CountRef, f) {
+    using impl_traits = RefImplTraits<uint64_t, uint8_t>;
+    TestCountImpl<typename impl_traits::bitset_type>();
+}
+
+//
+TEST(CountElement, f) {
+    using impl_traits = ElementImplTraits<uint64_t, uint8_t>;
+    TestCountImpl<typename impl_traits::bitset_type>();
+}
 
 
 //////////////////////////////////////////////////////////////////////////////////////////

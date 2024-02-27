@@ -1155,7 +1155,7 @@ bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
             // process 8 elements
             const int64_t* const __restrict src64 = (const int64_t*)(src + size16);
             const __m128i vs = _mm_set_epi64x(0, *src64);
-            const __m512i v0s = _mm512_cvtepi16_epi64(vs);
+            const __m512i v0s = _mm512_cvtepi8_epi64(vs);
             const __mmask8 cmp_mask = ArithHelperI64<AOp, CmpOp>::op(v0s, right_v, value_v);
 
             res_u8[size16 / 8] = cmp_mask;

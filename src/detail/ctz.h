@@ -20,15 +20,22 @@ struct CtzHelper<uint8_t> {
 };
 
 template<>
-struct CtzHelper<uint32_t> {
-    static inline auto ctz(const uint32_t value) {
+struct CtzHelper<unsigned int> {
+    static inline auto ctz(const unsigned int value) {
         return __builtin_ctz(value);
     }
 };
 
 template<>
-struct CtzHelper<uint64_t> {
-    static inline auto ctz(const uint64_t value) {
+struct CtzHelper<unsigned long> {
+    static inline auto ctz(const unsigned long value) {
+        return __builtin_ctzl(value);
+    }
+};
+
+template<>
+struct CtzHelper<unsigned long long> {
+    static inline auto ctz(const unsigned long long value) {
         return __builtin_ctzll(value);
     }
 };

@@ -1135,7 +1135,6 @@ bool OpArithCompareImpl<int8_t, AOp, CmpOp>::op_arith_compare(
         //
         const __m512i right_v = _mm512_set1_epi64(right_operand);
         const __m512i value_v = _mm512_set1_epi64(value);
-        constexpr auto pred = ComparePredicate<int64_t, CmpOp>::value;
 
         // process big blocks
         const size_t size16 = (size / 16) * 16;
@@ -1183,7 +1182,6 @@ bool OpArithCompareImpl<int16_t, AOp, CmpOp>::op_arith_compare(
         //
         const __m512i right_v = _mm512_set1_epi64(right_operand);
         const __m512i value_v = _mm512_set1_epi64(value);
-        constexpr auto pred = ComparePredicate<int64_t, CmpOp>::value;
 
         // todo: aligned reads & writes
 
@@ -1232,7 +1230,6 @@ bool OpArithCompareImpl<int32_t, AOp, CmpOp>::op_arith_compare(
         //
         const __m512i right_v = _mm512_set1_epi64(right_operand);
         const __m512i value_v = _mm512_set1_epi64(value);
-        constexpr auto pred = ComparePredicate<int64_t, CmpOp>::value;
 
         // todo: aligned reads & writes
 
@@ -1281,7 +1278,6 @@ bool OpArithCompareImpl<int64_t, AOp, CmpOp>::op_arith_compare(
         //
         const __m512i right_v = _mm512_set1_epi64(right_operand);
         const __m512i value_v = _mm512_set1_epi64(value);
-        constexpr auto pred = ComparePredicate<int64_t, CmpOp>::value;
 
         // todo: aligned reads & writes
 
@@ -1316,7 +1312,6 @@ bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
         const __m512 right_v = _mm512_set1_ps(right_operand);
         const __m512 value_v = _mm512_set1_ps(value);
         uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res_u8);
-        constexpr auto pred = ComparePredicate<float, CmpOp>::value;
 
         // todo: aligned reads & writes
 
@@ -1358,7 +1353,6 @@ bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
         //
         const __m512d right_v = _mm512_set1_pd(right_operand);
         const __m512d value_v = _mm512_set1_pd(value);
-        constexpr auto pred = ComparePredicate<double, CmpOp>::value;
 
         // todo: aligned reads & writes
 

@@ -596,29 +596,89 @@ public:
         const ArithOpType a_op,
         const CompareOpType cmp_op
     ) {
-        if (a_op == ArithOpType::Add && cmp_op == CompareOpType::EQ) {
-            this->inplace_arith_compare<T, ArithOpType::Add, CompareOpType::EQ>(src, right_operand, value, size);
-        } else if (a_op == ArithOpType::Add && cmp_op == CompareOpType::NE) {
-            this->inplace_arith_compare<T, ArithOpType::Add, CompareOpType::NE>(src, right_operand, value, size);
-        } else if (a_op == ArithOpType::Sub && cmp_op == CompareOpType::EQ) {
-            this->inplace_arith_compare<T, ArithOpType::Sub, CompareOpType::EQ>(src, right_operand, value, size);
-        } else if (a_op == ArithOpType::Sub && cmp_op == CompareOpType::NE) {
-            this->inplace_arith_compare<T, ArithOpType::Sub, CompareOpType::NE>(src, right_operand, value, size);
-        } else if (a_op == ArithOpType::Mul && cmp_op == CompareOpType::EQ) {
-            this->inplace_arith_compare<T, ArithOpType::Mul, CompareOpType::EQ>(src, right_operand, value, size);
-        } else if (a_op == ArithOpType::Mul && cmp_op == CompareOpType::NE) {
-            this->inplace_arith_compare<T, ArithOpType::Mul, CompareOpType::NE>(src, right_operand, value, size);
-        } else if (a_op == ArithOpType::Div && cmp_op == CompareOpType::EQ) {
-            this->inplace_arith_compare<T, ArithOpType::Div, CompareOpType::EQ>(src, right_operand, value, size);
-        } else if (a_op == ArithOpType::Div && cmp_op == CompareOpType::NE) {
-            this->inplace_arith_compare<T, ArithOpType::Div, CompareOpType::NE>(src, right_operand, value, size);
-        } else if (a_op == ArithOpType::Mod && cmp_op == CompareOpType::EQ) {
-            this->inplace_arith_compare<T, ArithOpType::Mod, CompareOpType::EQ>(src, right_operand, value, size);
-        } else if (a_op == ArithOpType::Mod && cmp_op == CompareOpType::NE) {
-            this->inplace_arith_compare<T, ArithOpType::Mod, CompareOpType::NE>(src, right_operand, value, size);
+        if (a_op == ArithOpType::Add) {
+            if (cmp_op == CompareOpType::EQ) {
+                this->inplace_arith_compare<T, ArithOpType::Add, CompareOpType::EQ>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::GE) {
+                this->inplace_arith_compare<T, ArithOpType::Add, CompareOpType::GE>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::GT) {
+                this->inplace_arith_compare<T, ArithOpType::Add, CompareOpType::GT>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::LE) {
+                this->inplace_arith_compare<T, ArithOpType::Add, CompareOpType::LE>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::LT) {
+                this->inplace_arith_compare<T, ArithOpType::Add, CompareOpType::LT>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::NE) {
+                this->inplace_arith_compare<T, ArithOpType::Add, CompareOpType::NE>(src, right_operand, value, size);
+            } else {
+                // unimplemented
+            }
+        } else if (a_op == ArithOpType::Sub) {
+            if (cmp_op == CompareOpType::EQ) {
+                this->inplace_arith_compare<T, ArithOpType::Sub, CompareOpType::EQ>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::GE) {
+                this->inplace_arith_compare<T, ArithOpType::Sub, CompareOpType::GE>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::GT) {
+                this->inplace_arith_compare<T, ArithOpType::Sub, CompareOpType::GT>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::LE) {
+                this->inplace_arith_compare<T, ArithOpType::Sub, CompareOpType::LE>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::LT) {
+                this->inplace_arith_compare<T, ArithOpType::Sub, CompareOpType::LT>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::NE) {
+                this->inplace_arith_compare<T, ArithOpType::Sub, CompareOpType::NE>(src, right_operand, value, size);
+            } else {
+                // unimplemented
+            }
+        } else if (a_op == ArithOpType::Mul) {
+            if (cmp_op == CompareOpType::EQ) {
+                this->inplace_arith_compare<T, ArithOpType::Mul, CompareOpType::EQ>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::GE) {
+                this->inplace_arith_compare<T, ArithOpType::Mul, CompareOpType::GE>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::GT) {
+                this->inplace_arith_compare<T, ArithOpType::Mul, CompareOpType::GT>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::LE) {
+                this->inplace_arith_compare<T, ArithOpType::Mul, CompareOpType::LE>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::LT) {
+                this->inplace_arith_compare<T, ArithOpType::Mul, CompareOpType::LT>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::NE) {
+                this->inplace_arith_compare<T, ArithOpType::Mul, CompareOpType::NE>(src, right_operand, value, size);
+            } else {
+                // unimplemented
+            }
+        } else if (a_op == ArithOpType::Div) {
+            if (cmp_op == CompareOpType::EQ) {
+                this->inplace_arith_compare<T, ArithOpType::Div, CompareOpType::EQ>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::GE) {
+                this->inplace_arith_compare<T, ArithOpType::Div, CompareOpType::GE>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::GT) {
+                this->inplace_arith_compare<T, ArithOpType::Div, CompareOpType::GT>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::LE) {
+                this->inplace_arith_compare<T, ArithOpType::Div, CompareOpType::LE>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::LT) {
+                this->inplace_arith_compare<T, ArithOpType::Div, CompareOpType::LT>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::NE) {
+                this->inplace_arith_compare<T, ArithOpType::Div, CompareOpType::NE>(src, right_operand, value, size);
+            } else {
+                // unimplemented
+            }
+        } else if (a_op == ArithOpType::Mod) {
+            if (cmp_op == CompareOpType::EQ) {
+                this->inplace_arith_compare<T, ArithOpType::Mod, CompareOpType::EQ>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::GE) {
+                this->inplace_arith_compare<T, ArithOpType::Mod, CompareOpType::GE>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::GT) {
+                this->inplace_arith_compare<T, ArithOpType::Mod, CompareOpType::GT>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::LE) {
+                this->inplace_arith_compare<T, ArithOpType::Mod, CompareOpType::LE>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::LT) {
+                this->inplace_arith_compare<T, ArithOpType::Mod, CompareOpType::LT>(src, right_operand, value, size);
+            } else if (cmp_op == CompareOpType::NE) {
+                this->inplace_arith_compare<T, ArithOpType::Mod, CompareOpType::NE>(src, right_operand, value, size);
+            } else {
+                // unimplemented
+            }
         } else {
             // unimplemented
-        }            
+        }
     }
 
     template<typename T, ArithOpType AOp, CompareOpType CmpOp>

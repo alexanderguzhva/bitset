@@ -35,14 +35,34 @@ namespace sve {
 // a facility to run through all possible arithmetic compare operations
 #define ALL_ARITH_CMP_OPS(FUNC,...) \
     FUNC(__VA_ARGS__,Add,EQ); \
+    FUNC(__VA_ARGS__,Add,GE); \
+    FUNC(__VA_ARGS__,Add,GT); \
+    FUNC(__VA_ARGS__,Add,LE); \
+    FUNC(__VA_ARGS__,Add,LT); \
     FUNC(__VA_ARGS__,Add,NE); \
     FUNC(__VA_ARGS__,Sub,EQ); \
+    FUNC(__VA_ARGS__,Sub,GE); \
+    FUNC(__VA_ARGS__,Sub,GT); \
+    FUNC(__VA_ARGS__,Sub,LE); \
+    FUNC(__VA_ARGS__,Sub,LT); \
     FUNC(__VA_ARGS__,Sub,NE); \
     FUNC(__VA_ARGS__,Mul,EQ); \
+    FUNC(__VA_ARGS__,Mul,GE); \
+    FUNC(__VA_ARGS__,Mul,GT); \
+    FUNC(__VA_ARGS__,Mul,LE); \
+    FUNC(__VA_ARGS__,Mul,LT); \
     FUNC(__VA_ARGS__,Mul,NE); \
     FUNC(__VA_ARGS__,Div,EQ); \
+    FUNC(__VA_ARGS__,Div,GE); \
+    FUNC(__VA_ARGS__,Div,GT); \
+    FUNC(__VA_ARGS__,Div,LE); \
+    FUNC(__VA_ARGS__,Div,LT); \
     FUNC(__VA_ARGS__,Div,NE); \
     FUNC(__VA_ARGS__,Mod,EQ); \
+    FUNC(__VA_ARGS__,Mod,GE); \
+    FUNC(__VA_ARGS__,Mod,GT); \
+    FUNC(__VA_ARGS__,Mod,LE); \
+    FUNC(__VA_ARGS__,Mod,LT); \
     FUNC(__VA_ARGS__,Mod,NE);
 
 

@@ -91,8 +91,6 @@ static constexpr RangeType typical_range_types[] =
     { RangeType::IncInc, RangeType::IncExc, RangeType::ExcInc, RangeType::ExcExc };
 static constexpr ArithOpType typical_arith_ops[] = 
     { ArithOpType::Add, ArithOpType::Sub, ArithOpType::Mul, ArithOpType::Div, ArithOpType::Mod };
-static constexpr CompareOpType typical_arith_compare_ops[] =
-    { CompareOpType::EQ, CompareOpType::NE };
 
 #elif RUNNING_MODE == 2
 
@@ -1171,26 +1169,86 @@ void TestInplaceArithCompareImpl(
     }
 
     for (size_t i = 0; i < n; i++) {
-        if (a_op == ArithOpType::Add && cmp_op == CompareOpType::EQ) {
-            ASSERT_EQ((left[i] + right_operand) == value, bitset[i]) << i;
-        } else if (a_op == ArithOpType::Add && cmp_op == CompareOpType::NE) {
-            ASSERT_EQ((left[i] + right_operand) != value, bitset[i]) << i;
-        } else if (a_op == ArithOpType::Sub && cmp_op == CompareOpType::EQ) {
-            ASSERT_EQ((left[i] - right_operand) == value, bitset[i]) << i;
-        } else if (a_op == ArithOpType::Sub && cmp_op == CompareOpType::NE) {
-            ASSERT_EQ((left[i] - right_operand) != value, bitset[i]) << i;
-        } else if (a_op == ArithOpType::Mul && cmp_op == CompareOpType::EQ) {
-            ASSERT_EQ((left[i] * right_operand) == value, bitset[i]) << i;
-        } else if (a_op == ArithOpType::Mul && cmp_op == CompareOpType::NE) {
-            ASSERT_EQ((left[i] * right_operand) != value, bitset[i]) << i;
-        } else if (a_op == ArithOpType::Div && cmp_op == CompareOpType::EQ) {
-            ASSERT_EQ((left[i] / right_operand) == value, bitset[i]) << i;
-        } else if (a_op == ArithOpType::Div && cmp_op == CompareOpType::NE) {
-            ASSERT_EQ((left[i] / right_operand) != value, bitset[i]) << i;
-        } else if (a_op == ArithOpType::Mod && cmp_op == CompareOpType::EQ) {
-            ASSERT_EQ(fmod(left[i], right_operand) == value, bitset[i]) << i;
-        } else if (a_op == ArithOpType::Mod && cmp_op == CompareOpType::NE) {
-            ASSERT_EQ(fmod(left[i], right_operand) != value, bitset[i]) << i;
+        if (a_op == ArithOpType::Add) {
+            if (cmp_op == CompareOpType::EQ) {
+                ASSERT_EQ((left[i] + right_operand) == value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::GE) {
+                ASSERT_EQ((left[i] + right_operand) >= value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::GT) {
+                ASSERT_EQ((left[i] + right_operand) > value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::LE) {
+                ASSERT_EQ((left[i] + right_operand) <= value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::LT) {
+                ASSERT_EQ((left[i] + right_operand) < value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::NE) {
+                ASSERT_EQ((left[i] + right_operand) != value, bitset[i]) << i;
+            } else {
+                ASSERT_TRUE(false) << "Not implemented";
+            }
+        } else if (a_op == ArithOpType::Sub) {
+            if (cmp_op == CompareOpType::EQ) {
+                ASSERT_EQ((left[i] - right_operand) == value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::GE) {
+                ASSERT_EQ((left[i] - right_operand) >= value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::GT) {
+                ASSERT_EQ((left[i] - right_operand) > value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::LE) {
+                ASSERT_EQ((left[i] - right_operand) <= value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::LT) {
+                ASSERT_EQ((left[i] - right_operand) < value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::NE) {
+                ASSERT_EQ((left[i] - right_operand) != value, bitset[i]) << i;
+            } else {
+                ASSERT_TRUE(false) << "Not implemented";
+            }
+        } else if (a_op == ArithOpType::Mul) {
+            if (cmp_op == CompareOpType::EQ) {
+                ASSERT_EQ((left[i] * right_operand) == value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::GE) {
+                ASSERT_EQ((left[i] * right_operand) >= value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::GT) {
+                ASSERT_EQ((left[i] * right_operand) > value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::LE) {
+                ASSERT_EQ((left[i] * right_operand) <= value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::LT) {
+                ASSERT_EQ((left[i] * right_operand) < value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::NE) {
+                ASSERT_EQ((left[i] * right_operand) != value, bitset[i]) << i;
+            } else {
+                ASSERT_TRUE(false) << "Not implemented";
+            }
+        } else if (a_op == ArithOpType::Div) {
+            if (cmp_op == CompareOpType::EQ) {
+                ASSERT_EQ((left[i] / right_operand) == value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::GE) {
+                ASSERT_EQ((left[i] / right_operand) >= value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::GT) {
+                ASSERT_EQ((left[i] / right_operand) > value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::LE) {
+                ASSERT_EQ((left[i] / right_operand) <= value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::LT) {
+                ASSERT_EQ((left[i] / right_operand) < value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::NE) {
+                ASSERT_EQ((left[i] / right_operand) != value, bitset[i]) << i;
+            } else {
+                ASSERT_TRUE(false) << "Not implemented";
+            }
+        } else if (a_op == ArithOpType::Mod) {
+            if (cmp_op == CompareOpType::EQ) {
+                ASSERT_EQ(fmod(left[i], right_operand) == value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::GE) {
+                ASSERT_EQ(fmod(left[i], right_operand) >= value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::GT) {
+                ASSERT_EQ(fmod(left[i], right_operand) > value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::LE) {
+                ASSERT_EQ(fmod(left[i], right_operand) <= value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::LT) {
+                ASSERT_EQ(fmod(left[i], right_operand) < value, bitset[i]) << i;
+            } else if (cmp_op == CompareOpType::NE) {
+                ASSERT_EQ(fmod(left[i], right_operand) != value, bitset[i]) << i;
+            } else {
+                ASSERT_TRUE(false) << "Not implemented";
+            }
         } else {
             ASSERT_TRUE(false) << "Not implemented";
         }
@@ -1201,7 +1259,7 @@ template<typename BitsetT, typename T>
 void TestInplaceArithCompareImpl() {
     for (const size_t n : typical_sizes) {
         for (const auto a_op : typical_arith_ops) {
-            for (const auto cmp_op : typical_arith_compare_ops) {
+            for (const auto cmp_op : typical_compare_ops) {
                 BitsetT bitset(n);
                 bitset.reset();
 

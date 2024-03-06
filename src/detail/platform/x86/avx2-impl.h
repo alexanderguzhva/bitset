@@ -1166,26 +1166,26 @@ namespace {
 template<ArithOpType Op, CompareOpType CmpOp>
 struct ArithHelperI64 {};
 
-template<>
-struct ArithHelperI64<ArithOpType::Add, CompareOpType::EQ> {
+template<CompareOpType CmpOp>
+struct ArithHelperI64<ArithOpType::Add, CmpOp> {
     static inline __m256i op(const __m256i left, const __m256i right, const __m256i value) {
-        // left + right == value
-        return _mm256_cmpeq_epi64(_mm256_add_epi64(left, right), value);
+        // left + right ?? value
+        return CmpHelperI64<CmpOp>::compare(_mm256_add_epi64(left, right), value);
     }
 };
 
-template<>
-struct ArithHelperI64<ArithOpType::Sub, CompareOpType::EQ> {
+template<CompareOpType CmpOp>
+struct ArithHelperI64<ArithOpType::Sub, CmpOp> {
     static inline __m256i op(const __m256i left, const __m256i right, const __m256i value) {
-        // left - right == value
-        return _mm256_cmpeq_epi64(_mm256_sub_epi64(left, right), value);
+        // left - right ?? value
+        return CmpHelperI64<CmpOp>::compare(_mm256_sub_epi64(left, right), value);
     }
 };
 
-template<>
-struct ArithHelperI64<ArithOpType::Mul, CompareOpType::EQ> {
+template<CompareOpType CmpOp>
+struct ArithHelperI64<ArithOpType::Mul, CmpOp> {
     static inline __m256i op(const __m256i left, const __m256i right, const __m256i value) {
-        // left * right == value
+        // left * right ?? value
         
         // draft: the code from Agner Fog's vectorclass library
         const __m256i a = left;
@@ -1198,31 +1198,7 @@ struct ArithHelperI64<ArithOpType::Mul, CompareOpType::EQ> {
         const __m256i prodll  = _mm256_mul_epu32(a,b);               // a0Lb0L,a1Lb1L, 64 bit unsigned products
         const __m256i prod    = _mm256_add_epi64(prodll,prodlh3);    // a0Lb0L+(a0Lb0H+a0Hb0L)<<32, a1Lb1L+(a1Lb1H+a1Hb1L)<<32
             
-        return _mm256_cmpeq_epi64(prod, value);
-    }
-};
-
-template<>
-struct ArithHelperI64<ArithOpType::Add, CompareOpType::NE> {
-    static inline __m256i op(const __m256i left, const __m256i right, const __m256i value) {
-        const __m256i eq_mask = ArithHelperI64<ArithOpType::Add, CompareOpType::EQ>::op(left, right, value);
-        return _mm256_xor_si256(eq_mask, _mm256_set1_epi32(0xFFFFFFFF));
-    }
-};
-
-template<>
-struct ArithHelperI64<ArithOpType::Sub, CompareOpType::NE> {
-    static inline __m256i op(const __m256i left, const __m256i right, const __m256i value) {
-        const __m256i eq_mask = ArithHelperI64<ArithOpType::Sub, CompareOpType::EQ>::op(left, right, value);
-        return _mm256_xor_si256(eq_mask, _mm256_set1_epi32(0xFFFFFFFF));
-    }
-};
-
-template<>
-struct ArithHelperI64<ArithOpType::Mul, CompareOpType::NE> {
-    static inline __m256i op(const __m256i left, const __m256i right, const __m256i value) {
-        const __m256i eq_mask = ArithHelperI64<ArithOpType::Mul, CompareOpType::EQ>::op(left, right, value);
-        return _mm256_xor_si256(eq_mask, _mm256_set1_epi32(0xFFFFFFFF));
+        return CmpHelperI64<CmpOp>::compare(prod, value);
     }
 };
 

@@ -108,8 +108,6 @@ static constexpr RangeType typical_range_types[] =
     { RangeType::IncInc, RangeType::IncExc, RangeType::ExcInc, RangeType::ExcExc };
 static constexpr ArithOpType typical_arith_ops[] = 
     { ArithOpType::Add, ArithOpType::Sub, ArithOpType::Mul, ArithOpType::Div, ArithOpType::Mod };
-static constexpr CompareOpType typical_arith_compare_ops[] =
-    { CompareOpType::EQ, CompareOpType::NE };
 
 #else
 
@@ -127,8 +125,6 @@ static constexpr RangeType typical_range_types[] =
     { RangeType::IncInc, RangeType::IncExc, RangeType::ExcInc, RangeType::ExcExc };
 static constexpr ArithOpType typical_arith_ops[] = 
     { ArithOpType::Add, ArithOpType::Sub, ArithOpType::Mul, ArithOpType::Div, ArithOpType::Mod };
-static constexpr CompareOpType typical_arith_compare_ops[] =
-    { CompareOpType::EQ, CompareOpType::NE };
 
 #define FULL_TESTS 1
 #endif

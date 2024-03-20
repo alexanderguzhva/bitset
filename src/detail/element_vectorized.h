@@ -87,46 +87,46 @@ struct VectorizedElementWiseBitsetPolicy {
         ElementWiseBitsetPolicy<ElementT>::op_or(left, right, start_left, start_right, size);
     }
 
-    static inline void set(
+    static inline void op_set(
         data_type* const data, 
         const size_type start, 
         const size_type size
     ) {
-        ElementWiseBitsetPolicy<ElementT>::set(data, start, size);
+        ElementWiseBitsetPolicy<ElementT>::op_set(data, start, size);
     }
 
-    static inline void reset(
+    static inline void op_reset(
         data_type* const data, 
         const size_type start, 
         const size_type size
     ) {
-        ElementWiseBitsetPolicy<ElementT>::reset(data, start, size);
+        ElementWiseBitsetPolicy<ElementT>::op_reset(data, start, size);
     }
 
-    static inline bool all(
+    static inline bool op_all(
         const data_type* const data, 
         const size_type start, 
         const size_type size
     ) {
-        return ElementWiseBitsetPolicy<ElementT>::all(data, start, size);
+        return ElementWiseBitsetPolicy<ElementT>::op_all(data, start, size);
     }
 
-    static inline bool none(
+    static inline bool op_none(
         const data_type* const data, 
         const size_type start, 
         const size_type size
     ) {
-        return ElementWiseBitsetPolicy<ElementT>::none(data, start, size);
+        return ElementWiseBitsetPolicy<ElementT>::op_none(data, start, size);
     }
 
-    static void copy(
+    static void op_copy(
         const data_type* const src,
         const size_type start_src,
         data_type* const dst,
         const size_type start_dst,
         const size_type size
     ) {
-        ElementWiseBitsetPolicy<ElementT>::copy(src, start_src, dst, start_dst, size);
+        ElementWiseBitsetPolicy<ElementT>::op_copy(src, start_src, dst, start_dst, size);
     }
 
     static inline size_type op_count(
@@ -167,23 +167,23 @@ struct VectorizedElementWiseBitsetPolicy {
         ElementWiseBitsetPolicy<ElementT>::op_sub(left, right, start_left, start_right, size);
     }
 
-    static void fill(
+    static void op_fill(
         data_type* const data,
         const size_type start,
         const size_type size,
         const bool value 
     ) {
-        ElementWiseBitsetPolicy<ElementT>::fill(data, start, size, value);
+        ElementWiseBitsetPolicy<ElementT>::op_fill(data, start, size, value);
     }
 
     //
-    static inline std::optional<size_type> find(
+    static inline std::optional<size_type> op_find(
         const data_type* const data, 
         const size_type start, 
         const size_type size,
         const size_type starting_idx
     ) {
-        return ElementWiseBitsetPolicy<ElementT>::find(data, start, size, starting_idx);
+        return ElementWiseBitsetPolicy<ElementT>::op_find(data, start, size, starting_idx);
     }
 
     //

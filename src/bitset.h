@@ -141,7 +141,7 @@ public:
 
     // Set all bits to true.
     inline void set() {
-        policy_type::set(this->data(), this->offset(), this->size());
+        policy_type::op_set(this->data(), this->offset(), this->size());
     }
 
     // Set a given bit to a given value.
@@ -151,7 +151,7 @@ public:
 
     // Set all bits to false.
     inline void reset() {
-        policy_type::reset(this->data(), this->offset(), this->size());
+        policy_type::op_reset(this->data(), this->offset(), this->size());
     }
 
     // Set a given bit to false.
@@ -161,7 +161,7 @@ public:
 
     // Return whether all bits are set to true.
     inline bool all() const {
-        return policy_type::all(this->data(), this->offset(), this->size());
+        return policy_type::op_all(this->data(), this->offset(), this->size());
     }
 
     // Return whether any of the bits is set to true.
@@ -171,7 +171,7 @@ public:
 
     // Return whether all bits are set to false.
     inline bool none() const {
-        return policy_type::none(this->data(), this->offset(), this->size());
+        return policy_type::op_none(this->data(), this->offset(), this->size());
     }
 
     // Inplace and.
@@ -365,7 +365,7 @@ public:
 
     // Find the index of the first bit set to true.
     inline std::optional<size_type> find_first() const {
-        return policy_type::find(this->data(), this->offset(), this->size(), 0);
+        return policy_type::op_find(this->data(), this->offset(), this->size(), 0);
     }
 
     // Find the index of the first bit set to true, starting from a given bit index.
@@ -375,7 +375,7 @@ public:
             return std::nullopt;
         }
 
-        return policy_type::find(this->data(), this->offset(), this->size(), starting_bit_idx + 1);
+        return policy_type::op_find(this->data(), this->offset(), this->size(), starting_bit_idx + 1);
     }
 
     // Read multiple bits starting from a given bit index.
@@ -385,7 +385,7 @@ public:
     ) {
         range_checker::le(nbits, sizeof(data_type));
 
-        return policy_type::read(
+        return policy_type::op_read(
             this->data(),
             this->offset() + starting_bit_idx,
             nbits
@@ -400,7 +400,7 @@ public:
     ) {
         range_checker::le(nbits, sizeof(data_type));
 
-        policy_type::write(
+        policy_type::op_write(
             this->data(),
             this->offset() + starting_bit_idx,
             nbits,
@@ -840,7 +840,7 @@ public:
         Data = container_type(get_required_size_in_container_elements(other.size()));
         Size = other.size();
 
-        policy_type::copy(
+        policy_type::op_copy(
             other.data(),
             other.offset(),
             this->data(),
@@ -876,7 +876,7 @@ public:
         this->resize(new_size);
 
         if (new_size > old_size) {
-            policy_type::fill(this->data(), old_size, new_size - old_size, init);
+            policy_type::op_fill(this->data(), old_size, new_size - old_size, init);
         }
     }
 
@@ -890,7 +890,7 @@ public:
         const size_type old_size = this->size();
         this->resize(this->size() + count);
 
-        policy_type::copy(
+        policy_type::op_copy(
             other.data(),
             other.offset() + starting_bit_idx,
             this->data(),

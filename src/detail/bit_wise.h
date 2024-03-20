@@ -59,7 +59,7 @@ struct BitWiseBitsetPolicy {
         return const_proxy_type{element, shift};
     }
 
-    static inline data_type read(
+    static inline data_type op_read(
         const data_type* const data,
         const size_type start,
         const size_type nbits
@@ -73,7 +73,7 @@ struct BitWiseBitsetPolicy {
         return value;
     }
 
-    static void write(
+    static void op_write(
         data_type* const data,
         const size_type start,
         const size_type nbits,
@@ -136,7 +136,7 @@ struct BitWiseBitsetPolicy {
         }
     }
 
-    static inline void set(
+    static inline void op_set(
         data_type* const data, 
         const size_type start, 
         const size_type size
@@ -146,7 +146,7 @@ struct BitWiseBitsetPolicy {
         }
     }
 
-    static inline void reset(
+    static inline void op_reset(
         data_type* const data, 
         const size_type start, 
         const size_type size
@@ -156,7 +156,7 @@ struct BitWiseBitsetPolicy {
         }
     }
 
-    static inline bool all(
+    static inline bool op_all(
         const data_type* const data, 
         const size_type start, 
         const size_type size
@@ -170,7 +170,7 @@ struct BitWiseBitsetPolicy {
         return true;
     }
 
-    static inline bool none(
+    static inline bool op_none(
         const data_type* const data, 
         const size_type start, 
         const size_type size
@@ -184,7 +184,7 @@ struct BitWiseBitsetPolicy {
         return true;
     }
 
-    static void copy(
+    static void op_copy(
         const data_type* const src,
         const size_type start_src,
         data_type* const dst,
@@ -198,7 +198,7 @@ struct BitWiseBitsetPolicy {
         }
     }
 
-    static void fill(
+    static void op_fill(
         data_type* const dst,
         const size_type start_dst,
         const size_type size,
@@ -279,7 +279,7 @@ struct BitWiseBitsetPolicy {
     }
 
     //
-    static inline std::optional<size_type> find(
+    static inline std::optional<size_type> op_find(
         const data_type* const data, 
         const size_type start, 
         const size_type size,

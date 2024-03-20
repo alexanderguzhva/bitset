@@ -60,7 +60,7 @@ struct ElementWiseBitsetPolicy {
         return const_proxy_type{element, shift};
     }
 
-    static inline data_type read(
+    static inline data_type op_read(
         const data_type* const data,
         const size_type start,
         const size_type nbits
@@ -103,7 +103,7 @@ struct ElementWiseBitsetPolicy {
         }
     }
 
-    static inline void write(
+    static inline void op_write(
         data_type* const data,
         const size_type start,
         const size_type nbits,
@@ -165,7 +165,6 @@ struct ElementWiseBitsetPolicy {
             return;
         }
 
-        //
         auto start_element = get_element(start);
         const auto end_element = get_element(start + size);
 
@@ -259,7 +258,7 @@ struct ElementWiseBitsetPolicy {
         return ~(get_shift_mask_begin(shift));
     }
 
-    static inline void set(
+    static inline void op_set(
         data_type* const data, 
         const size_type start, 
         const size_type size
@@ -267,15 +266,15 @@ struct ElementWiseBitsetPolicy {
         fill(data, start, size, true);
     }
 
-    static inline void reset(
+    static inline void op_reset(
         data_type* const data, 
         const size_type start, 
         const size_type size
     ) {
-        fill(data, start, size, false);
+        op_fill(data, start, size, false);
     }
 
-    static inline bool all(
+    static inline bool op_all(
         const data_type* const data, 
         const size_type start, 
         const size_type size
@@ -333,7 +332,7 @@ struct ElementWiseBitsetPolicy {
         return true;
     }
 
-    static inline bool none(
+    static inline bool op_none(
         const data_type* const data, 
         const size_type start, 
         const size_type size
@@ -391,7 +390,7 @@ struct ElementWiseBitsetPolicy {
         return true;
     }
 
-    static void copy(
+    static void op_copy(
         const data_type* const src,
         const size_type start_src,
         data_type* const dst,
@@ -416,33 +415,33 @@ struct ElementWiseBitsetPolicy {
                 // easier read
                 for (size_type i = 0; i < size_b; i += data_bits) {
                     const data_type src_v = src[(start_src + i) / data_bits];
-                    write(dst, start_dst + i, data_bits, src_v);
+                    op_write(dst, start_dst + i, data_bits, src_v);
                 }
             }
         } else {
             if ((start_dst % data_bits) == 0) {
                 // easier write
                 for (size_type i = 0; i < size_b; i += data_bits) {
-                    const data_type src_v = read(src, start_src + i, data_bits);
+                    const data_type src_v = op_read(src, start_src + i, data_bits);
                     dst[(start_dst + i) / data_bits] = src_v;
                 }
             } else {
                 // general case
                 for (size_type i = 0; i < size_b; i += data_bits) {
-                    const data_type src_v = read(src, start_src + i, data_bits);
-                    write(dst, start_dst + i, data_bits, src_v);
+                    const data_type src_v = op_read(src, start_src + i, data_bits);
+                    op_write(dst, start_dst + i, data_bits, src_v);
                 }
             }
         }
 
         // process leftovers
         if (size_b != size) {
-            const data_type src_v = read(src, start_src + size_b, size - size_b);
-            write(dst, start_dst + size_b, size - size_b, src_v);
+            const data_type src_v = op_read(src, start_src + size_b, size - size_b);
+            op_write(dst, start_dst + size_b, size - size_b, src_v);
         }
     }
 
-    static void fill(
+    static void op_fill(
         data_type* const data,
         const size_type start,
         const size_type size,
@@ -587,7 +586,7 @@ struct ElementWiseBitsetPolicy {
 
                 for (size_type i = 0, j = 0; i < size_b; i += data_bits, j += 1) {
                     const data_type left_v = left[start_left_idx + j];
-                    const data_type right_v = read(right, start_right + i, data_bits);
+                    const data_type right_v = op_read(right, start_right + i, data_bits);
                     if (left_v != right_v) {
                         return false;
                     }
@@ -599,7 +598,7 @@ struct ElementWiseBitsetPolicy {
                 size_type start_right_idx = start_right / data_bits;
 
                 for (size_type i = 0, j = 0; i < size_b; i += data_bits, j += 1) {
-                    const data_type left_v = read(left, start_left + i, data_bits);
+                    const data_type left_v = op_read(left, start_left + i, data_bits);
                     const data_type right_v = right[start_right_idx + j];
                     if (left_v != right_v) {
                         return false;
@@ -608,8 +607,8 @@ struct ElementWiseBitsetPolicy {
             } else {
                 // general case
                 for (size_type i = 0; i < size_b; i += data_bits) {
-                    const data_type left_v = read(left, start_left + i, data_bits);
-                    const data_type right_v = read(right, start_right + i, data_bits);
+                    const data_type left_v = op_read(left, start_left + i, data_bits);
+                    const data_type right_v = op_read(right, start_right + i, data_bits);
                     if (left_v != right_v) {
                         return false;
                     }
@@ -619,8 +618,8 @@ struct ElementWiseBitsetPolicy {
 
         // process leftovers
         if (size_b != size) {
-            const data_type left_v = read(left, start_left + size_b, size - size_b);
-            const data_type right_v = read(right, start_right + size_b, size - size_b);            
+            const data_type left_v = op_read(left, start_left + size_b, size - size_b);
+            const data_type right_v = op_read(right, start_right + size_b, size - size_b);            
             if (left_v != right_v) {
                 return false;
             }
@@ -660,7 +659,7 @@ struct ElementWiseBitsetPolicy {
     }
 
     //
-    static inline std::optional<size_type> find(
+    static inline std::optional<size_type> op_find(
         const data_type* const data, 
         const size_type start, 
         const size_type size,
@@ -885,7 +884,7 @@ struct ElementWiseBitsetPolicy {
                 size_type start_right_idx = start_right / data_bits;
 
                 for (size_type i = 0, j = 0; i < size_b; i += data_bits, j += 1) {
-                    const data_type left_v = read(left, start_left + i, data_bits);
+                    const data_type left_v = op_read(left, start_left + i, data_bits);
                     const data_type right_v = right[start_right_idx + j];
 
                     const data_type result_v = func(left_v, right_v);
@@ -899,7 +898,7 @@ struct ElementWiseBitsetPolicy {
 
                 for (size_type i = 0, j = 0; i < size_b; i += data_bits, j += 1) {
                     data_type& left_v = left[start_left_idx + j];
-                    const data_type right_v = read(right, start_right + i, data_bits);
+                    const data_type right_v = op_read(right, start_right + i, data_bits);
 
                     const data_type result_v = func(left_v, right_v);
                     left_v = result_v;
@@ -907,25 +906,24 @@ struct ElementWiseBitsetPolicy {
             } else {
                 // general case
                 for (size_type i = 0; i < size_b; i += data_bits) {
-                    const data_type left_v = read(left, start_left + i, data_bits);
-                    const data_type right_v = read(right, start_right + i, data_bits);
+                    const data_type left_v = op_read(left, start_left + i, data_bits);
+                    const data_type right_v = op_read(right, start_right + i, data_bits);
 
                     const data_type result_v = func(left_v, right_v);
-                    write(left, start_right + i, data_bits, result_v);
+                    op_write(left, start_right + i, data_bits, result_v);
                 }
             }
         }
 
         // process leftovers
         if (size_b != size) {
-            const data_type left_v = read(left, start_left + size_b, size - size_b);
-            const data_type right_v = read(right, start_right + size_b, size - size_b);
+            const data_type left_v = op_read(left, start_left + size_b, size - size_b);
+            const data_type right_v = op_read(right, start_right + size_b, size - size_b);
 
             const data_type result_v = func(left_v, right_v);
-            write(left, start_left + size_b, size - size_b, result_v);
+            op_write(left, start_left + size_b, size - size_b, result_v);
         }
     }
-
 };
 
 }

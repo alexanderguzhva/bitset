@@ -401,7 +401,7 @@ struct VectorizedElementWiseBitsetPolicy {
         // process the first element
         if (start_shift != 0) [[unlikely]] {
             // it is possible to do vectorized masking here, but it is not worth it
-            func_baseline(start, 0, size);
+            func_baseline(start, 0, data_bits - start_shift);
 
             // start from the next element
             start_element += 1;

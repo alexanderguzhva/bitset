@@ -648,10 +648,6 @@ struct ElementWiseBitsetPolicy {
         const size_t start_right, 
         const size_t size
     ) {
-        if (size == 0) [[unlikely]] {
-            return;
-        }
-
         op_func(left, right, start_left, start_right, size, 
             [](const data_type left_v, const data_type right_v) { 
                 return left_v & ~right_v; 
@@ -743,9 +739,10 @@ struct ElementWiseBitsetPolicy {
         const U* const __restrict u,
         const size_type size
     ) {
-        for (size_type i = 0; i < size; i++) {
-            get_proxy(data, start + i) = CompareOperator<Op>::compare(t[i], u[i]);
-        }
+        op_func(data, start, size, 
+            [t, u](const size_type bit_idx) {
+                return CompareOperator<Op>::compare(t[bit_idx], u[bit_idx]);
+            });
     }
 
     //
@@ -757,9 +754,10 @@ struct ElementWiseBitsetPolicy {
         const size_type size,
         const T& value
     ) {
-        for (size_type i = 0; i < size; i++) {
-            get_proxy(data, start + i) = CompareOperator<Op>::compare(t[i], value);
-        }
+        op_func(data, start, size, 
+            [t, value](const size_type bit_idx) {
+                return CompareOperator<Op>::compare(t[bit_idx], value);
+            });
     }
 
     //
@@ -772,9 +770,10 @@ struct ElementWiseBitsetPolicy {
         const T* const __restrict values,
         const size_type size
     ) {
-        for (size_type i = 0; i < size; i++) {
-            get_proxy(data, start + i) = RangeOperator<Op>::within_range(lower[i], upper[i], values[i]);
-        }
+        op_func(data, start, size, 
+            [lower, upper, values](const size_type bit_idx) {
+                return RangeOperator<Op>::within_range(lower[bit_idx], upper[bit_idx], values[bit_idx]);
+            });
     }
 
     //
@@ -787,9 +786,10 @@ struct ElementWiseBitsetPolicy {
         const T* const __restrict values,
         const size_type size
     ) {
-        for (size_type i = 0; i < size; i++) {
-            get_proxy(data, start + i) = RangeOperator<Op>::within_range(lower, upper, values[i]);
-        }
+        op_func(data, start, size, 
+            [lower, upper, values](const size_type bit_idx) {
+                return RangeOperator<Op>::within_range(lower, upper, values[bit_idx]);
+            });
     }
 
     //
@@ -802,9 +802,10 @@ struct ElementWiseBitsetPolicy {
         const ArithHighPrecisionType<T>& value,
         const size_type size
     ) {
-        for (size_type i = 0; i < size; i++) {
-            get_proxy(data, start + i) = ArithCompareOperator<AOp, CmpOp>::compare(src[i], right_operand, value);
-        }
+        op_func(data, start, size, 
+            [src, right_operand, value](const size_type bit_idx) {
+                return ArithCompareOperator<AOp, CmpOp>::compare(src[bit_idx], right_operand, value);
+            });
     }
 
     //
@@ -925,6 +926,7 @@ struct ElementWiseBitsetPolicy {
         }
     }
 
+    // bool Func(const size_type bit_idx);
     template<typename Func>
     static inline void op_func(
         data_type* const __restrict data, 
@@ -946,7 +948,11 @@ struct ElementWiseBitsetPolicy {
             data_type bits = 0;
             for (size_type j = 0; j < size; j++) {
                 const bool bit = func(j);
-                bits |= (bit ? (data_type(1) << j) : 0);
+                // // a curious example where the compiler does not optimize the code properly
+                // bits |= (bit ? (data_type(1) << j) : 0);
+                //
+                // use the following code
+                bits |= (data_type(bit ? 1 : 0) << j); 
             }
 
             op_write(data, start, size, bits);
@@ -963,7 +969,7 @@ struct ElementWiseBitsetPolicy {
             data_type bits = 0;
             for (size_type j = 0; j < n_bits; j++) {
                 const bool bit = func(j);
-                bits |= (bit ? (data_type(1) << j) : 0);
+                bits |= (data_type(bit ? 1 : 0) << j); 
             }
 
             op_write(data, start, n_bits, bits);
@@ -978,24 +984,21 @@ struct ElementWiseBitsetPolicy {
             for (size_type i = start_element; i < end_element; i++) {
                 data_type bits = 0;
                 for (size_type j = 0; j < data_bits; j++) {
-                    const bool bit = func(ptr_offset + i * data_bits + j);
-                    bits |= (bit ? (data_type(1) << j) : 0);
+                    const bool bit = func(ptr_offset + j);
+                    bits |= (data_type(bit ? 1 : 0) << j); 
                 }
 
                 data[i] = bits;
+                ptr_offset += data_bits;
             }
-
-            // apply the shift
-            const size_t nbits = (end_element - start_element) * data_bits;
-            ptr_offset += nbits;
         }
 
         // process the last element
         if (end_shift != 0) [[likely]] {
             data_type bits = 0;
             for (size_type j = 0; j < end_shift; j++) {
-                const bool bit = func(ptr_offset + + j);
-                bits |= (bit ? (data_type(1) << j) : 0);
+                const bool bit = func(ptr_offset + j);
+                bits |= (data_type(bit ? 1 : 0) << j); 
             }
 
             const size_t starting_bit_idx = end_element * data_bits; 

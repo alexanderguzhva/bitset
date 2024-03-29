@@ -263,7 +263,7 @@ struct ElementWiseBitsetPolicy {
         const size_type start, 
         const size_type size
     ) {
-        fill(data, start, size, true);
+        op_fill(data, start, size, true);
     }
 
     static inline void op_reset(
@@ -889,7 +889,7 @@ struct ElementWiseBitsetPolicy {
                     const data_type right_v = right[start_right_idx + j];
 
                     const data_type result_v = func(left_v, right_v);
-                    write(left, start_right + i, data_bits, result_v);
+                    op_write(left, start_right + i, data_bits, result_v);
                 }
             }
         } else {

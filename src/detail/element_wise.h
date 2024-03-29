@@ -924,6 +924,84 @@ struct ElementWiseBitsetPolicy {
             op_write(left, start_left + size_b, size - size_b, result_v);
         }
     }
+
+    template<typename Func>
+    static inline void op_func(
+        data_type* const __restrict data, 
+        const size_type start,
+        const size_t size,
+        Func func
+    ) {
+        if (size == 0) [[unlikely]] {
+            return;
+        }
+
+        auto start_element = get_element(start);
+        const auto end_element = get_element(start + size);
+
+        const auto start_shift = get_shift(start);
+        const auto end_shift = get_shift(start + size);
+
+        if (start_element == end_element) {
+            data_type bits = 0;
+            for (size_type j = 0; j < size; j++) {
+                const bool bit = func(j);
+                bits |= (bit ? (data_type(1) << j) : 0);
+            }
+
+            op_write(data, start, size, bits);
+            return;
+        }
+
+        //
+        uintptr_t ptr_offset = 0;
+
+        // process the first element
+        if (start_shift != 0) [[unlikely]] {
+            const size_type n_bits = data_bits - start_shift;
+
+            data_type bits = 0;
+            for (size_type j = 0; j < n_bits; j++) {
+                const bool bit = func(j);
+                bits |= (bit ? (data_type(1) << j) : 0);
+            }
+
+            op_write(data, start, n_bits, bits);
+
+            // start from the next element
+            start_element += 1;
+            ptr_offset += n_bits;
+        }
+
+        // process the middle
+        {
+            for (size_type i = start_element; i < end_element; i++) {
+                data_type bits = 0;
+                for (size_type j = 0; j < data_bits; j++) {
+                    const bool bit = func(ptr_offset + i * data_bits + j);
+                    bits |= (bit ? (data_type(1) << j) : 0);
+                }
+
+                data[i] = bits;
+            }
+
+            // apply the shift
+            const size_t nbits = (end_element - start_element) * data_bits;
+            ptr_offset += nbits;
+        }
+
+        // process the last element
+        if (end_shift != 0) [[likely]] {
+            data_type bits = 0;
+            for (size_type j = 0; j < end_shift; j++) {
+                const bool bit = func(ptr_offset + + j);
+                bits |= (bit ? (data_type(1) << j) : 0);
+            }
+
+            const size_t starting_bit_idx = end_element * data_bits; 
+            op_write(data, starting_bit_idx, end_shift, bits);
+        }
+    }
 };
 
 }

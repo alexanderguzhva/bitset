@@ -1,9 +1,9 @@
 Basically, a clone of a `boost::dynamic_bitset` library with views and SIMD (AVX2/AVX512/NEON/SVE).
 
-This is an alpha version of library. The work is still in progress.
+This is an beta version of library. The work is still in progress.
 
 This library was written specifically for the Milvus project (https://github.com/milvus-io/milvus) and expected to be placed at https://github.com/milvus-io/milvus/tree/master/internal/core/src/bitset in the future release. 
-Although, this library may be used as a general-purpose ibe. The version in this repo contains additional attributes like `[[likely]]` and may be used as a header-only library.
+Although, this library may be used as a general-purpose one. The version in this repo contains additional attributes like `[[likely]]` and may be used as a header-only library.
 
 Tested on:
 * Intel Xeon 4th Gen

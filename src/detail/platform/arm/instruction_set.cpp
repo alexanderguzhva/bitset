@@ -1,6 +1,8 @@
 #include "instruction_set.h"
 
+#ifdef __linux__
 #include <sys/auxv.h>
+#endif
 
 namespace milvus {
 namespace bitset {
@@ -9,10 +11,16 @@ namespace arm {
 
 InstructionSet::InstructionSet() {}
 
+#ifdef __linux__
 bool InstructionSet::supports_sve() {
     const unsigned long cap = getauxval(AT_HWCAP);
     return ((cap & HWCAP_SVE) == HWCAP_SVE);
 }
+#else
+bool InstructionSet::supports_sve() {
+    return false;
+}
+#endif
 
 }
 }

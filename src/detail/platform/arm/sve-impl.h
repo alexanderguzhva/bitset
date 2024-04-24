@@ -677,7 +677,7 @@ struct MaskHelper<1> {
         const svbool_t pred6, const svbool_t pred7
     ) {
         const size_t sve_width = svcntb();
-        if (sve_width == 8 * sve_width) {
+        if (size == 8 * sve_width) {
             // perform a full write
             *((svbool_t*)(bitmask + 0 * sve_width / 8)) = pred0;
             *((svbool_t*)(bitmask + 1 * sve_width / 8)) = pred1;

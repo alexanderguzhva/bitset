@@ -56,123 +56,6 @@ void print_svuint8_t(const svuint8_t value) {
 
 */
 
-///////////////////////////////////////////////////////////////////////////
-
-// todo: replace with pext whenever available
-
-// generate 16-bit bitmask from 8 serialized 16-bit svbool_t values
-void write_bitmask_16_8x(
-    uint8_t* const __restrict res_u8,
-    const svbool_t pred_op,
-    const svbool_t pred_write,
-    const uint8_t* const __restrict pred_buf
-) {
-    // perform parallel pext
-    // 2048b -> 32 bytes mask -> 256 bytes total, 128 uint16_t values
-    // 512b -> 8 bytes mask -> 64 bytes total, 32 uint16_t values
-    // 256b -> 4 bytes mask -> 32 bytes total, 16 uint16_t values
-    // 128b -> 2 bytes mask -> 16 bytes total, 8 uint16_t values
-
-    // this code does reduction of 16-bit 0b0A0B0C0D0E0F0G0H words into
-    //   uint8_t values 0bABCDEFGH, then writes ones to the memory
-
-    // we need to operate in uint8_t
-    const svuint8_t mask_8b = svld1_u8(pred_op, pred_buf);
-
-    const svuint8_t mask_04_8b = svand_n_u8_z(pred_op, mask_8b, 0x01);
-    const svuint8_t mask_15_8b = svand_n_u8_z(pred_op, mask_8b, 0x04);
-    const svuint8_t mask_15s_8b = svlsr_n_u8_z(pred_op, mask_15_8b, 1);
-    const svuint8_t mask_26_8b = svand_n_u8_z(pred_op, mask_8b, 0x10);
-    const svuint8_t mask_26s_8b = svlsr_n_u8_z(pred_op, mask_26_8b, 2);
-    const svuint8_t mask_37_8b = svand_n_u8_z(pred_op, mask_8b, 0x40);
-    const svuint8_t mask_37s_8b = svlsr_n_u8_z(pred_op, mask_37_8b, 3);
-
-    const svuint8_t mask_0347_8b = svorr_u8_z(pred_op, mask_04_8b, mask_37s_8b);
-    const svuint8_t mask_1256_8b = svorr_u8_z(pred_op, mask_15s_8b, mask_26s_8b);
-    const svuint8_t mask_cmb_8b = svorr_u8_z(pred_op, mask_0347_8b, mask_1256_8b);
-
-    //
-    const svuint16_t shifts_16b = svdup_u16(0x0400UL);
-    const svuint8_t shifts_8b = svreinterpret_u8_u16(shifts_16b);
-    const svuint8_t shifted_8b_m0 = svlsl_u8_z(pred_op, mask_cmb_8b, shifts_8b);
-
-    const svuint8_t zero_8b = svdup_n_u8(0);
-
-    const svuint8_t shifted_8b_m3 = svorr_u8_z(pred_op, svuzp1_u8(shifted_8b_m0, zero_8b), svuzp2_u8(shifted_8b_m0, zero_8b));
-
-    // write a finished bitmask
-    svst1_u8(pred_write, res_u8, shifted_8b_m3);
-}
-
-// generate 32-bit bitmask from 8 serialized 32-bit svbool_t values
-void write_bitmask_32_8x(
-    uint8_t* const __restrict res_u8,
-    const svbool_t pred_op,
-    const svbool_t pred_write,
-    const uint8_t* const __restrict pred_buf
-) {
-    // perform parallel pext
-    // 2048b -> 32 bytes mask -> 256 bytes total, 64 uint32_t values
-    // 512b -> 8 bytes mask -> 64 bytes total, 16 uint32_t values
-    // 256b -> 4 bytes mask -> 32 bytes total, 8 uint32_t values
-    // 128b -> 2 bytes mask -> 16 bytes total, 4 uint32_t values
-
-    // this code does reduction of 32-bit 0b000A000B000C000D... dwords into
-    //   uint8_t values 0bABCDEFGH, then writes ones to the memory
-
-    // we need to operate in uint8_t
-    const svuint8_t mask_8b = svld1_u8(pred_op, pred_buf);
-
-    const svuint8_t mask_024_8b = svand_n_u8_z(pred_op, mask_8b, 0x01);
-    const svuint8_t mask_135s_8b = svlsr_n_u8_z(pred_op, mask_8b, 3);
-    const svuint8_t mask_cmb_8b = svorr_u8_z(pred_op, mask_024_8b, mask_135s_8b);
-
-    //
-    const svuint32_t shifts_32b = svdup_u32(0x06040200UL);
-    const svuint8_t shifts_8b = svreinterpret_u8_u32(shifts_32b);
-    const svuint8_t shifted_8b_m0 = svlsl_u8_z(pred_op, mask_cmb_8b, shifts_8b);
-
-    const svuint8_t zero_8b = svdup_n_u8(0);
-
-    const svuint8_t shifted_8b_m2 = svorr_u8_z(pred_op, svuzp1_u8(shifted_8b_m0, zero_8b), svuzp2_u8(shifted_8b_m0, zero_8b));
-    const svuint8_t shifted_8b_m3 = svorr_u8_z(pred_op, svuzp1_u8(shifted_8b_m2, zero_8b), svuzp2_u8(shifted_8b_m2, zero_8b));
-
-    // write a finished bitmask
-    svst1_u8(pred_write, res_u8, shifted_8b_m3);
-}
-
-// generate 64-bit bitmask from 8 serialized 64-bit svbool_t values
-void write_bitmask_64_8x(
-    uint8_t* const __restrict res_u8,
-    const svbool_t pred_op,
-    const svbool_t pred_write,
-    const uint8_t* const __restrict pred_buf
-) {
-    // perform parallel pext
-    // 2048b -> 32 bytes mask -> 256 bytes total, 32 uint64_t values
-    // 512b -> 8 bytes mask -> 64 bytes total, 4 uint64_t values
-    // 256b -> 4 bytes mask -> 32 bytes total, 2 uint64_t values
-    // 128b -> 2 bytes mask -> 16 bytes total, 1 uint64_t values
-
-    // this code does reduction of 64-bit 0b0000000A0000000B... qwords into
-    //   uint8_t values 0bABCDEFGH, then writes ones to the memory
-
-    // we need to operate in uint8_t
-    const svuint8_t mask_8b = svld1_u8(pred_op, pred_buf);
-    const svuint64_t shifts_64b = svdup_u64(0x706050403020100ULL);
-    const svuint8_t shifts_8b = svreinterpret_u8_u64(shifts_64b);
-    const svuint8_t shifted_8b_m0 = svlsl_u8_z(pred_op, mask_8b, shifts_8b);
-
-    const svuint8_t zero_8b = svdup_n_u8(0);
-
-    const svuint8_t shifted_8b_m1 = svorr_u8_z(pred_op, svuzp1_u8(shifted_8b_m0, zero_8b), svuzp2_u8(shifted_8b_m0, zero_8b));
-    const svuint8_t shifted_8b_m2 = svorr_u8_z(pred_op, svuzp1_u8(shifted_8b_m1, zero_8b), svuzp2_u8(shifted_8b_m1, zero_8b));
-    const svuint8_t shifted_8b_m3 = svorr_u8_z(pred_op, svuzp1_u8(shifted_8b_m2, zero_8b), svuzp2_u8(shifted_8b_m2, zero_8b));
-
-    // write a finished bitmask
-    svst1_u8(pred_write, res_u8, shifted_8b_m3);
-}
-
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -428,7 +311,7 @@ struct SVEVector<int8_t> {
     using sve_type = svint8_t;
 
     // measured in the number of elements that an SVE register can hold
-    static inline size_t width() {
+    static inline uint64_t width() {
         return svcntb();
     }
 
@@ -451,7 +334,7 @@ struct SVEVector<int16_t> {
     using sve_type = svint16_t;
 
     // measured in the number of elements that an SVE register can hold
-    static inline size_t width() {
+    static inline uint64_t width() {
         return svcnth();
     }
 
@@ -474,7 +357,7 @@ struct SVEVector<int32_t> {
     using sve_type = svint32_t;
 
     // measured in the number of elements that an SVE register can hold
-    static inline size_t width() {
+    static inline uint64_t width() {
         return svcntw();
     }
 
@@ -497,7 +380,7 @@ struct SVEVector<int64_t> {
     using sve_type = svint64_t;
 
     // measured in the number of elements that an SVE register can hold
-    static inline size_t width() {
+    static inline uint64_t width() {
         return svcntd();
     }
 
@@ -520,7 +403,7 @@ struct SVEVector<float> {
     using sve_type = svfloat32_t;
 
     // measured in the number of elements that an SVE register can hold
-    static inline size_t width() {
+    static inline uint64_t width() {
         return svcntw();
     }
 
@@ -543,7 +426,7 @@ struct SVEVector<double> {
     using sve_type = svfloat64_t;
 
     // measured in the number of elements that an SVE register can hold
-    static inline size_t width() {
+    static inline uint64_t width() {
         return svcntd();
     }
 
@@ -563,147 +446,234 @@ struct SVEVector<double> {
 
 ///////////////////////////////////////////////////////////////////////////
 
-// an interesting discussion here:
-// https://stackoverflow.com/questions/77834169/what-is-a-fast-fallback-algorithm-which-emulates-pdep-and-pext-in-software
-
-// SVE2 has bitperm, which contains the implementation of pext
-
-// todo: replace with pext whenever available
-
-//
+// NBYTES is the size of the underlying datatype in bytes.
+//   So, for example, for i8/u8 use 1, for i64/u64/f64 use 8/
 template<size_t NBYTES>
 struct MaskHelper {};
 
 template<>
 struct MaskHelper<1> {
-    static inline void write(
+    static inline void write_full(
         uint8_t* const __restrict bitmask, 
-        const size_t size,
         const svbool_t pred0, const svbool_t pred1,
         const svbool_t pred2, const svbool_t pred3,
         const svbool_t pred4, const svbool_t pred5,
         const svbool_t pred6, const svbool_t pred7
     ) {
-        const size_t sve_width = svcntb();
-        if (size == 8 * sve_width) {
-            // perform a full write
-            *((svbool_t*)(bitmask + 0 * sve_width / 8)) = pred0;
-            *((svbool_t*)(bitmask + 1 * sve_width / 8)) = pred1;
-            *((svbool_t*)(bitmask + 2 * sve_width / 8)) = pred2;
-            *((svbool_t*)(bitmask + 3 * sve_width / 8)) = pred3;
-            *((svbool_t*)(bitmask + 4 * sve_width / 8)) = pred4;
-            *((svbool_t*)(bitmask + 5 * sve_width / 8)) = pred5;
-            *((svbool_t*)(bitmask + 6 * sve_width / 8)) = pred6;
-            *((svbool_t*)(bitmask + 7 * sve_width / 8)) = pred7;
-        } else {
-            // perform a partial write
+        const uint64_t sve_width = svcntb();
 
-            // this is the buffer for the maximum possible case of 2048 bits
-            uint8_t pred_buf[MAX_SVE_WIDTH / 8];
-            *((volatile svbool_t*)(pred_buf + 0 * sve_width / 8)) = pred0;
-            *((volatile svbool_t*)(pred_buf + 1 * sve_width / 8)) = pred1;
-            *((volatile svbool_t*)(pred_buf + 2 * sve_width / 8)) = pred2;
-            *((volatile svbool_t*)(pred_buf + 3 * sve_width / 8)) = pred3;
-            *((volatile svbool_t*)(pred_buf + 4 * sve_width / 8)) = pred4;
-            *((volatile svbool_t*)(pred_buf + 5 * sve_width / 8)) = pred5;
-            *((volatile svbool_t*)(pred_buf + 6 * sve_width / 8)) = pred6;
-            *((volatile svbool_t*)(pred_buf + 7 * sve_width / 8)) = pred7;
+        // perform a full write
+        *((svbool_t*)(bitmask + 0 * sve_width / 8)) = pred0;
+        *((svbool_t*)(bitmask + 1 * sve_width / 8)) = pred1;
+        *((svbool_t*)(bitmask + 2 * sve_width / 8)) = pred2;
+        *((svbool_t*)(bitmask + 3 * sve_width / 8)) = pred3;
+        *((svbool_t*)(bitmask + 4 * sve_width / 8)) = pred4;
+        *((svbool_t*)(bitmask + 5 * sve_width / 8)) = pred5;
+        *((svbool_t*)(bitmask + 6 * sve_width / 8)) = pred6;
+        *((svbool_t*)(bitmask + 7 * sve_width / 8)) = pred7;
+    }
 
-            // make the write mask
-            const svbool_t pred_write = get_pred_op_8(size / 8);
+    static inline void write_partial(
+        uint8_t* const __restrict bitmask, 
+        const size_t size,
+        const svbool_t pred_0, const svbool_t pred_1,
+        const svbool_t pred_2, const svbool_t pred_3,
+        const svbool_t pred_4, const svbool_t pred_5,
+        const svbool_t pred_6, const svbool_t pred_7
+    ) {
+        const uint64_t sve_width = svcntb();
 
-            // load the buffer
-            const svuint8_t mask_u8 = svld1_u8(pred_write, pred_buf);
-            // write it to the bitmask
-            svst1_u8(pred_write, bitmask, mask_u8);
-        }
+        // perform a partial write
+
+        // this is a temporary buffer for the maximum possible case of 2048 bits
+        uint8_t pred_buf[MAX_SVE_WIDTH / 8];
+        // write to the temporary buffer
+        *((volatile svbool_t*)(pred_buf + 0 * sve_width / 8)) = pred_0;
+        *((volatile svbool_t*)(pred_buf + 1 * sve_width / 8)) = pred_1;
+        *((volatile svbool_t*)(pred_buf + 2 * sve_width / 8)) = pred_2;
+        *((volatile svbool_t*)(pred_buf + 3 * sve_width / 8)) = pred_3;
+        *((volatile svbool_t*)(pred_buf + 4 * sve_width / 8)) = pred_4;
+        *((volatile svbool_t*)(pred_buf + 5 * sve_width / 8)) = pred_5;
+        *((volatile svbool_t*)(pred_buf + 6 * sve_width / 8)) = pred_6;
+        *((volatile svbool_t*)(pred_buf + 7 * sve_width / 8)) = pred_7;
+
+        // make the write mask. (size % 8) == 0 is guaranteed by the caller.
+        const svbool_t pred_write = svwhilelt_b8(uint32_t(0), uint32_t(size / 8));
+
+        // load the buffer
+        const svuint8_t mask_u8 = svld1_u8(pred_write, pred_buf);
+        // write it to the bitmask
+        svst1_u8(pred_write, bitmask, mask_u8);
     }
 };
 
 template<>
 struct MaskHelper<2> {
-    static inline void write(
+    static inline void write_full(
+        uint8_t* const __restrict bitmask, 
+        const svbool_t pred_0, const svbool_t pred_1,
+        const svbool_t pred_2, const svbool_t pred_3,
+        const svbool_t pred_4, const svbool_t pred_5,
+        const svbool_t pred_6, const svbool_t pred_7
+    ) {
+        const uint64_t sve_width = svcntb();
+
+        // compact predicates
+        const svbool_t pred_01 = svuzp1_b8(pred_0, pred_1);
+        const svbool_t pred_23 = svuzp1_b8(pred_2, pred_3);
+        const svbool_t pred_45 = svuzp1_b8(pred_4, pred_5);
+        const svbool_t pred_67 = svuzp1_b8(pred_6, pred_7);
+
+        // perform a full write
+        *((svbool_t*)(bitmask + 0 * sve_width / 8)) = pred_01;
+        *((svbool_t*)(bitmask + 1 * sve_width / 8)) = pred_23;
+        *((svbool_t*)(bitmask + 2 * sve_width / 8)) = pred_45;
+        *((svbool_t*)(bitmask + 3 * sve_width / 8)) = pred_67;
+    }
+
+    static inline void write_partial(
         uint8_t* const __restrict bitmask, 
         const size_t size,
-        const svbool_t pred0, const svbool_t pred1,
-        const svbool_t pred2, const svbool_t pred3,
-        const svbool_t pred4, const svbool_t pred5,
-        const svbool_t pred6, const svbool_t pred7
+        const svbool_t pred_0, const svbool_t pred_1,
+        const svbool_t pred_2, const svbool_t pred_3,
+        const svbool_t pred_4, const svbool_t pred_5,
+        const svbool_t pred_6, const svbool_t pred_7
     ) {
-        const size_t sve_width = svcnth();
+        const uint64_t sve_width = svcntb();
 
-        // this is the buffer for the maximum possible case of 2048 bits
-        uint8_t pred_buf[MAX_SVE_WIDTH / 8];
-        *((volatile svbool_t*)(pred_buf + 0 * sve_width / 4)) = pred0;
-        *((volatile svbool_t*)(pred_buf + 1 * sve_width / 4)) = pred1;
-        *((volatile svbool_t*)(pred_buf + 2 * sve_width / 4)) = pred2;
-        *((volatile svbool_t*)(pred_buf + 3 * sve_width / 4)) = pred3;
-        *((volatile svbool_t*)(pred_buf + 4 * sve_width / 4)) = pred4;
-        *((volatile svbool_t*)(pred_buf + 5 * sve_width / 4)) = pred5;
-        *((volatile svbool_t*)(pred_buf + 6 * sve_width / 4)) = pred6;
-        *((volatile svbool_t*)(pred_buf + 7 * sve_width / 4)) = pred7;
+        // compact predicates
+        const svbool_t pred_01 = svuzp1_b8(pred_0, pred_1);
+        const svbool_t pred_23 = svuzp1_b8(pred_2, pred_3);
+        const svbool_t pred_45 = svuzp1_b8(pred_4, pred_5);
+        const svbool_t pred_67 = svuzp1_b8(pred_6, pred_7);
 
-        const svbool_t pred_op_8 = get_pred_op_8(size / 4);
-        const svbool_t pred_write_8 = get_pred_op_8(size / 8);
-        write_bitmask_16_8x(bitmask, pred_op_8, pred_write_8, pred_buf);
+        // this is a temporary buffer for the maximum possible case of 1024 bits
+        uint8_t pred_buf[MAX_SVE_WIDTH / 16];
+        // write to the temporary buffer
+        *((volatile svbool_t*)(pred_buf + 0 * sve_width / 8)) = pred_01;
+        *((volatile svbool_t*)(pred_buf + 1 * sve_width / 8)) = pred_23;
+        *((volatile svbool_t*)(pred_buf + 2 * sve_width / 8)) = pred_45;
+        *((volatile svbool_t*)(pred_buf + 3 * sve_width / 8)) = pred_67;
+
+        // make the write mask. (size % 8) == 0 is guaranteed by the caller.
+        const svbool_t pred_write = svwhilelt_b8(uint32_t(0), uint32_t(size / 8));
+
+        // load the buffer
+        const svuint8_t mask_u8 = svld1_u8(pred_write, pred_buf);
+        // write it to the bitmask
+        svst1_u8(pred_write, bitmask, mask_u8);
     }
 };
 
 template<>
 struct MaskHelper<4> {
-    static inline void write(
+    static inline void write_full(
+        uint8_t* const __restrict bitmask, 
+        const svbool_t pred_0, const svbool_t pred_1,
+        const svbool_t pred_2, const svbool_t pred_3,
+        const svbool_t pred_4, const svbool_t pred_5,
+        const svbool_t pred_6, const svbool_t pred_7
+    ) {
+        const uint64_t sve_width = svcntb();
+
+        // compact predicates
+        const svbool_t pred_01 = svuzp1_b16(pred_0, pred_1);
+        const svbool_t pred_23 = svuzp1_b16(pred_2, pred_3);
+        const svbool_t pred_45 = svuzp1_b16(pred_4, pred_5);
+        const svbool_t pred_67 = svuzp1_b16(pred_6, pred_7);
+        const svbool_t pred_0123 = svuzp1_b8(pred_01, pred_23);
+        const svbool_t pred_4567 = svuzp1_b8(pred_45, pred_67);
+
+        // perform a full write
+        *((svbool_t*)(bitmask + 0 * sve_width / 8)) = pred_0123;
+        *((svbool_t*)(bitmask + 1 * sve_width / 8)) = pred_4567;
+    }
+
+    static inline void write_partial(
         uint8_t* const __restrict bitmask, 
         const size_t size,
-        const svbool_t pred0, const svbool_t pred1,
-        const svbool_t pred2, const svbool_t pred3,
-        const svbool_t pred4, const svbool_t pred5,
-        const svbool_t pred6, const svbool_t pred7
+        const svbool_t pred_0, const svbool_t pred_1,
+        const svbool_t pred_2, const svbool_t pred_3,
+        const svbool_t pred_4, const svbool_t pred_5,
+        const svbool_t pred_6, const svbool_t pred_7
     ) {
-        const size_t sve_width = svcntw();
+        const uint64_t sve_width = svcntb();
 
-        // this is the buffer for the maximum possible case of 2048 bits
-        uint8_t pred_buf[MAX_SVE_WIDTH / 8];
-        *((volatile svbool_t*)(pred_buf + 0 * sve_width / 2)) = pred0;
-        *((volatile svbool_t*)(pred_buf + 1 * sve_width / 2)) = pred1;
-        *((volatile svbool_t*)(pred_buf + 2 * sve_width / 2)) = pred2;
-        *((volatile svbool_t*)(pred_buf + 3 * sve_width / 2)) = pred3;
-        *((volatile svbool_t*)(pred_buf + 4 * sve_width / 2)) = pred4;
-        *((volatile svbool_t*)(pred_buf + 5 * sve_width / 2)) = pred5;
-        *((volatile svbool_t*)(pred_buf + 6 * sve_width / 2)) = pred6;
-        *((volatile svbool_t*)(pred_buf + 7 * sve_width / 2)) = pred7;
+        // compact predicates
+        const svbool_t pred_01 = svuzp1_b16(pred_0, pred_1);
+        const svbool_t pred_23 = svuzp1_b16(pred_2, pred_3);
+        const svbool_t pred_45 = svuzp1_b16(pred_4, pred_5);
+        const svbool_t pred_67 = svuzp1_b16(pred_6, pred_7);
+        const svbool_t pred_0123 = svuzp1_b8(pred_01, pred_23);
+        const svbool_t pred_4567 = svuzp1_b8(pred_45, pred_67);
 
-        const svbool_t pred_op_8 = get_pred_op_8(size / 2);
-        const svbool_t pred_write_8 = get_pred_op_8(size / 8);
-        write_bitmask_32_8x(bitmask, pred_op_8, pred_write_8, pred_buf);
+        // this is a temporary buffer for the maximum possible case of 512 bits
+        uint8_t pred_buf[MAX_SVE_WIDTH / 32];
+        // write to the temporary buffer
+        *((volatile svbool_t*)(pred_buf + 0 * sve_width / 8)) = pred_0123;
+        *((volatile svbool_t*)(pred_buf + 1 * sve_width / 8)) = pred_4567;
+
+        // make the write mask. (size % 8) == 0 is guaranteed by the caller.
+        const svbool_t pred_write = svwhilelt_b8(uint32_t(0), uint32_t(size / 8));
+
+        // load the buffer
+        const svuint8_t mask_u8 = svld1_u8(pred_write, pred_buf);
+        // write it to the bitmask
+        svst1_u8(pred_write, bitmask, mask_u8);
     }
 };
 
 template<>
 struct MaskHelper<8> {
-    static inline void write(
+    static inline void write_full(
+        uint8_t* const __restrict bitmask, 
+        const svbool_t pred_0, const svbool_t pred_1,
+        const svbool_t pred_2, const svbool_t pred_3,
+        const svbool_t pred_4, const svbool_t pred_5,
+        const svbool_t pred_6, const svbool_t pred_7
+    ) {
+        // compact predicates
+        const svbool_t pred_01 = svuzp1_b32(pred_0, pred_1);
+        const svbool_t pred_23 = svuzp1_b32(pred_2, pred_3);
+        const svbool_t pred_45 = svuzp1_b32(pred_4, pred_5);
+        const svbool_t pred_67 = svuzp1_b32(pred_6, pred_7);
+        const svbool_t pred_0123 = svuzp1_b16(pred_01, pred_23);
+        const svbool_t pred_4567 = svuzp1_b16(pred_45, pred_67);
+        const svbool_t pred_01234567 = svuzp1_b8(pred_0123, pred_4567);
+
+        // perform a full write
+        *((svbool_t*)bitmask) = pred_01234567;
+    }
+
+    static inline void write_partial(
         uint8_t* const __restrict bitmask, 
         const size_t size,
-        const svbool_t pred0, const svbool_t pred1,
-        const svbool_t pred2, const svbool_t pred3,
-        const svbool_t pred4, const svbool_t pred5,
-        const svbool_t pred6, const svbool_t pred7
+        const svbool_t pred_0, const svbool_t pred_1,
+        const svbool_t pred_2, const svbool_t pred_3,
+        const svbool_t pred_4, const svbool_t pred_5,
+        const svbool_t pred_6, const svbool_t pred_7
     ) {
-        const size_t sve_width = svcntd();
+        // compact predicates
+        const svbool_t pred_01 = svuzp1_b32(pred_0, pred_1);
+        const svbool_t pred_23 = svuzp1_b32(pred_2, pred_3);
+        const svbool_t pred_45 = svuzp1_b32(pred_4, pred_5);
+        const svbool_t pred_67 = svuzp1_b32(pred_6, pred_7);
+        const svbool_t pred_0123 = svuzp1_b16(pred_01, pred_23);
+        const svbool_t pred_4567 = svuzp1_b16(pred_45, pred_67);
+        const svbool_t pred_01234567 = svuzp1_b8(pred_0123, pred_4567);
 
-        // this is the buffer for the maximum possible case of 2048 bits
-        uint8_t pred_buf[MAX_SVE_WIDTH / 8];
-        *((volatile svbool_t*)(pred_buf + 0 * sve_width)) = pred0;
-        *((volatile svbool_t*)(pred_buf + 1 * sve_width)) = pred1;
-        *((volatile svbool_t*)(pred_buf + 2 * sve_width)) = pred2;
-        *((volatile svbool_t*)(pred_buf + 3 * sve_width)) = pred3;
-        *((volatile svbool_t*)(pred_buf + 4 * sve_width)) = pred4;
-        *((volatile svbool_t*)(pred_buf + 5 * sve_width)) = pred5;
-        *((volatile svbool_t*)(pred_buf + 6 * sve_width)) = pred6;
-        *((volatile svbool_t*)(pred_buf + 7 * sve_width)) = pred7;
+        // this is a temporary buffer for the maximum possible case of 256 bits
+        uint8_t pred_buf[MAX_SVE_WIDTH / 64];
+        // write to the temporary buffer
+        *((volatile svbool_t*)(pred_buf)) = pred_01234567;
 
-        const svbool_t pred_op_8 = get_pred_op_8(size / 1);
-        const svbool_t pred_write_8 = get_pred_op_8(size / 8);
-        write_bitmask_64_8x(bitmask, pred_op_8, pred_write_8, pred_buf);
+        // make the write mask. (size % 8) == 0 is guaranteed by the caller.
+        const svbool_t pred_write = svwhilelt_b8(uint32_t(0), uint32_t(size / 8));
+
+        // load the buffer
+        const svuint8_t mask_u8 = svld1_u8(pred_write, pred_buf);
+        // write it to the bitmask
+        svst1_u8(pred_write, bitmask, mask_u8);
     }
 };
 
@@ -742,7 +712,7 @@ bool op_mask_helper(
             const svbool_t cmp6 = func(pred_all, i + 6 * sve_width);
             const svbool_t cmp7 = func(pred_all, i + 7 * sve_width);
 
-            MaskHelper<sizeof(T)>::write(res_u8 + i / 8, sve_width * 8, cmp0, cmp1, cmp2, cmp3, cmp4, cmp5, cmp6, cmp7);
+            MaskHelper<sizeof(T)>::write_full(res_u8 + i / 8, cmp0, cmp1, cmp2, cmp3, cmp4, cmp5, cmp6, cmp7);
         }
     }
 
@@ -778,7 +748,7 @@ bool op_mask_helper(
         if (jcount > 6) { cmp6 = func(get_partial_pred(6), size_sve8 + 6 * sve_width); }
         if (jcount > 7) { cmp7 = func(get_partial_pred(7), size_sve8 + 7 * sve_width); }
 
-        MaskHelper<sizeof(T)>::write(res_u8 + size_sve8 / 8, size - size_sve8, cmp0, cmp1, cmp2, cmp3, cmp4, cmp5, cmp6, cmp7);
+        MaskHelper<sizeof(T)>::write_partial(res_u8 + size_sve8 / 8, size - size_sve8, cmp0, cmp1, cmp2, cmp3, cmp4, cmp5, cmp6, cmp7);
     }
 
     return true;

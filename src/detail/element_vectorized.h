@@ -16,53 +16,51 @@ namespace detail {
 template<typename ElementT, typename VectorizedT>
 struct VectorizedElementWiseBitsetPolicy {
     using data_type = ElementT;
-    constexpr static auto data_bits = sizeof(data_type) * 8;
-
-    using size_type = size_t;
+    constexpr static size_t data_bits = sizeof(data_type) * 8;
 
     using self_type = VectorizedElementWiseBitsetPolicy<ElementT, VectorizedT>;
 
     using proxy_type = Proxy<self_type>;
     using const_proxy_type = ConstProxy<self_type>;
 
-    static inline size_type get_element(const size_t idx) {
+    static inline size_t get_element(const size_t idx) {
         return idx / data_bits;
     }
 
-    static inline size_type get_shift(const size_t idx) {
+    static inline size_t get_shift(const size_t idx) {
         return idx % data_bits;
     }
 
-    static inline size_type get_required_size_in_elements(const size_t size) {
+    static inline size_t get_required_size_in_elements(const size_t size) {
         return (size + data_bits - 1) / data_bits;
     }
 
-    static inline size_type get_required_size_in_bytes(const size_t size) {
+    static inline size_t get_required_size_in_bytes(const size_t size) {
         return get_required_size_in_elements(size) * sizeof(data_type);
     }
 
     static inline proxy_type get_proxy(
         data_type* const __restrict data, 
-        const size_type idx
+        const size_t idx
     ) {
         data_type& element = data[get_element(idx)];
-        const size_type shift = get_shift(idx);
+        const size_t shift = get_shift(idx);
         return proxy_type{element, shift};
     }
 
     static inline const_proxy_type get_proxy(
         const data_type* const __restrict data, 
-        const size_type idx
+        const size_t idx
     ) {
         const data_type& element = data[get_element(idx)];
-        const size_type shift = get_shift(idx);
+        const size_t shift = get_shift(idx);
         return const_proxy_type{element, shift};
     }
 
     static inline void op_flip(
         data_type* const data, 
-        const size_type start, 
-        const size_type size
+        const size_t start, 
+        const size_t size
     ) {
         ElementWiseBitsetPolicy<ElementT>::op_flip(data, start, size);
     }
@@ -74,7 +72,19 @@ struct VectorizedElementWiseBitsetPolicy {
         const size_t start_right, 
         const size_t size
     ) {
-        ElementWiseBitsetPolicy<ElementT>::op_and(left, right, start_left, start_right, size);
+        // ElementWiseBitsetPolicy<ElementT>::op_and(left, right, start_left, start_right, size);
+        VectorizedT::template forward_op_and<ElementT>(left, right, start_left, start_right, size);
+    }
+
+    static inline void op_and_multiple(
+        data_type* const left,
+        const data_type* const * const rights,
+        const size_t start_left,
+        const size_t* const __restrict start_rights,
+        const size_t n_rights,
+        const size_t size
+    ) {
+        VectorizedT::template forward_op_and_multiple<ElementT>(left, rights, start_left, start_rights, n_rights, size);
     }
 
     static inline void op_or(
@@ -84,55 +94,67 @@ struct VectorizedElementWiseBitsetPolicy {
         const size_t start_right, 
         const size_t size
     ) {
-        ElementWiseBitsetPolicy<ElementT>::op_or(left, right, start_left, start_right, size);
+        // ElementWiseBitsetPolicy<ElementT>::op_or(left, right, start_left, start_right, size);
+        VectorizedT::template forward_op_or<ElementT>(left, right, start_left, start_right, size);
+    }
+
+    static inline void op_or_multiple(
+        data_type* const left,
+        const data_type* const * const rights,
+        const size_t start_left,
+        const size_t* const __restrict start_rights,
+        const size_t n_rights,
+        const size_t size
+    ) {
+        VectorizedT::template forward_op_or_multiple<ElementT>(left, rights, start_left, start_rights, n_rights, size);
     }
 
     static inline void op_set(
         data_type* const data, 
-        const size_type start, 
-        const size_type size
+        const size_t start, 
+        const size_t size
     ) {
         ElementWiseBitsetPolicy<ElementT>::op_set(data, start, size);
     }
 
     static inline void op_reset(
         data_type* const data, 
-        const size_type start, 
-        const size_type size
+        const size_t start, 
+        const size_t size
     ) {
         ElementWiseBitsetPolicy<ElementT>::op_reset(data, start, size);
     }
 
     static inline bool op_all(
         const data_type* const data, 
-        const size_type start, 
-        const size_type size
+        const size_t start, 
+        const size_t size
     ) {
         return ElementWiseBitsetPolicy<ElementT>::op_all(data, start, size);
     }
 
     static inline bool op_none(
         const data_type* const data, 
-        const size_type start, 
-        const size_type size
+        const size_t start, 
+        const size_t size
     ) {
         return ElementWiseBitsetPolicy<ElementT>::op_none(data, start, size);
     }
 
     static void op_copy(
         const data_type* const src,
-        const size_type start_src,
+        const size_t start_src,
         data_type* const dst,
-        const size_type start_dst,
-        const size_type size
+        const size_t start_dst,
+        const size_t size
     ) {
         ElementWiseBitsetPolicy<ElementT>::op_copy(src, start_src, dst, start_dst, size);
     }
 
-    static inline size_type op_count(
+    static inline size_t op_count(
         const data_type* const data, 
-        const size_type start, 
-        const size_type size
+        const size_t start, 
+        const size_t size
     ) {
         return ElementWiseBitsetPolicy<ElementT>::op_count(data, start, size);
     }
@@ -140,9 +162,9 @@ struct VectorizedElementWiseBitsetPolicy {
     static inline bool op_eq(
         const data_type* const left, 
         const data_type* const right, 
-        const size_type start_left,
-        const size_type start_right, 
-        const size_type size
+        const size_t start_left,
+        const size_t start_right, 
+        const size_t size
     ) {
         return ElementWiseBitsetPolicy<ElementT>::op_eq(left, right, start_left, start_right, size);
     }
@@ -154,7 +176,8 @@ struct VectorizedElementWiseBitsetPolicy {
         const size_t start_right, 
         const size_t size
     ) {
-        ElementWiseBitsetPolicy<ElementT>::op_xor(left, right, start_left, start_right, size);
+        // ElementWiseBitsetPolicy<ElementT>::op_xor(left, right, start_left, start_right, size);
+        VectorizedT::template forward_op_xor<ElementT>(left, right, start_left, start_right, size);
     }
 
     static inline void op_sub(
@@ -164,24 +187,25 @@ struct VectorizedElementWiseBitsetPolicy {
         const size_t start_right, 
         const size_t size
     ) {
-        ElementWiseBitsetPolicy<ElementT>::op_sub(left, right, start_left, start_right, size);
+        // ElementWiseBitsetPolicy<ElementT>::op_sub(left, right, start_left, start_right, size);
+        VectorizedT::template forward_op_sub<ElementT>(left, right, start_left, start_right, size);
     }
 
     static void op_fill(
         data_type* const data,
-        const size_type start,
-        const size_type size,
+        const size_t start,
+        const size_t size,
         const bool value 
     ) {
         ElementWiseBitsetPolicy<ElementT>::op_fill(data, start, size, value);
     }
 
     //
-    static inline std::optional<size_type> op_find(
+    static inline std::optional<size_t> op_find(
         const data_type* const data, 
-        const size_type start, 
-        const size_type size,
-        const size_type starting_idx
+        const size_t start, 
+        const size_t size,
+        const size_t starting_idx
     ) {
         return ElementWiseBitsetPolicy<ElementT>::op_find(data, start, size, starting_idx);
     }
@@ -190,13 +214,13 @@ struct VectorizedElementWiseBitsetPolicy {
     template<typename T, typename U, CompareOpType Op>
     static inline void op_compare_column(
         data_type* const __restrict data, 
-        const size_type start,
+        const size_t start,
         const T* const __restrict t,
         const U* const __restrict u,
-        const size_type size
+        const size_t size
     ) {
         op_func(start, size, 
-            [data, t, u](const size_type starting_bit, const size_type ptr_offset, const size_type nbits){
+            [data, t, u](const size_t starting_bit, const size_t ptr_offset, const size_t nbits){
                 ElementWiseBitsetPolicy<ElementT>::template op_compare_column<T, U, Op>(
                     data, 
                     starting_bit, 
@@ -205,7 +229,7 @@ struct VectorizedElementWiseBitsetPolicy {
                     nbits
                 );
             },
-            [data, t, u](const size_type starting_element, const size_type ptr_offset, const size_type nbits){
+            [data, t, u](const size_t starting_element, const size_t ptr_offset, const size_t nbits){
                 return VectorizedT::template op_compare_column<T, U, Op>(
                     reinterpret_cast<uint8_t*>(data + starting_element),
                     t + ptr_offset,
@@ -220,13 +244,13 @@ struct VectorizedElementWiseBitsetPolicy {
     template<typename T, CompareOpType Op>
     static inline void op_compare_val(
         data_type* const __restrict data, 
-        const size_type start,
+        const size_t start,
         const T* const __restrict t,
-        const size_type size,
+        const size_t size,
         const T& value
     ) {
         op_func(start, size, 
-            [data, t, value](const size_type starting_bit, const size_type ptr_offset, const size_type nbits){
+            [data, t, value](const size_t starting_bit, const size_t ptr_offset, const size_t nbits){
                 ElementWiseBitsetPolicy<ElementT>::template op_compare_val<T, Op>(
                     data, 
                     starting_bit, 
@@ -235,7 +259,7 @@ struct VectorizedElementWiseBitsetPolicy {
                     value
                 );
             },
-            [data, t, value](const size_type starting_element, const size_type ptr_offset, const size_type nbits){
+            [data, t, value](const size_t starting_element, const size_t ptr_offset, const size_t nbits){
                 return VectorizedT::template op_compare_val<T, Op>(
                     reinterpret_cast<uint8_t*>(data + starting_element),
                     t + ptr_offset,
@@ -250,14 +274,14 @@ struct VectorizedElementWiseBitsetPolicy {
     template<typename T, RangeType Op>
     static inline void op_within_range_column(
         data_type* const __restrict data, 
-        const size_type start,
+        const size_t start,
         const T* const __restrict lower,
         const T* const __restrict upper,
         const T* const __restrict values,
-        const size_type size
+        const size_t size
     ) {
         op_func(start, size, 
-            [data, lower, upper, values](const size_type starting_bit, const size_type ptr_offset, const size_type nbits){
+            [data, lower, upper, values](const size_t starting_bit, const size_t ptr_offset, const size_t nbits){
                 ElementWiseBitsetPolicy<ElementT>::template op_within_range_column<T, Op>(
                     data, 
                     starting_bit, 
@@ -267,7 +291,7 @@ struct VectorizedElementWiseBitsetPolicy {
                     nbits
                 );
             },
-            [data, lower, upper, values](const size_type starting_element, const size_type ptr_offset, const size_type nbits){
+            [data, lower, upper, values](const size_t starting_element, const size_t ptr_offset, const size_t nbits){
                 return VectorizedT::template op_within_range_column<T, Op>(
                     reinterpret_cast<uint8_t*>(data + starting_element),
                     lower + ptr_offset,
@@ -283,14 +307,14 @@ struct VectorizedElementWiseBitsetPolicy {
     template<typename T, RangeType Op>
     static inline void op_within_range_val(
         data_type* const __restrict data, 
-        const size_type start,
+        const size_t start,
         const T& lower,
         const T& upper,
         const T* const __restrict values,
-        const size_type size
+        const size_t size
     ) {
         op_func(start, size, 
-            [data, lower, upper, values](const size_type starting_bit, const size_type ptr_offset, const size_type nbits){
+            [data, lower, upper, values](const size_t starting_bit, const size_t ptr_offset, const size_t nbits){
                 ElementWiseBitsetPolicy<ElementT>::template op_within_range_val<T, Op>(
                     data, 
                     starting_bit, 
@@ -300,7 +324,7 @@ struct VectorizedElementWiseBitsetPolicy {
                     nbits
                 );
             },
-            [data, lower, upper, values](const size_type starting_element, const size_type ptr_offset, const size_type nbits){
+            [data, lower, upper, values](const size_t starting_element, const size_t ptr_offset, const size_t nbits){
                 return VectorizedT::template op_within_range_val<T, Op>(
                     reinterpret_cast<uint8_t*>(data + starting_element),
                     lower,
@@ -316,14 +340,14 @@ struct VectorizedElementWiseBitsetPolicy {
     template<typename T, ArithOpType AOp, CompareOpType CmpOp>
     static inline void op_arith_compare(
         data_type* const __restrict data, 
-        const size_type start,
+        const size_t start,
         const T* const __restrict src,
         const ArithHighPrecisionType<T>& right_operand,
         const ArithHighPrecisionType<T>& value,
-        const size_type size
+        const size_t size
     ) {
         op_func(start, size, 
-            [data, src, right_operand, value](const size_type starting_bit, const size_type ptr_offset, const size_type nbits){
+            [data, src, right_operand, value](const size_t starting_bit, const size_t ptr_offset, const size_t nbits){
                 ElementWiseBitsetPolicy<ElementT>::template op_arith_compare<T, AOp, CmpOp>(
                     data, 
                     starting_bit, 
@@ -333,7 +357,7 @@ struct VectorizedElementWiseBitsetPolicy {
                     nbits
                 );
             },
-            [data, src, right_operand, value](const size_type starting_element, const size_type ptr_offset, const size_type nbits){
+            [data, src, right_operand, value](const size_t starting_element, const size_t ptr_offset, const size_t nbits){
                 return VectorizedT::template op_arith_compare<T, AOp, CmpOp>(
                     reinterpret_cast<uint8_t*>(data + starting_element),
                     src + ptr_offset,
@@ -370,12 +394,12 @@ struct VectorizedElementWiseBitsetPolicy {
         );
     }
 
-    // void FuncBaseline(const size_t starting_bit, const size_type ptr_offset, const size_type nbits)
-    // bool FuncVectorized(const size_type starting_element, const size_type ptr_offset, const size_type nbits)
+    // void FuncBaseline(const size_t starting_bit, const size_t ptr_offset, const size_t nbits)
+    // bool FuncVectorized(const size_t starting_element, const size_t ptr_offset, const size_t nbits)
     template<typename FuncBaseline, typename FuncVectorized>
     static inline void op_func(
-        const size_type start,
-        const size_type size,
+        const size_t start,
+        const size_t size,
         FuncBaseline func_baseline,
         FuncVectorized func_vectorized
     ) {

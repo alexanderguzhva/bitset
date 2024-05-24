@@ -634,11 +634,23 @@ static void init_dynamic_hook() {
         ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_SVE, float)
         ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_SVE, double)
 
+#define SET_FORWARD_OPS_SVE(ELEMENTTYPE) \
+    forward_op_and_##ELEMENTTYPE = VectorizedSve::template forward_op_and<ELEMENTTYPE>; \
+    forward_op_and_multiple_##ELEMENTTYPE = VectorizedSve::template forward_op_and_multiple<ELEMENTTYPE>; \
+    forward_op_or_##ELEMENTTYPE = VectorizedSve::template forward_op_or<ELEMENTTYPE>; \
+    forward_op_or_multiple_##ELEMENTTYPE = VectorizedSve::template forward_op_or_multiple<ELEMENTTYPE>; \
+    forward_op_xor_##ELEMENTTYPE = VectorizedSve::template forward_op_xor<ELEMENTTYPE>; \
+    forward_op_sub_##ELEMENTTYPE = VectorizedSve::template forward_op_sub<ELEMENTTYPE>;
+
+        ALL_FORWARD_OPS(SET_FORWARD_OPS_SVE)
+
+
 #undef SET_OP_COMPARE_COLUMN_SVE
 #undef SET_OP_COMPARE_VAL_SVE
 #undef SET_OP_WITHIN_RANGE_COLUMN_SVE
 #undef SET_OP_WITHIN_RANGE_VAL_SVE
 #undef SET_ARITH_COMPARE_SVE
+#undef SET_FORWARD_OPS_SVE
 
         return;
     }
@@ -693,11 +705,23 @@ static void init_dynamic_hook() {
         ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_NEON, float)
         ALL_ARITH_CMP_OPS(SET_ARITH_COMPARE_NEON, double)
 
+#define SET_FORWARD_OPS_NEON(ELEMENTTYPE) \
+    forward_op_and_##ELEMENTTYPE = VectorizedNeon::template forward_op_and<ELEMENTTYPE>; \
+    forward_op_and_multiple_##ELEMENTTYPE = VectorizedNeon::template forward_op_and_multiple<ELEMENTTYPE>; \
+    forward_op_or_##ELEMENTTYPE = VectorizedNeon::template forward_op_or<ELEMENTTYPE>; \
+    forward_op_or_multiple_##ELEMENTTYPE = VectorizedNeon::template forward_op_or_multiple<ELEMENTTYPE>; \
+    forward_op_xor_##ELEMENTTYPE = VectorizedNeon::template forward_op_xor<ELEMENTTYPE>; \
+    forward_op_sub_##ELEMENTTYPE = VectorizedNeon::template forward_op_sub<ELEMENTTYPE>;
+
+        ALL_FORWARD_OPS(SET_FORWARD_OPS_NEON)
+
+
 #undef SET_OP_COMPARE_COLUMN_NEON
 #undef SET_OP_COMPARE_VAL_NEON
 #undef SET_OP_WITHIN_RANGE_COLUMN_NEON
 #undef SET_OP_WITHIN_RANGE_VAL_NEON
 #undef SET_ARITH_COMPARE_NEON
+#undef SET_FORWARD_OPS_NEON
 
         return;
     }

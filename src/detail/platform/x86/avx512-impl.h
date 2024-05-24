@@ -1375,7 +1375,7 @@ bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
 // forward ops
 
 //
-void ForwardOpsImpl<uint8_t>::op_and(
+bool ForwardOpsImpl<uint8_t>::op_and(
     uint8_t* const left,
     const uint8_t* const right,
     const size_t start_left,
@@ -1383,9 +1383,10 @@ void ForwardOpsImpl<uint8_t>::op_and(
     const size_t size
 ) {
     ElementWiseBitsetPolicy<uint8_t>::op_and(left, right, start_left, start_right, size);
+    return true;
 }
 
-void ForwardOpsImpl<uint8_t>::op_and_multiple(
+bool ForwardOpsImpl<uint8_t>::op_and_multiple(
     uint8_t* const left,
     const uint8_t* const * const rights,
     const size_t start_left,
@@ -1394,9 +1395,10 @@ void ForwardOpsImpl<uint8_t>::op_and_multiple(
     const size_t size
 ) {
     ElementWiseBitsetPolicy<uint8_t>::op_and_multiple(left, rights, start_left, start_rights, n_rights, size);
+    return true;
 }
 
-void ForwardOpsImpl<uint8_t>::op_or(
+bool ForwardOpsImpl<uint8_t>::op_or(
     uint8_t* const left,
     const uint8_t* const right,
     const size_t start_left,
@@ -1404,9 +1406,10 @@ void ForwardOpsImpl<uint8_t>::op_or(
     const size_t size
 ) {
     ElementWiseBitsetPolicy<uint8_t>::op_or(left, right, start_left, start_right, size);
+    return true;
 }
 
-void ForwardOpsImpl<uint8_t>::op_or_multiple(
+bool ForwardOpsImpl<uint8_t>::op_or_multiple(
     uint8_t* const left,
     const uint8_t* const * const rights,
     const size_t start_left,
@@ -1415,9 +1418,10 @@ void ForwardOpsImpl<uint8_t>::op_or_multiple(
     const size_t size
 ) {
     ElementWiseBitsetPolicy<uint8_t>::op_or_multiple(left, rights, start_left, start_rights, n_rights, size);
+    return true;
 }
 
-void ForwardOpsImpl<uint8_t>::op_xor(
+bool ForwardOpsImpl<uint8_t>::op_xor(
     uint8_t* const left,
     const uint8_t* const right,
     const size_t start_left,
@@ -1425,9 +1429,10 @@ void ForwardOpsImpl<uint8_t>::op_xor(
     const size_t size
 ) {
     ElementWiseBitsetPolicy<uint8_t>::op_xor(left, right, start_left, start_right, size);
+    return true;
 }
 
-void ForwardOpsImpl<uint8_t>::op_sub(
+bool ForwardOpsImpl<uint8_t>::op_sub(
     uint8_t* const left,
     const uint8_t* const right,
     const size_t start_left,
@@ -1435,10 +1440,11 @@ void ForwardOpsImpl<uint8_t>::op_sub(
     const size_t size
 ) {
     ElementWiseBitsetPolicy<uint8_t>::op_sub(left, right, start_left, start_right, size);
+    return true;
 }
 
 //
-void ForwardOpsImpl<uint64_t>::op_and(
+bool ForwardOpsImpl<uint64_t>::op_and(
     uint64_t* const left,
     const uint64_t* const right,
     const size_t start_left,
@@ -1446,9 +1452,10 @@ void ForwardOpsImpl<uint64_t>::op_and(
     const size_t size
 ) {
     ElementWiseBitsetPolicy<uint64_t>::op_and(left, right, start_left, start_right, size);
+    return true;
 }
 
-void ForwardOpsImpl<uint64_t>::op_and_multiple(
+bool ForwardOpsImpl<uint64_t>::op_and_multiple(
     uint64_t* const left,
     const uint64_t* const * const rights,
     const size_t start_left,
@@ -1457,9 +1464,10 @@ void ForwardOpsImpl<uint64_t>::op_and_multiple(
     const size_t size
 ) {
     ElementWiseBitsetPolicy<uint64_t>::op_and_multiple(left, rights, start_left, start_rights, n_rights, size);
+    return true;
 }
 
-void ForwardOpsImpl<uint64_t>::op_or(
+bool ForwardOpsImpl<uint64_t>::op_or(
     uint64_t* const left,
     const uint64_t* const right,
     const size_t start_left,
@@ -1467,9 +1475,10 @@ void ForwardOpsImpl<uint64_t>::op_or(
     const size_t size
 ) {
     ElementWiseBitsetPolicy<uint64_t>::op_or(left, right, start_left, start_right, size);
+    return true;
 }
 
-void ForwardOpsImpl<uint64_t>::op_or_multiple(
+bool ForwardOpsImpl<uint64_t>::op_or_multiple(
     uint64_t* const left,
     const uint64_t* const * const rights,
     const size_t start_left,
@@ -1478,9 +1487,10 @@ void ForwardOpsImpl<uint64_t>::op_or_multiple(
     const size_t size
 ) {
     ElementWiseBitsetPolicy<uint64_t>::op_or_multiple(left, rights, start_left, start_rights, n_rights, size);
+    return true;
 }
 
-void ForwardOpsImpl<uint64_t>::op_xor(
+bool ForwardOpsImpl<uint64_t>::op_xor(
     uint64_t* const left,
     const uint64_t* const right,
     const size_t start_left,
@@ -1488,9 +1498,10 @@ void ForwardOpsImpl<uint64_t>::op_xor(
     const size_t size
 ) {
     ElementWiseBitsetPolicy<uint64_t>::op_xor(left, right, start_left, start_right, size);
+    return true;
 }
 
-void ForwardOpsImpl<uint64_t>::op_sub(
+bool ForwardOpsImpl<uint64_t>::op_sub(
     uint64_t* const left,
     const uint64_t* const right,
     const size_t start_left,
@@ -1498,6 +1509,7 @@ void ForwardOpsImpl<uint64_t>::op_sub(
     const size_t size
 ) {
     ElementWiseBitsetPolicy<uint64_t>::op_sub(left, right, start_left, start_right, size);
+    return true;
 }
 
 

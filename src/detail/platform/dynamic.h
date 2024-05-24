@@ -187,40 +187,73 @@ ALL_DATATYPES_1(DECLARE_PARTIAL_OP_ARITH_COMPARE)
 // the default implementation
 template<typename ElementT>
 struct ForwardOpsImpl {
-    static inline void op_and(
+    static inline bool op_and(
         ElementT* const left,
         const ElementT* const right,
         const size_t start_left,
         const size_t start_right,
         const size_t size
-    ) {}
-    static inline void op_or(
+    ) {
+        return false;
+    }
+
+    static inline bool op_and_multiple(
+        ElementT* const left,
+        const ElementT* const * const rights,
+        const size_t start_left,
+        const size_t* const __restrict start_rights,
+        const size_t n_rights,
+        const size_t size
+    ) {
+        return false;
+    }
+
+    static inline bool op_or(
         ElementT* const left,
         const ElementT* const right,
         const size_t start_left,
         const size_t start_right,
         const size_t size
-    ) {}
-    static inline void op_xor(
+    ) {
+        return false;
+    }
+
+    static inline bool op_or_multiple(
+        ElementT* const left,
+        const ElementT* const * const rights,
+        const size_t start_left,
+        const size_t* const __restrict start_rights,
+        const size_t n_rights,
+        const size_t size
+    ) {
+        return false;
+    }
+
+    static inline bool op_xor(
         ElementT* const left,
         const ElementT* const right,
         const size_t start_left,
         const size_t start_right,
         const size_t size
-    ) {}
-    static inline void op_sub(
+    ) {
+        return false;
+    }
+
+    static inline bool op_sub(
         ElementT* const left,
         const ElementT* const right,
         const size_t start_left,
         const size_t start_right,
         const size_t size
-    ) {}
+    ) {
+        return false;
+    }
 };
 
 #define DECLARE_PARTIAL_FORWARD_OPS(ELEMENTTYPE) \
     template<> \
     struct ForwardOpsImpl<ELEMENTTYPE> { \
-        static void op_and( \
+        static bool op_and( \
             ELEMENTTYPE* const left, \
             const ELEMENTTYPE* const right, \
             const size_t start_left, \
@@ -228,7 +261,7 @@ struct ForwardOpsImpl {
             const size_t size \
         ); \
 \
-        static void op_and_multiple( \
+        static bool op_and_multiple( \
             ELEMENTTYPE* const left, \
             const ELEMENTTYPE* const * const rights, \
             const size_t start_left, \
@@ -237,7 +270,7 @@ struct ForwardOpsImpl {
             const size_t size \
         ); \
 \
-        static void op_or( \
+        static bool op_or( \
             ELEMENTTYPE* const left, \
             const ELEMENTTYPE* const right, \
             const size_t start_left, \
@@ -245,7 +278,7 @@ struct ForwardOpsImpl {
             const size_t size \
         ); \
 \
-        static void op_or_multiple( \
+        static bool op_or_multiple( \
             ELEMENTTYPE* const left, \
             const ELEMENTTYPE* const * const rights, \
             const size_t start_left, \
@@ -254,7 +287,7 @@ struct ForwardOpsImpl {
             const size_t size \
         ); \
 \
-        static void op_sub( \
+        static bool op_sub( \
             ELEMENTTYPE* const left, \
             const ELEMENTTYPE* const right, \
             const size_t start_left, \
@@ -262,7 +295,7 @@ struct ForwardOpsImpl {
             const size_t size \
         ); \
 \
-        static void op_xor( \
+        static bool op_xor( \
             ELEMENTTYPE* const left, \
             const ELEMENTTYPE* const right, \
             const size_t start_left, \
@@ -352,18 +385,18 @@ struct VectorizedDynamic {
     //   generated for a particular platform.
 
     template<typename ElementT>
-    static inline void forward_op_and(
+    static inline bool forward_op_and(
         ElementT* const left, 
         const ElementT* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
     ) {
-        dynamic::ForwardOpsImpl<ElementT>::op_and(left, right, start_left, start_right, size);
+        return dynamic::ForwardOpsImpl<ElementT>::op_and(left, right, start_left, start_right, size);
     }
 
     template<typename ElementT>
-    static inline void forward_op_and_multiple(
+    static inline bool forward_op_and_multiple(
         ElementT* const left,
         const ElementT* const * const rights,
         const size_t start_left,
@@ -371,22 +404,22 @@ struct VectorizedDynamic {
         const size_t n_rights,
         const size_t size
     ) {
-        dynamic::ForwardOpsImpl<ElementT>::op_and_multiple(left, rights, start_left, start_rights, n_rights, size);
+        return dynamic::ForwardOpsImpl<ElementT>::op_and_multiple(left, rights, start_left, start_rights, n_rights, size);
     }
 
     template<typename ElementT>
-    static inline void forward_op_or(
+    static inline bool forward_op_or(
         ElementT* const left, 
         const ElementT* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
     ) {
-        dynamic::ForwardOpsImpl<ElementT>::op_or(left, right, start_left, start_right, size);
+        return dynamic::ForwardOpsImpl<ElementT>::op_or(left, right, start_left, start_right, size);
     }
 
     template<typename ElementT>
-    static inline void forward_op_or_multiple(
+    static inline bool forward_op_or_multiple(
         ElementT* const left,
         const ElementT* const * const rights,
         const size_t start_left,
@@ -394,29 +427,29 @@ struct VectorizedDynamic {
         const size_t n_rights,
         const size_t size
     ) {
-        dynamic::ForwardOpsImpl<ElementT>::op_or_multiple(left, rights, start_left, start_rights, n_rights, size);
+        return dynamic::ForwardOpsImpl<ElementT>::op_or_multiple(left, rights, start_left, start_rights, n_rights, size);
     }
 
     template<typename ElementT>
-    static inline void forward_op_xor(
+    static inline bool forward_op_xor(
         ElementT* const left, 
         const ElementT* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
     ) {
-        dynamic::ForwardOpsImpl<ElementT>::op_xor(left, right, start_left, start_right, size);
+        return dynamic::ForwardOpsImpl<ElementT>::op_xor(left, right, start_left, start_right, size);
     }
 
     template<typename ElementT>
-    static inline void forward_op_sub(
+    static inline bool forward_op_sub(
         ElementT* const left, 
         const ElementT* const right, 
         const size_t start_left,
         const size_t start_right, 
         const size_t size
     ) {
-        dynamic::ForwardOpsImpl<ElementT>::op_sub(left, right, start_left, start_right, size);
+        return dynamic::ForwardOpsImpl<ElementT>::op_sub(left, right, start_left, start_right, size);
     }
 };
 

@@ -335,7 +335,7 @@ ALL_ARITH_CMP_OPS(DISPATCH_OP_ARITH_COMPARE, double)
 // forward_ops
 
 template<typename ElementT>
-using ForwardOpsOp2 = void(*)(
+using ForwardOpsOp2 = bool(*)(
     ElementT* const left, 
     const ElementT* const right, 
     const size_t start_left,
@@ -344,7 +344,7 @@ using ForwardOpsOp2 = void(*)(
 );
 
 template<typename ElementT>
-using ForwardOpsOpMultiple2 = void(*)(
+using ForwardOpsOpMultiple2 = bool(*)(
     ElementT* const left, 
     const ElementT* const * const rights, 
     const size_t start_left,
@@ -369,16 +369,16 @@ ALL_FORWARD_OPS(DECLARE_FORWARD_OPS_OP2)
 namespace dynamic {
 
 #define DISPATCH_FORWARD_OPS_OP_AND(ELEMENTTYPE) \
-    void ForwardOpsImpl<ELEMENTTYPE>::op_and (\
+    bool ForwardOpsImpl<ELEMENTTYPE>::op_and (\
         ELEMENTTYPE* const left, \
         const ELEMENTTYPE* const right, \
         const size_t start_left, \
         const size_t start_right, \
         const size_t size \
     ) { \
-        forward_op_and_##ELEMENTTYPE(left, right, start_left, start_right, size); \
+        return forward_op_and_##ELEMENTTYPE(left, right, start_left, start_right, size); \
     } \
-    void ForwardOpsImpl<ELEMENTTYPE>::op_and_multiple( \
+    bool ForwardOpsImpl<ELEMENTTYPE>::op_and_multiple( \
         ELEMENTTYPE* const left, \
         const ELEMENTTYPE* const * const rights, \
         const size_t start_left, \
@@ -386,18 +386,18 @@ namespace dynamic {
         const size_t n_rights, \
         const size_t size \
     ) { \
-        forward_op_and_multiple_##ELEMENTTYPE(left, rights, start_left, start_rights, n_rights, size); \
+        return forward_op_and_multiple_##ELEMENTTYPE(left, rights, start_left, start_rights, n_rights, size); \
     } \
-    void ForwardOpsImpl<ELEMENTTYPE>::op_or (\
+    bool ForwardOpsImpl<ELEMENTTYPE>::op_or (\
         ELEMENTTYPE* const left, \
         const ELEMENTTYPE* const right, \
         const size_t start_left, \
         const size_t start_right, \
         const size_t size \
     ) { \
-        forward_op_or_##ELEMENTTYPE(left, right, start_left, start_right, size); \
+        return forward_op_or_##ELEMENTTYPE(left, right, start_left, start_right, size); \
     } \
-    void ForwardOpsImpl<ELEMENTTYPE>::op_or_multiple( \
+    bool ForwardOpsImpl<ELEMENTTYPE>::op_or_multiple( \
         ELEMENTTYPE* const left, \
         const ELEMENTTYPE* const * const rights, \
         const size_t start_left, \
@@ -405,25 +405,25 @@ namespace dynamic {
         const size_t n_rights, \
         const size_t size \
     ) { \
-        forward_op_or_multiple_##ELEMENTTYPE(left, rights, start_left, start_rights, n_rights, size); \
+        return forward_op_or_multiple_##ELEMENTTYPE(left, rights, start_left, start_rights, n_rights, size); \
     } \
-    void ForwardOpsImpl<ELEMENTTYPE>::op_xor (\
+    bool ForwardOpsImpl<ELEMENTTYPE>::op_xor (\
         ELEMENTTYPE* const left, \
         const ELEMENTTYPE* const right, \
         const size_t start_left, \
         const size_t start_right, \
         const size_t size \
     ) { \
-        forward_op_xor_##ELEMENTTYPE(left, right, start_left, start_right, size); \
+        return forward_op_xor_##ELEMENTTYPE(left, right, start_left, start_right, size); \
     } \
-    void ForwardOpsImpl<ELEMENTTYPE>::op_sub (\
+    bool ForwardOpsImpl<ELEMENTTYPE>::op_sub (\
         ELEMENTTYPE* const left, \
         const ELEMENTTYPE* const right, \
         const size_t start_left, \
         const size_t start_right, \
         const size_t size \
     ) { \
-        forward_op_sub_##ELEMENTTYPE(left, right, start_left, start_right, size); \
+        return forward_op_sub_##ELEMENTTYPE(left, right, start_left, start_right, size); \
     }
 
 ALL_FORWARD_OPS(DISPATCH_FORWARD_OPS_OP_AND)
@@ -564,7 +564,7 @@ static void init_dynamic_hook() {
 #define SET_FORWARD_OPS_AVX2(ELEMENTTYPE) \
     forward_op_and_##ELEMENTTYPE = VectorizedAvx2::template forward_op_and<ELEMENTTYPE>; \
     forward_op_and_multiple_##ELEMENTTYPE = VectorizedAvx2::template forward_op_and_multiple<ELEMENTTYPE>; \
-    forward_op_or_##ELEMENTTYPE = VectorizedAvx512::template forward_op_or<ELEMENTTYPE>; \
+    forward_op_or_##ELEMENTTYPE = VectorizedAvx2::template forward_op_or<ELEMENTTYPE>; \
     forward_op_or_multiple_##ELEMENTTYPE = VectorizedAvx2::template forward_op_or_multiple<ELEMENTTYPE>; \
     forward_op_xor_##ELEMENTTYPE = VectorizedAvx2::template forward_op_xor<ELEMENTTYPE>; \
     forward_op_sub_##ELEMENTTYPE = VectorizedAvx2::template forward_op_sub<ELEMENTTYPE>;

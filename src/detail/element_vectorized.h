@@ -72,8 +72,9 @@ struct VectorizedElementWiseBitsetPolicy {
         const size_t start_right, 
         const size_t size
     ) {
-        // ElementWiseBitsetPolicy<ElementT>::op_and(left, right, start_left, start_right, size);
-        VectorizedT::template forward_op_and<ElementT>(left, right, start_left, start_right, size);
+        if (!VectorizedT::template forward_op_and<ElementT>(left, right, start_left, start_right, size)) {
+            ElementWiseBitsetPolicy<ElementT>::op_and(left, right, start_left, start_right, size);
+        }
     }
 
     static inline void op_and_multiple(
@@ -84,7 +85,9 @@ struct VectorizedElementWiseBitsetPolicy {
         const size_t n_rights,
         const size_t size
     ) {
-        VectorizedT::template forward_op_and_multiple<ElementT>(left, rights, start_left, start_rights, n_rights, size);
+        if (!VectorizedT::template forward_op_and_multiple<ElementT>(left, rights, start_left, start_rights, n_rights, size)) {
+            ElementWiseBitsetPolicy<ElementT>::op_and_multiple(left, rights, start_left, start_rights, n_rights, size);
+        }
     }
 
     static inline void op_or(
@@ -94,8 +97,9 @@ struct VectorizedElementWiseBitsetPolicy {
         const size_t start_right, 
         const size_t size
     ) {
-        // ElementWiseBitsetPolicy<ElementT>::op_or(left, right, start_left, start_right, size);
-        VectorizedT::template forward_op_or<ElementT>(left, right, start_left, start_right, size);
+        if (!VectorizedT::template forward_op_or<ElementT>(left, right, start_left, start_right, size)) {
+            ElementWiseBitsetPolicy<ElementT>::op_or(left, right, start_left, start_right, size);
+        }
     }
 
     static inline void op_or_multiple(
@@ -106,7 +110,9 @@ struct VectorizedElementWiseBitsetPolicy {
         const size_t n_rights,
         const size_t size
     ) {
-        VectorizedT::template forward_op_or_multiple<ElementT>(left, rights, start_left, start_rights, n_rights, size);
+        if (!VectorizedT::template forward_op_or_multiple<ElementT>(left, rights, start_left, start_rights, n_rights, size)) {
+            ElementWiseBitsetPolicy<ElementT>::op_or_multiple(left, rights, start_left, start_rights, n_rights, size);
+        }
     }
 
     static inline void op_set(
@@ -176,8 +182,9 @@ struct VectorizedElementWiseBitsetPolicy {
         const size_t start_right, 
         const size_t size
     ) {
-        // ElementWiseBitsetPolicy<ElementT>::op_xor(left, right, start_left, start_right, size);
-        VectorizedT::template forward_op_xor<ElementT>(left, right, start_left, start_right, size);
+        if (!VectorizedT::template forward_op_xor<ElementT>(left, right, start_left, start_right, size)) {
+            ElementWiseBitsetPolicy<ElementT>::op_xor(left, right, start_left, start_right, size);
+        }
     }
 
     static inline void op_sub(
@@ -187,8 +194,9 @@ struct VectorizedElementWiseBitsetPolicy {
         const size_t start_right, 
         const size_t size
     ) {
-        // ElementWiseBitsetPolicy<ElementT>::op_sub(left, right, start_left, start_right, size);
-        VectorizedT::template forward_op_sub<ElementT>(left, right, start_left, start_right, size);
+        if (!VectorizedT::template forward_op_sub<ElementT>(left, right, start_left, start_right, size)) {
+            ElementWiseBitsetPolicy<ElementT>::op_sub(left, right, start_left, start_right, size);
+        }
     }
 
     static void op_fill(

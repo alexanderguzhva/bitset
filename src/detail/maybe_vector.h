@@ -19,11 +19,6 @@ struct MaybeVector {
 public:
     static_assert(std::is_scalar_v<T>);
     
-    static constexpr size_t num_array_elements = 64;
-
-    std::unique_ptr<T[]> maybe_memory;
-    std::array<T, num_array_elements> maybe_array;
-
     MaybeVector(const size_t n_elements) {
         m_size = n_elements;
 
@@ -51,6 +46,12 @@ private:
     size_t m_size = 0;
 
     T* m_data = nullptr;
+
+    //
+    static constexpr size_t num_array_elements = 64;
+
+    std::unique_ptr<T[]> maybe_memory;
+    std::array<T, num_array_elements> maybe_array;
 };
 
 }

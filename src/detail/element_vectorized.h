@@ -205,6 +205,8 @@ struct VectorizedElementWiseBitsetPolicy {
         const size_t size,
         const bool value 
     ) {
+        // There is no need to optimize this one, because the compiler will
+        //   use std::memset(), which is optimal.
         ElementWiseBitsetPolicy<ElementT>::op_fill(data, start, size, value);
     }
 

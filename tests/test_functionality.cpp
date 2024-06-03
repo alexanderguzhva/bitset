@@ -2090,3 +2090,123 @@ REGISTER_TYPED_TEST_SUITE_P(InplaceOpMultipleSuite, BitWise, ElementWise, Avx2, 
 INSTANTIATE_TYPED_TEST_SUITE_P(InplaceOpMultipleTest, InplaceOpMultipleSuite, Ttypes0);
 
 
+//////////////////////////////////////////////////////////////////////////////////////////
+
+//
+template<typename BitsetT>
+void TestFillImpl(BitsetT& bitset, const bool flag) {
+    const size_t n = bitset.size();
+
+    // rng
+    std::default_random_engine rng(123);
+
+    // test everything
+    {
+        FillRandom(bitset, rng);
+
+        //
+        StopWatch sw;
+
+        if (flag) {
+            bitset.set();
+        } else {
+            bitset.reset();
+        }
+
+        if (print_timing) {
+            printf("elapsed %f\n", sw.elapsed());
+        }
+
+        for (size_t i = 0; i < n; i++) {
+            ASSERT_EQ(bitset[i], flag);
+        }
+    }
+
+    // test a first half
+    {
+        FillRandom(bitset, rng);
+
+        //
+        StopWatch sw;
+
+        if (flag) {
+            bitset.set(0, n / 2);
+        } else {
+            bitset.reset(0, n / 2);
+        }
+
+        if (print_timing) {
+            printf("elapsed %f\n", sw.elapsed());
+        }
+
+        for (size_t i = 0; i < n / 2; i++) {
+            ASSERT_EQ(bitset[i], flag);
+        }
+    }
+
+    // test a second half
+    {
+        FillRandom(bitset, rng);
+
+        //
+        StopWatch sw;
+
+        if (flag) {
+            bitset.set(n / 2, n - n / 2);
+        } else {
+            bitset.reset(n / 2, n - n / 2);
+        }
+
+        if (print_timing) {
+            printf("elapsed %f\n", sw.elapsed());
+        }
+
+        for (size_t i = n / 2; i < n; i++) {
+            ASSERT_EQ(bitset[i], flag);
+        }
+    }
+
+}
+
+template<typename BitsetT>
+void TestFillImpl() {
+    for (const size_t n : typical_sizes) {
+        for (const bool flag : {true, false}) {
+            BitsetT bitset(n);
+            bitset.reset();
+
+            if (print_log) {
+                printf("Testing bitset, n=%zd, flag=%zd\n", n, size_t(flag));
+            }
+            
+            TestFillImpl(bitset, flag);
+
+            for (const size_t offset : typical_offsets) {
+                if (offset >= n) {
+                    continue;
+                }
+
+                bitset.reset();
+                auto view = bitset.view(offset);
+
+                if (print_log) {
+                    printf("Testing bitset view, n=%zd, offset=%zd, flag=%zd\n", n, offset, size_t(flag));
+                }
+                
+                TestFillImpl(view, flag);
+            }
+        }
+    }
+}
+
+//
+TEST(FillRef, f) {
+    using impl_traits = RefImplTraits<uint64_t, uint8_t>;
+    TestFillImpl<typename impl_traits::bitset_type>();
+}
+
+//
+TEST(FillElement, f) {
+    using impl_traits = ElementImplTraits<uint64_t, uint8_t>;
+    TestFillImpl<typename impl_traits::bitset_type>();
+}

@@ -149,6 +149,17 @@ public:
         this->operator[](bit_idx) = value;
     }
 
+    // Set a given range of [a, b) bits to a given value.
+    inline void set(const size_t bit_idx_start, const size_t size, const bool value = true) {
+        range_checker::le(bit_idx_start + size, this->size());
+
+        policy_type::op_fill(
+            this->data(), 
+            this->offset() + bit_idx_start, 
+            size,
+            value);
+    }
+
     // Set all bits to false.
     inline void reset() {
         policy_type::op_reset(this->data(), this->offset(), this->size());
@@ -157,6 +168,11 @@ public:
     // Set a given bit to false.
     inline void reset(const size_t bit_idx) {
         this->operator[](bit_idx) = false;
+    }
+
+    // Set a given range of [a, b) bits to false.
+    inline void reset(const size_t bit_idx_start, const size_t size) {
+        this->set(bit_idx_start, size, false);
     }
 
     // Return whether all bits are set to true.

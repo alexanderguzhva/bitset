@@ -1,8 +1,6 @@
 Basically, a clone of a `boost::dynamic_bitset` library with views and SIMD (AVX2/AVX512/NEON/SVE).
 
-This is an beta version of library. The work is still in progress.
-
-This library was written specifically for the Milvus project (https://github.com/milvus-io/milvus) and expected to be placed at https://github.com/milvus-io/milvus/tree/master/internal/core/src/bitset in the future release. 
+This library was written specifically for the Milvus project (https://github.com/milvus-io/milvus) and is a part of it (https://github.com/milvus-io/milvus/tree/master/internal/core/src/bitset) since version 2.4. 
 Although, this library may be used as a general-purpose one. The version in this repo contains additional attributes like `[[likely]]` and may be used as a header-only library.
 
 Tested on:
@@ -11,7 +9,7 @@ Tested on:
 * AWS Graviton3 (SVE width 256)
 * docker-qemu which emulates ARM (SVE width 512)
 
-Clang produces faster code for SIMD than GCC for x86, but may produce slower code for ARM.
+Clang seems to produce faster code for SIMD than GCC.
 
 ===========================================================================
 

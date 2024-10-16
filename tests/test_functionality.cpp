@@ -349,22 +349,114 @@ void TestFindImpl() {
 }
 
 //
-TEST(FindRef, f) {
-    using impl_traits = RefImplTraits<uint64_t, uint8_t>;
+template<typename T>
+class FindSuite : public ::testing::Test {};
+
+TYPED_TEST_SUITE_P(FindSuite);
+
+//
+TYPED_TEST_P(FindSuite, BitWise) {
+    using impl_traits = 
+        RefImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>
+        >;
+    TestFindImpl<typename impl_traits::bitset_type>();
+}
+
+TYPED_TEST_P(FindSuite, ElementWise) {
+    using impl_traits = 
+        ElementImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>
+        >;
+    TestFindImpl<typename impl_traits::bitset_type>();
+}
+
+TYPED_TEST_P(FindSuite, Avx2) {
+#if defined(__x86_64__)
+    using namespace milvus::bitset::detail::x86;
+
+    if (cpu_support_avx2()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<0, TypeParam>, 
+                std::tuple_element_t<1, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx2
+            >;
+        TestFindImpl<typename impl_traits::bitset_type>();
+    }
+#endif
+}
+
+TYPED_TEST_P(FindSuite, Avx512) {
+#if defined(__x86_64__)
+    using namespace milvus::bitset::detail::x86;
+
+    if (cpu_support_avx512()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<0, TypeParam>, 
+                std::tuple_element_t<1, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx512
+            >;
+        TestFindImpl<typename impl_traits::bitset_type>();
+    }
+#endif
+}
+
+TYPED_TEST_P(FindSuite, Neon) {
+#if defined(__aarch64__)
+    using namespace milvus::bitset::detail::arm;
+
+    using impl_traits =
+        VectorizedImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedNeon
+        >;
+    TestFindImpl<typename impl_traits::bitset_type>();
+#endif
+}
+
+TYPED_TEST_P(FindSuite, Sve) {
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+    using namespace milvus::bitset::detail::arm;
+
+    using impl_traits =
+        VectorizedImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedSve
+        >;
+    TestFindImpl<typename impl_traits::bitset_type>();
+#endif
+}
+
+TYPED_TEST_P(FindSuite, Dynamic) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>,
+            milvus::bitset::detail::VectorizedDynamic
+        >;
+    TestFindImpl<typename impl_traits::bitset_type>();
+}
+
+TYPED_TEST_P(FindSuite, VecRef) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>,
+            milvus::bitset::detail::VectorizedRef
+        >;
     TestFindImpl<typename impl_traits::bitset_type>();
 }
 
 //
-TEST(FindElement, f) {
-    using impl_traits = ElementImplTraits<uint64_t, uint8_t>;
-    TestFindImpl<typename impl_traits::bitset_type>();
-}
+REGISTER_TYPED_TEST_SUITE_P(FindSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Sve, Dynamic, VecRef);
 
-// //
-// TEST(FindVectorizedAvx2, f) {
-//     TestFindImpl<avx2_u64_u8::bitset_type>();
-// }
-
+INSTANTIATE_TYPED_TEST_SUITE_P(FindTest, FindSuite, Ttypes0);
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1544,16 +1636,115 @@ void TestAppendImpl() {
     }
 }
 
-TEST(Append, BitWise) {
-    using impl_traits = RefImplTraits<uint64_t, uint8_t>;
+//
+template<typename T>
+class AppendSuite : public ::testing::Test {};
+
+TYPED_TEST_SUITE_P(AppendSuite);
+
+//
+TYPED_TEST_P(AppendSuite, BitWise) {
+    using impl_traits = 
+        RefImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>
+        >;
     TestAppendImpl<typename impl_traits::bitset_type>();
 }
 
-TEST(Append, ElementWise) {
-    using impl_traits = ElementImplTraits<uint64_t, uint8_t>;
+TYPED_TEST_P(AppendSuite, ElementWise) {
+    using impl_traits = 
+        ElementImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>
+        >;
     TestAppendImpl<typename impl_traits::bitset_type>();
 }
 
+TYPED_TEST_P(AppendSuite, Avx2) {
+#if defined(__x86_64__)
+    using namespace milvus::bitset::detail::x86;
+
+    if (cpu_support_avx2()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<0, TypeParam>, 
+                std::tuple_element_t<1, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx2
+            >;
+        TestAppendImpl<typename impl_traits::bitset_type>();
+    }
+#endif
+}
+
+TYPED_TEST_P(AppendSuite, Avx512) {
+#if defined(__x86_64__)
+    using namespace milvus::bitset::detail::x86;
+
+    if (cpu_support_avx512()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<0, TypeParam>, 
+                std::tuple_element_t<1, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx512
+            >;
+        TestAppendImpl<typename impl_traits::bitset_type>();
+    }
+#endif
+}
+
+TYPED_TEST_P(AppendSuite, Neon) {
+#if defined(__aarch64__)
+    using namespace milvus::bitset::detail::arm;
+
+    using impl_traits =
+        VectorizedImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedNeon
+        >;
+    TestAppendImpl<typename impl_traits::bitset_type>();
+#endif
+}
+
+TYPED_TEST_P(AppendSuite, Sve) {
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+    using namespace milvus::bitset::detail::arm;
+
+    using impl_traits =
+        VectorizedImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedSve
+        >;
+    TestAppendImpl<typename impl_traits::bitset_type>();
+#endif
+}
+
+TYPED_TEST_P(AppendSuite, Dynamic) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>,
+            milvus::bitset::detail::VectorizedDynamic
+        >;
+    TestAppendImpl<typename impl_traits::bitset_type>();
+}
+
+TYPED_TEST_P(AppendSuite, VecRef) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>,
+            milvus::bitset::detail::VectorizedRef
+        >;
+    TestAppendImpl<typename impl_traits::bitset_type>();
+}
+
+//
+REGISTER_TYPED_TEST_SUITE_P(AppendSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Sve, Dynamic, VecRef);
+
+INSTANTIATE_TYPED_TEST_SUITE_P(AppendTest, AppendSuite, Ttypes0);
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1616,17 +1807,114 @@ void TestCountImpl() {
 }
 
 //
-TEST(CountRef, f) {
-    using impl_traits = RefImplTraits<uint64_t, uint8_t>;
+template<typename T>
+class CountSuite : public ::testing::Test {};
+
+TYPED_TEST_SUITE_P(CountSuite);
+
+//
+TYPED_TEST_P(CountSuite, BitWise) {
+    using impl_traits = 
+        RefImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>
+        >;
+    TestCountImpl<typename impl_traits::bitset_type>();
+}
+
+TYPED_TEST_P(CountSuite, ElementWise) {
+    using impl_traits = 
+        ElementImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>
+        >;
+    TestCountImpl<typename impl_traits::bitset_type>();
+}
+
+TYPED_TEST_P(CountSuite, Avx2) {
+#if defined(__x86_64__)
+    using namespace milvus::bitset::detail::x86;
+
+    if (cpu_support_avx2()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<0, TypeParam>, 
+                std::tuple_element_t<1, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx2
+            >;
+        TestCountImpl<typename impl_traits::bitset_type>();
+    }
+#endif
+}
+
+TYPED_TEST_P(CountSuite, Avx512) {
+#if defined(__x86_64__)
+    using namespace milvus::bitset::detail::x86;
+
+    if (cpu_support_avx512()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<0, TypeParam>, 
+                std::tuple_element_t<1, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx512
+            >;
+        TestCountImpl<typename impl_traits::bitset_type>();
+    }
+#endif
+}
+
+TYPED_TEST_P(CountSuite, Neon) {
+#if defined(__aarch64__)
+    using namespace milvus::bitset::detail::arm;
+
+    using impl_traits =
+        VectorizedImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedNeon
+        >;
+    TestCountImpl<typename impl_traits::bitset_type>();
+#endif
+}
+
+TYPED_TEST_P(CountSuite, Sve) {
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+    using namespace milvus::bitset::detail::arm;
+
+    using impl_traits =
+        VectorizedImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedSve
+        >;
+    TestCountImpl<typename impl_traits::bitset_type>();
+#endif
+}
+
+TYPED_TEST_P(CountSuite, Dynamic) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>,
+            milvus::bitset::detail::VectorizedDynamic
+        >;
+    TestCountImpl<typename impl_traits::bitset_type>();
+}
+
+TYPED_TEST_P(CountSuite, VecRef) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>,
+            milvus::bitset::detail::VectorizedRef
+        >;
     TestCountImpl<typename impl_traits::bitset_type>();
 }
 
 //
-TEST(CountElement, f) {
-    using impl_traits = ElementImplTraits<uint64_t, uint8_t>;
-    TestCountImpl<typename impl_traits::bitset_type>();
-}
+REGISTER_TYPED_TEST_SUITE_P(CountSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Sve, Dynamic, VecRef);
 
+INSTANTIATE_TYPED_TEST_SUITE_P(CountTest, CountSuite, Ttypes0);
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1634,7 +1922,12 @@ enum class TestInplaceOp {
     AND,
     OR,
     XOR,
-    SUB
+    SUB,
+    AND_WITH_COUNT,
+    OR_WITH_COUNT,
+    FLIP,
+    ALL,
+    NONE
 };
 
 //
@@ -1666,8 +1959,15 @@ void TestInplaceOpImpl(
         bitset_2[i] = enabled;
     }
 
+    // for _WITH_COUNT ops
+    size_t bits_count = 0;
+    // for ALL and NONE ops
+    bool bits_flag = false;
+    bool bits_flag_2 = false;
+
     // evaluate
     StopWatch sw;
+    
     if (op == TestInplaceOp::AND) {
         bitset.inplace_and(bitset_2, n);
     } else if (op == TestInplaceOp::OR) {
@@ -1676,6 +1976,21 @@ void TestInplaceOpImpl(
         bitset.inplace_xor(bitset_2, n);
     } else if (op == TestInplaceOp::SUB) {
         bitset.inplace_sub(bitset_2, n);
+    } else if (op == TestInplaceOp::AND_WITH_COUNT) {
+        // number of active bits
+        bits_count = bitset.inplace_and_with_count(bitset_2, n);
+    } else if (op == TestInplaceOp::OR_WITH_COUNT) {
+        // number of inactive bits
+        bits_count = bitset.inplace_or_with_count(bitset_2, n);
+    } else if (op == TestInplaceOp::FLIP) {
+        bitset.flip();
+        bitset_2.flip();
+    } else if (op == TestInplaceOp::ALL) {
+        bits_flag = bitset.all();
+        bits_flag_2 = bitset_2.all();
+    } else if (op == TestInplaceOp::NONE) {
+        bits_flag = bitset.none();
+        bits_flag_2 = bitset_2.none();
     } else {
         ASSERT_TRUE(false) << "Not implemented";
     }
@@ -1683,6 +1998,9 @@ void TestInplaceOpImpl(
     if (print_timing) {
         printf("elapsed %f\n", sw.elapsed());
     }
+
+    // ref for _WITH_COUNT ops
+    size_t ref_bits_count = 0;
 
     // validate
     for (size_t i = 0; i < n; i++) {
@@ -1694,16 +2012,63 @@ void TestInplaceOpImpl(
             ASSERT_EQ(bitset[i], ref_bitset[i] ^ ref_bitset_2[i]);
         } else if (op == TestInplaceOp::SUB) {
             ASSERT_EQ(bitset[i], ref_bitset[i] & (~ref_bitset_2[i]));
+        } else if (op == TestInplaceOp::AND || op == TestInplaceOp::AND_WITH_COUNT) {
+            const bool ref_value = ref_bitset[i] & ref_bitset_2[i];
+            ASSERT_EQ(bitset[i], ref_value);
+            ref_bits_count += ref_value ? 1 : 0;
+        } else if (op == TestInplaceOp::OR || op == TestInplaceOp::OR_WITH_COUNT) {
+            const bool ref_value = ref_bitset[i] | ref_bitset_2[i];
+            ASSERT_EQ(bitset[i], ref_value);
+            ref_bits_count += ref_value ? 0 : 1;
+        } else if (op == TestInplaceOp::FLIP) {
+            ASSERT_EQ(bitset[i], !ref_bitset[i]);
+            ASSERT_EQ(bitset_2[i], !ref_bitset_2[i]);
+        } else if (op == TestInplaceOp::ALL) {
+            if (bits_flag) { ASSERT_TRUE(ref_bitset[i]); }
+            if (bits_flag_2) { ASSERT_TRUE(ref_bitset_2[i]); }
+        } else if (op == TestInplaceOp::NONE) {
+            if (bits_flag) { ASSERT_FALSE(ref_bitset[i]); }
+            if (bits_flag_2) { ASSERT_FALSE(ref_bitset_2[i]); }
         } else {
             ASSERT_TRUE(false) << "Not implemented";
         }
+    }
+
+    // additional validation for _WITH_COUNT ops
+    if (op == TestInplaceOp::AND_WITH_COUNT || op == TestInplaceOp::OR_WITH_COUNT) {
+        ASSERT_EQ(bits_count, ref_bits_count) << ((op == TestInplaceOp::AND_WITH_COUNT) ? "and" : "or");
+    }
+
+    // additional validation for ALL and NONE
+    if (op == TestInplaceOp::ALL) {
+        bool ref_bits_flag = true;
+        bool ref_bits_flag_2 = true;
+        for (size_t i = 0; i < n; i++) {
+            ref_bits_flag &= ref_bitset[i];
+            ref_bits_flag_2 &= ref_bitset_2[i];
+        }
+
+        ASSERT_EQ(ref_bits_flag, bits_flag);
+        ASSERT_EQ(ref_bits_flag_2, bits_flag_2);
+    } else if (op == TestInplaceOp::NONE) {
+        bool ref_bits_flag = true;
+        bool ref_bits_flag_2 = true;
+        for (size_t i = 0; i < n; i++) {
+            ref_bits_flag &= !ref_bitset[i];
+            ref_bits_flag_2 &= !ref_bitset_2[i];
+        }
+
+        ASSERT_EQ(ref_bits_flag, bits_flag);
+        ASSERT_EQ(ref_bits_flag_2, bits_flag_2);
     }
 }
 
 template<typename BitsetT>
 void TestInplaceOpImpl() {
     const auto inplace_ops = {
-        TestInplaceOp::AND, TestInplaceOp::OR, TestInplaceOp::XOR, TestInplaceOp::SUB
+        TestInplaceOp::AND, TestInplaceOp::OR, TestInplaceOp::XOR, TestInplaceOp::SUB,
+        TestInplaceOp::AND_WITH_COUNT, TestInplaceOp::OR_WITH_COUNT,
+        TestInplaceOp::FLIP, TestInplaceOp::ALL, TestInplaceOp::NONE
     };
 
     for (const size_t n : typical_sizes) {
@@ -1931,7 +2296,7 @@ void TestInplaceOpMultipleImpl() {
     };
 
     for (const size_t n : typical_sizes) {
-        for (const size_t n_ngb : {1, 2, 4, 8}) {
+        for (const size_t n_ngb : {1, 2, 3, 4, 5, 6, 7, 8, 9}) {
             for (const auto op : inplace_ops) {
                 BitsetT bitset(n);
                 bitset.reset();
@@ -2165,7 +2530,6 @@ void TestFillImpl(BitsetT& bitset, const bool flag) {
             ASSERT_EQ(bitset[i], flag);
         }
     }
-
 }
 
 template<typename BitsetT>
@@ -2200,13 +2564,112 @@ void TestFillImpl() {
 }
 
 //
-TEST(FillRef, f) {
-    using impl_traits = RefImplTraits<uint64_t, uint8_t>;
+template<typename T>
+class FillSuite : public ::testing::Test {};
+
+TYPED_TEST_SUITE_P(FillSuite);
+
+//
+TYPED_TEST_P(FillSuite, BitWise) {
+    using impl_traits = 
+        RefImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>
+        >;
+    TestFillImpl<typename impl_traits::bitset_type>();
+}
+
+TYPED_TEST_P(FillSuite, ElementWise) {
+    using impl_traits = 
+        ElementImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>
+        >;
+    TestFillImpl<typename impl_traits::bitset_type>();
+}
+
+TYPED_TEST_P(FillSuite, Avx2) {
+#if defined(__x86_64__)
+    using namespace milvus::bitset::detail::x86;
+
+    if (cpu_support_avx2()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<0, TypeParam>, 
+                std::tuple_element_t<1, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx2
+            >;
+        TestFillImpl<typename impl_traits::bitset_type>();
+    }
+#endif
+}
+
+TYPED_TEST_P(FillSuite, Avx512) {
+#if defined(__x86_64__)
+    using namespace milvus::bitset::detail::x86;
+
+    if (cpu_support_avx512()) {
+        using impl_traits = 
+            VectorizedImplTraits<
+                std::tuple_element_t<0, TypeParam>, 
+                std::tuple_element_t<1, TypeParam>,
+                milvus::bitset::detail::x86::VectorizedAvx512
+            >;
+        TestFillImpl<typename impl_traits::bitset_type>();
+    }
+#endif
+}
+
+TYPED_TEST_P(FillSuite, Neon) {
+#if defined(__aarch64__)
+    using namespace milvus::bitset::detail::arm;
+
+    using impl_traits =
+        VectorizedImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedNeon
+        >;
+    TestFillImpl<typename impl_traits::bitset_type>();
+#endif
+}
+
+TYPED_TEST_P(FillSuite, Sve) {
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+    using namespace milvus::bitset::detail::arm;
+
+    using impl_traits =
+        VectorizedImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>,
+            milvus::bitset::detail::arm::VectorizedSve
+        >;
+    TestFillImpl<typename impl_traits::bitset_type>();
+#endif
+}
+
+TYPED_TEST_P(FillSuite, Dynamic) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>,
+            milvus::bitset::detail::VectorizedDynamic
+        >;
+    TestFillImpl<typename impl_traits::bitset_type>();
+}
+
+TYPED_TEST_P(FillSuite, VecRef) {
+    using impl_traits = 
+        VectorizedImplTraits<
+            std::tuple_element_t<0, TypeParam>, 
+            std::tuple_element_t<1, TypeParam>,
+            milvus::bitset::detail::VectorizedRef
+        >;
     TestFillImpl<typename impl_traits::bitset_type>();
 }
 
 //
-TEST(FillElement, f) {
-    using impl_traits = ElementImplTraits<uint64_t, uint8_t>;
-    TestFillImpl<typename impl_traits::bitset_type>();
-}
+REGISTER_TYPED_TEST_SUITE_P(FillSuite, BitWise, ElementWise, Avx2, Avx512, Neon, Sve, Dynamic, VecRef);
+
+INSTANTIATE_TYPED_TEST_SUITE_P(FillTest, FillSuite, Ttypes0);
+

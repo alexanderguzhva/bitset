@@ -866,13 +866,26 @@ struct ElementWiseBitsetPolicy {
     ) {
         size_t inactive = 0;
 
-        op_func(left, right, start_left, start_right, size, 
+        const size_t size_b = (size / data_bits) * data_bits;
+
+        // process bulk
+        op_func(left, right, start_left, start_right, size_b, 
             [&inactive](const data_type left_v, const data_type right_v) { 
                 const data_type result = left_v | right_v;
                 inactive += (data_bits - PopCountHelper<data_type>::count(result));
 
                 return result; 
             });
+
+        // process leftovers
+        if (size != size_b) {
+            const data_type left_v = op_read(left, start_left + size_b, size - size_b);
+            const data_type right_v = op_read(right, start_right + size_b, size - size_b);
+
+            const data_type result_v = left_v | right_v;
+            inactive += (size - size_b - PopCountHelper<data_type>::count(result_v));
+            op_write(left, start_left + size_b, size - size_b, result_v);
+        }
 
         return inactive;
     }

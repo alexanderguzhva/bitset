@@ -923,19 +923,6 @@ struct ElementWiseBitsetPolicy {
                 }
             } else {
                 // easier read
-                size_t start_right_idx = start_right / data_bits;
-
-                for (size_t i = 0, j = 0; i < size_b; i += data_bits, j += 1) {
-                    const data_type left_v = op_read(left, start_left + i, data_bits);
-                    const data_type right_v = right[start_right_idx + j];
-
-                    const data_type result_v = func(left_v, right_v);
-                    op_write(left, start_right + i, data_bits, result_v);
-                }
-            }
-        } else {
-            if ((start_right % data_bits) == 0) {
-                // easier write
                 size_t start_left_idx = start_left / data_bits;
 
                 for (size_t i = 0, j = 0; i < size_b; i += data_bits, j += 1) {
@@ -944,6 +931,19 @@ struct ElementWiseBitsetPolicy {
 
                     const data_type result_v = func(left_v, right_v);
                     left_v = result_v;
+                }
+            }
+        } else {
+            if ((start_right % data_bits) == 0) {
+                // easier write
+                size_t start_right_idx = start_right / data_bits;
+
+                for (size_t i = 0, j = 0; i < size_b; i += data_bits, j += 1) {
+                    const data_type left_v = op_read(left, start_left + i, data_bits);
+                    const data_type right_v = right[start_right_idx + j];
+
+                    const data_type result_v = func(left_v, right_v);
+                    op_write(left, start_left + i, data_bits, result_v);
                 }
             } else {
                 // general case

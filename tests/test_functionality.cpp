@@ -2084,6 +2084,7 @@ void TestInplaceOpImpl() {
             
             TestInplaceOpImpl<BitsetT>(bitset, bitset_2, op);
 
+            // same offsets
             for (const size_t offset : typical_offsets) {
                 if (offset >= n) {
                     continue;
@@ -2096,6 +2097,42 @@ void TestInplaceOpImpl() {
 
                 if (print_log) {
                     printf("Testing bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
+                }
+                
+                TestInplaceOpImpl<decltype(view)>(view, view_2, op);
+            }
+
+            // fixed left offset
+            for (const size_t offset : typical_offsets) {
+                if (offset >= n) {
+                    continue;
+                }
+
+                bitset.reset();
+                auto view = bitset.view(0, n - offset);
+                bitset_2.reset();
+                auto view_2 = bitset_2.view(offset);
+
+                if (print_log) {
+                    printf("Testing left-fixed bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
+                }
+                
+                TestInplaceOpImpl<decltype(view)>(view, view_2, op);
+            }
+
+            // fixed right offset
+            for (const size_t offset : typical_offsets) {
+                if (offset >= n) {
+                    continue;
+                }
+
+                bitset.reset();
+                auto view = bitset.view(offset);
+                bitset_2.reset();
+                auto view_2 = bitset_2.view(0, n - offset);
+
+                if (print_log) {
+                    printf("Testing right-fixed bitset view, n=%zd, offset=%zd, op=%zd\n", n, offset, (size_t)op);
                 }
                 
                 TestInplaceOpImpl<decltype(view)>(view, view_2, op);

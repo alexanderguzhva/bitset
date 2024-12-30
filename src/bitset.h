@@ -930,18 +930,18 @@ public:
     
     using range_checker = RangeChecker<IsRangeCheckEnabled>;
 
-    BitsetView() {}
+    BitsetView() = default;
     BitsetView(const BitsetView &) = default;
-    BitsetView(BitsetView&&) = default;
+    BitsetView(BitsetView&&) noexcept = default;
     BitsetView& operator =(const BitsetView&) = default;
-    BitsetView& operator =(BitsetView&&) = default;
+    BitsetView& operator =(BitsetView&&) noexcept = default;
 
     template<typename ImplT, bool R>
-    BitsetView(BitsetBase<PolicyT, ImplT, R>& bitset) :
+    explicit BitsetView(BitsetBase<PolicyT, ImplT, R>& bitset) :
         Data{bitset.data()}, Size{bitset.size()}, Offset{bitset.offset()} {}
 
     BitsetView(void* data, const size_t size) :
-        Data{reinterpret_cast<data_type*>(data)}, Size{size}, Offset{0} {}
+        Data{reinterpret_cast<data_type*>(data)}, Size{size} {}
 
     BitsetView(void* data, const size_t offset, const size_t size) :
         Data{reinterpret_cast<data_type*>(data)}, Size{size}, Offset{offset} {}
@@ -984,9 +984,9 @@ public:
     using range_checker = RangeChecker<IsRangeCheckEnabled>;
 
     // Allocate an empty one.
-    Bitset() {}
+    Bitset() = default;
     // Allocate the given number of bits.
-    Bitset(const size_t size) : 
+    explicit Bitset(const size_t size) : 
         Data(get_required_size_in_container_elements(size)), Size{size} {}
     // Allocate the given number of bits, initialize with a given value.
     Bitset(const size_t size, const bool init) : 
@@ -997,14 +997,14 @@ public:
     // Do not allow implicit copies (Rust style).
     Bitset(const Bitset &) = delete;
     // Allow default move.
-    Bitset(Bitset&&) = default;
+    Bitset(Bitset&&) noexcept = default;
     // Do not allow implicit copies (Rust style).
     Bitset& operator =(const Bitset&) = delete;
     // Allow default move.
-    Bitset& operator =(Bitset&&) = default;
+    Bitset& operator =(Bitset&&) noexcept = default;
 
     template<typename C, bool R>
-    Bitset(const BitsetBase<PolicyT, C, R>& other) {
+    explicit Bitset(const BitsetBase<PolicyT, C, R>& other) {
         Data = container_type(get_required_size_in_container_elements(other.size()));
         Size = other.size();
 

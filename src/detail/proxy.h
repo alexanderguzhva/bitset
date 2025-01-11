@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 namespace milvus {
 namespace bitset {
 namespace detail {

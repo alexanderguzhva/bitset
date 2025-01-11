@@ -215,9 +215,10 @@ struct VectorizedElementWiseBitsetPolicy {
         const data_type* const data, 
         const size_t start, 
         const size_t size,
-        const size_t starting_idx
+        const size_t starting_idx,
+        const bool is_set
     ) {
-        return ElementWiseBitsetPolicy<ElementT>::op_find(data, start, size, starting_idx);
+        return ElementWiseBitsetPolicy<ElementT>::op_find(data, start, size, starting_idx, is_set);
     }
 
     //

@@ -281,7 +281,7 @@ std::string from_i32(const int32_t i) {
 
 //
 template<typename BitsetT>
-void TestFindImpl(BitsetT& bitset, const size_t max_v) {
+void TestFindImpl(BitsetT& bitset, const size_t max_v, const bool is_set) {
     const size_t n = bitset.size();
 
     std::default_random_engine rng(123);
@@ -296,9 +296,13 @@ void TestFindImpl(BitsetT& bitset, const size_t max_v) {
         }
     }
 
+    if (!is_set) {
+        bitset.flip();
+    }
+
     StopWatch sw;
 
-    auto bit_idx = bitset.find_first();
+    auto bit_idx = bitset.find_first(is_set);
     if (!bit_idx.has_value()) {
         ASSERT_EQ(one_pos.size(), 0);
         return;
@@ -307,7 +311,7 @@ void TestFindImpl(BitsetT& bitset, const size_t max_v) {
     for (size_t i = 0; i < one_pos.size(); i++) {
         ASSERT_TRUE(bit_idx.has_value()) << n << ", " << max_v;
         ASSERT_EQ(bit_idx.value(), one_pos[i]) << n << ", " << max_v;
-        bit_idx = bitset.find_next(bit_idx.value());
+        bit_idx = bitset.find_next(bit_idx.value(), is_set);
     }
 
     ASSERT_FALSE(bit_idx.has_value()) << n << ", " << max_v << ", " << bit_idx.value();
@@ -320,29 +324,31 @@ void TestFindImpl(BitsetT& bitset, const size_t max_v) {
 template<typename BitsetT>
 void TestFindImpl() {
     for (const size_t n : typical_sizes) {
-        for (const size_t pr : {1, 100}) {
-            BitsetT bitset(n);
-            bitset.reset();
-
-            if (print_log) {
-                printf("Testing bitset, n=%zd, pr=%zd\n", n, pr);
-            }
-            
-            TestFindImpl(bitset, pr);
-
-            for (const size_t offset : typical_offsets) {
-                if (offset >= n) {
-                    continue;
-                }
-
+        for (const bool is_set : {true, false}) {
+            for (const size_t pr : {1, 100}) {
+                BitsetT bitset(n);
                 bitset.reset();
-                auto view = bitset.view(offset);
 
                 if (print_log) {
-                    printf("Testing bitset view, n=%zd, offset=%zd, pr=%zd\n", n, offset, pr);
+                    printf("Testing bitset, n=%zd, is_set=%d, pr=%zd\n", n, (is_set) ? 1 : 0, pr);
                 }
                 
-                TestFindImpl(view, pr);
+                TestFindImpl(bitset, pr, is_set);
+
+                for (const size_t offset : typical_offsets) {
+                    if (offset >= n) {
+                        continue;
+                    }
+
+                    bitset.reset();
+                    auto view = bitset.view(offset);
+
+                    if (print_log) {
+                        printf("Testing bitset view, n=%zd, offset=%zd, is_set=%d, pr=%zd\n", n, offset, (is_set) ? 1 : 0, pr);
+                    }
+                    
+                    TestFindImpl(view, pr, is_set);
+                }
             }
         }
     }

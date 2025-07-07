@@ -1745,6 +1745,76 @@ bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
 ) {
     if constexpr(AOp == ArithOpType::Mod) {
         return false;
+    } else if constexpr(AOp == ArithOpType::Div) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+
+        //
+        const __m512d right_v = _mm512_set1_pd(right_operand);
+        const __m512d value_v = _mm512_set1_pd(value);
+
+        // todo: aligned reads & writes
+
+        if (right_operand > 0 || CmpOp == CompareOpType::EQ || CmpOp == CompareOpType::NE) {
+            // a special case that allows faster processing by using the multiplication
+            //   operation instead of the division one.
+
+            // interleaved pages
+            constexpr size_t BLOCK_COUNT = PAGE_SIZE / (sizeof(int64_t));
+            const size_t size_8p = (size / (N_BLOCKS * BLOCK_COUNT)) * N_BLOCKS * BLOCK_COUNT;
+            for (size_t i = 0; i < size_8p; i += N_BLOCKS * BLOCK_COUNT) {
+                for (size_t p = 0; p < BLOCK_COUNT; p += 8) {
+                    for (size_t ip = 0; ip < N_BLOCKS; ip++) {
+                        const __m512d v0s = _mm512_loadu_pd(src + i + p + ip * BLOCK_COUNT);
+                        const __mmask8 cmp_mask = ArithHelperF64<AOp, CmpOp>::op_special(v0s, right_v, value_v);
+
+                        res_u8[(i + p + ip * BLOCK_COUNT) / 8] = cmp_mask;
+
+                        _mm_prefetch((const char*)(src + i + p + ip * BLOCK_COUNT) + BLOCKS_PREFETCH_AHEAD * CACHELINE_WIDTH, _MM_HINT_T0);
+                    }
+                }
+            }
+
+            // process big blocks
+            const size_t size8 = (size / 8) * 8;
+            for (size_t i = size_8p; i < size8; i += 8) {
+                const __m512d v0s = _mm512_loadu_pd(src + i);
+                const __mmask8 cmp_mask = ArithHelperF64<AOp, CmpOp>::op_special(v0s, right_v, value_v);
+
+                res_u8[i / 8] = cmp_mask;
+            }
+
+            return true;
+        } else {
+            // fallback to the default division operation
+
+            // interleaved pages
+            constexpr size_t BLOCK_COUNT = PAGE_SIZE / (sizeof(int64_t));
+            const size_t size_8p = (size / (N_BLOCKS * BLOCK_COUNT)) * N_BLOCKS * BLOCK_COUNT;
+            for (size_t i = 0; i < size_8p; i += N_BLOCKS * BLOCK_COUNT) {
+                for (size_t p = 0; p < BLOCK_COUNT; p += 8) {
+                    for (size_t ip = 0; ip < N_BLOCKS; ip++) {
+                        const __m512d v0s = _mm512_loadu_pd(src + i + p + ip * BLOCK_COUNT);
+                        const __mmask8 cmp_mask = ArithHelperF64<AOp, CmpOp>::op(v0s, right_v, value_v);
+
+                        res_u8[(i + p + ip * BLOCK_COUNT) / 8] = cmp_mask;
+
+                        _mm_prefetch((const char*)(src + i + p + ip * BLOCK_COUNT) + BLOCKS_PREFETCH_AHEAD * CACHELINE_WIDTH, _MM_HINT_T0);
+                    }
+                }
+            }
+
+            // process big blocks
+            const size_t size8 = (size / 8) * 8;
+            for (size_t i = size_8p; i < size8; i += 8) {
+                const __m512d v0s = _mm512_loadu_pd(src + i);
+                const __mmask8 cmp_mask = ArithHelperF64<AOp, CmpOp>::op(v0s, right_v, value_v);
+
+                res_u8[i / 8] = cmp_mask;
+            }
+
+            return true;
+        }
     } else {
         // the restriction of the API
         assert((size % 8) == 0);

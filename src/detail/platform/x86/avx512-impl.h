@@ -1271,10 +1271,17 @@ struct ArithHelperF32<ArithOpType::Mul, CmpOp> {
 
 template<CompareOpType CmpOp>
 struct ArithHelperF32<ArithOpType::Div, CmpOp> {
-    static inline __mmask16 op(const __m512 left, const __m512 right, const __m512 value) {
+    static inline __mmask16 op_special(const __m512 left, const __m512 right, const __m512 value) {
+        // this is valid for the positive denominator, == and != cases.
         // left == right * value
         constexpr auto pred = ComparePredicate<float, CmpOp>::value;
         return _mm512_cmp_ps_mask(left, _mm512_mul_ps(right, value), pred);
+    }
+
+    static inline __mmask16 op(const __m512 left, const __m512 right, const __m512 value) {
+        // left / right == value
+        constexpr auto pred = ComparePredicate<float, CmpOp>::value;
+        return _mm512_cmp_ps_mask(_mm512_div_ps(left, right), value, pred);
     }
 };
 
@@ -1311,10 +1318,17 @@ struct ArithHelperF64<ArithOpType::Mul, CmpOp> {
 
 template<CompareOpType CmpOp>
 struct ArithHelperF64<ArithOpType::Div, CmpOp> {
-    static inline __mmask8 op(const __m512d left, const __m512d right, const __m512d value) {
+    static inline __mmask8 op_special(const __m512d left, const __m512d right, const __m512d value) {
+        // this is valid for the positive denominator, == and != cases.
         // left == right * value
         constexpr auto pred = ComparePredicate<double, CmpOp>::value;
         return _mm512_cmp_pd_mask(left, _mm512_mul_pd(right, value), pred);
+    }
+
+    static inline __mmask8 op(const __m512d left, const __m512d right, const __m512d value) {
+        // left / right == value
+        constexpr auto pred = ComparePredicate<double, CmpOp>::value;
+        return _mm512_cmp_pd_mask(_mm512_div_pd(left, right), value, pred);
     }
 };
 
@@ -1588,6 +1602,91 @@ bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
 ) {
     if constexpr(AOp == ArithOpType::Mod) {
         return false;
+    } else if constexpr(AOp == ArithOpType::Div) {
+        // the restriction of the API
+        assert((size % 8) == 0);
+
+        //
+        const __m512 right_v = _mm512_set1_ps(right_operand);
+        const __m512 value_v = _mm512_set1_ps(value);
+        uint16_t* const __restrict res_u16 = reinterpret_cast<uint16_t*>(res_u8);
+
+        if (right_operand > 0 || CmpOp == CompareOpType::EQ || CmpOp == CompareOpType::NE) {
+            // a special case that allows faster processing by using the multiplication
+            //   operation instead of the division one.
+
+            // interleaved pages
+            constexpr size_t BLOCK_COUNT = PAGE_SIZE / (sizeof(float));
+            const size_t size_8p = (size / (N_BLOCKS * BLOCK_COUNT)) * N_BLOCKS * BLOCK_COUNT;
+            for (size_t i = 0; i < size_8p; i += N_BLOCKS * BLOCK_COUNT) {
+                for (size_t p = 0; p < BLOCK_COUNT; p += 16) {
+                    for (size_t ip = 0; ip < N_BLOCKS; ip++) {
+                        const __m512 v0s = _mm512_loadu_ps(src + i + p + ip * BLOCK_COUNT);
+                        const __mmask16 cmp_mask = ArithHelperF32<AOp, CmpOp>::op_special(v0s, right_v, value_v);
+
+                        res_u16[(i + p + ip * BLOCK_COUNT) / 16] = cmp_mask;
+
+                        _mm_prefetch((const char*)(src + i + p + ip * BLOCK_COUNT) + BLOCKS_PREFETCH_AHEAD * CACHELINE_WIDTH, _MM_HINT_T0);
+                    }
+                }
+            }
+
+            // process big blocks
+            const size_t size16 = (size / 16) * 16;
+            for (size_t i = size_8p; i < size16; i += 16) {
+                const __m512 v0s = _mm512_loadu_ps(src + i);
+                const __mmask16 cmp_mask = ArithHelperF32<AOp, CmpOp>::op_special(v0s, right_v, value_v);
+                res_u16[i / 16] = cmp_mask;
+            }
+
+            // process leftovers
+            if (size16 != size) {
+                // process 8 elements
+                const __m256 vs = _mm256_loadu_ps(src + size16);
+                const __m512 v0s = _mm512_castps256_ps512(vs);
+                const __mmask16 cmp_mask = ArithHelperF32<AOp, CmpOp>::op_special(v0s, right_v, value_v);
+                res_u8[size16 / 8] = uint8_t(cmp_mask);
+            }
+
+            return true;
+        } else {
+            // fallback to the default division operation
+
+            // interleaved pages
+            constexpr size_t BLOCK_COUNT = PAGE_SIZE / (sizeof(float));
+            const size_t size_8p = (size / (N_BLOCKS * BLOCK_COUNT)) * N_BLOCKS * BLOCK_COUNT;
+            for (size_t i = 0; i < size_8p; i += N_BLOCKS * BLOCK_COUNT) {
+                for (size_t p = 0; p < BLOCK_COUNT; p += 16) {
+                    for (size_t ip = 0; ip < N_BLOCKS; ip++) {
+                        const __m512 v0s = _mm512_loadu_ps(src + i + p + ip * BLOCK_COUNT);
+                        const __mmask16 cmp_mask = ArithHelperF32<AOp, CmpOp>::op(v0s, right_v, value_v);
+
+                        res_u16[(i + p + ip * BLOCK_COUNT) / 16] = cmp_mask;
+
+                        _mm_prefetch((const char*)(src + i + p + ip * BLOCK_COUNT) + BLOCKS_PREFETCH_AHEAD * CACHELINE_WIDTH, _MM_HINT_T0);
+                    }
+                }
+            }
+
+            // process big blocks
+            const size_t size16 = (size / 16) * 16;
+            for (size_t i = size_8p; i < size16; i += 16) {
+                const __m512 v0s = _mm512_loadu_ps(src + i);
+                const __mmask16 cmp_mask = ArithHelperF32<AOp, CmpOp>::op(v0s, right_v, value_v);
+                res_u16[i / 16] = cmp_mask;
+            }
+
+            // process leftovers
+            if (size16 != size) {
+                // process 8 elements
+                const __m256 vs = _mm256_loadu_ps(src + size16);
+                const __m512 v0s = _mm512_castps256_ps512(vs);
+                const __mmask16 cmp_mask = ArithHelperF32<AOp, CmpOp>::op(v0s, right_v, value_v);
+                res_u8[size16 / 8] = uint8_t(cmp_mask);
+            }
+
+            return true;            
+        }
     } else {
         // the restriction of the API
         assert((size % 8) == 0);

@@ -243,6 +243,19 @@ void FillRandom(
     }
 }
 
+template<typename T>
+void FillRandomRange(
+    std::vector<T>& t, 
+    std::default_random_engine& rng,
+    const int32_t min_v,
+    const int32_t max_v
+) {
+    std::uniform_int_distribution<int32_t> tt(0, max_v);
+    for (size_t i = 0; i < t.size(); i++) {
+        t[i] = static_cast<T>(tt(rng)); 
+    }
+}
+
 template<>
 void FillRandom<std::string>(
     std::vector<std::string>& t,
@@ -1287,19 +1300,22 @@ INSTANTIATE_TYPED_TEST_SUITE_P(InplaceWithinRangeValTest, InplaceWithinRangeValS
 template<typename BitsetT, typename T>
 struct TestInplaceArithCompareImplS {
     static void process(
-        BitsetT& bitset, ArithOpType a_op, CompareOpType cmp_op
+        BitsetT& bitset, ArithOpType a_op, CompareOpType cmp_op, 
+        const int32_t right_operand_in
     ) {
         using HT = ArithHighPrecisionType<T>;
 
         const size_t n = bitset.size();
-        constexpr size_t max_v = 10;
+        constexpr int32_t max_v = 10;
 
         std::vector<T> left(n, 0);
-        const HT right_operand = from_i32<HT>(2);
+        const HT right_operand = from_i32<HT>(right_operand_in);
         const HT value = from_i32<HT>(5);
 
         std::default_random_engine rng(123);
-        FillRandom(left, rng, max_v);
+        // Generating values in (-x, x) range.
+        // This is fine, because we're operating with signed integers. 
+        FillRandomRange(left, rng, -max_v, max_v);
 
         StopWatch sw;
         bitset.inplace_arith_compare(left.data(), right_operand, value, n, a_op, cmp_op);
@@ -1399,7 +1415,7 @@ struct TestInplaceArithCompareImplS {
 template<typename BitsetT>
 struct TestInplaceArithCompareImplS<BitsetT, std::string> {
     static void process(
-        BitsetT&, ArithOpType, CompareOpType
+        BitsetT&, ArithOpType, CompareOpType, const int32_t
     ) {
         // does nothing
     }
@@ -1410,28 +1426,33 @@ void TestInplaceArithCompareImpl() {
     for (const size_t n : typical_sizes) {
         for (const auto a_op : typical_arith_ops) {
             for (const auto cmp_op : typical_compare_ops) {
-                BitsetT bitset(n);
-                bitset.reset();
-
-                if (print_log) {
-                    printf("Testing bitset, n=%zd, a_op=%zd\n", n, (size_t)a_op);
-                }
-                
-                TestInplaceArithCompareImplS<BitsetT, T>::process(bitset, a_op, cmp_op);
-
-                for (const size_t offset : typical_offsets) {
-                    if (offset >= n) {
-                        continue;
-                    }
-
+                // test both positive and negative
+                for (const int32_t right_operand : {2, -2}) {
+                    BitsetT bitset(n);
                     bitset.reset();
-                    auto view = bitset.view(offset);
 
                     if (print_log) {
-                        printf("Testing bitset view, n=%zd, offset=%zd, a_op=%zd, cmp_op=%zd\n", n, offset, (size_t)a_op, (size_t)cmp_op);
+                        printf("Testing bitset, n=%zd, a_op=%zd, cmp_op=%zd, right_operand=%d\n", 
+                            n, (size_t)a_op, (size_t)cmp_op, right_operand);
                     }
                     
-                    TestInplaceArithCompareImplS<decltype(view), T>::process(view, a_op, cmp_op);
+                    TestInplaceArithCompareImplS<BitsetT, T>::process(bitset, a_op, cmp_op, right_operand);
+
+                    for (const size_t offset : typical_offsets) {
+                        if (offset >= n) {
+                            continue;
+                        }
+
+                        bitset.reset();
+                        auto view = bitset.view(offset);
+
+                        if (print_log) {
+                            printf("Testing bitset view, n=%zd, offset=%zd, a_op=%zd, cmp_op=%zd, right_operand=%d\n", 
+                                n, offset, (size_t)a_op, (size_t)cmp_op, right_operand);
+                        }
+                        
+                        TestInplaceArithCompareImplS<decltype(view), T>::process(view, a_op, cmp_op, right_operand);
+                    }
                 }
             }
         }

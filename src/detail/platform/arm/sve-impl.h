@@ -5,6 +5,7 @@
 #include <arm_sve.h>
 
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>

@@ -5,6 +5,7 @@
 #include <immintrin.h>
 
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>

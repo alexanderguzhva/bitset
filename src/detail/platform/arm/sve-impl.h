@@ -1409,32 +1409,42 @@ bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
 ) {
     if constexpr(AOp == ArithOpType::Mod) {
         return false;
-    } else if constexpr(AOp == ArithOpType::Div) {
-        if (right_operand > 0 || CmpOp == CompareOpType::EQ || CmpOp == CompareOpType::NE) {
-            // a special case that allows faster processing by using the multiplication
-            //   operation instead of the division one.
+    } else {
+        if constexpr (AOp == ArithOpType::Div) {
+            if (std::isfinite(value) && std::isfinite(right_operand) && right_operand > 0) {
+                // a special case that allows faster processing by using the multiplication
+                //   operation instead of the division one.
 
-            using T = float;
-            
-            auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
-                using sve_t = SVEVector<T>;
+                using T = float;
+        
+                auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
+                    using sve_t = SVEVector<T>;
 
-                const auto right_v = svdup_n_f32(right_operand);
-                const auto value_v = svdup_n_f32(value);
-                const svfloat32_t src_v = svld1_f32(pred, src + idx);
+                    const auto right_v = svdup_n_f32(right_operand);
+                    const auto value_v = svdup_n_f32(value);
+                    const svfloat32_t src_v = svld1_f32(pred, src + idx);
 
-                const svbool_t cmp = ArithHelperF32<AOp, CmpOp>::op_special(pred, src_v, right_v, value_v);
-                return cmp;
-            };
+                    const svbool_t cmp = ArithHelperF32<AOp, CmpOp>::op_special(pred, src_v, right_v, value_v);
+                    return cmp;
+                };
 
-            return op_mask_helper<T, decltype(handler)>(
-                res_u8,
-                size,
-                handler
-            );
-        } else {
-            // fallback to the default division operation
+                return op_mask_helper<T, decltype(handler)>(
+                    res_u8,
+                    size,
+                    handler
+                );
+            } else if (std::isfinite(value) && std::isfinite(right_operand) && right_operand < 0) {
+                // flip signs and go for the multiplication case
+                return OpArithCompareImpl<float, AOp, CompareOpDivFlip<CmpOp>::op>::op_arith_compare(
+                    res_u8, src, -right_operand, -value, size
+                );
+            }
 
+            // go with the default case
+        }
+
+        // a default case
+        {
             using T = float;
             
             auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
@@ -1453,26 +1463,7 @@ bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
                 size,
                 handler
             );
-        }        
-    } else {
-        using T = float;
-        
-        auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
-            using sve_t = SVEVector<T>;
-
-            const auto right_v = svdup_n_f32(right_operand);
-            const auto value_v = svdup_n_f32(value);
-            const svfloat32_t src_v = svld1_f32(pred, src + idx);
-
-            const svbool_t cmp = ArithHelperF32<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
-            return cmp;
-        };
-
-        return op_mask_helper<T, decltype(handler)>(
-            res_u8,
-            size,
-            handler
-        );
+        }
     }
 }
 
@@ -1486,34 +1477,44 @@ bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
 ) {
     if constexpr(AOp == ArithOpType::Mod) {
         return false;
-    } else if constexpr(AOp == ArithOpType::Div) {
-        if (right_operand > 0 || CmpOp == CompareOpType::EQ || CmpOp == CompareOpType::NE) {
-            // a special case that allows faster processing by using the multiplication
-            //   operation instead of the division one.
+    } else {
+        if constexpr (AOp == ArithOpType::Div) {
+            if (std::isfinite(value) && std::isfinite(right_operand) && right_operand > 0) {
+                // a special case that allows faster processing by using the multiplication
+                //   operation instead of the division one.
 
+                using T = double;
+                
+                auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
+                    using sve_t = SVEVector<T>;
+
+                    const auto right_v = svdup_n_f64(right_operand);
+                    const auto value_v = svdup_n_f64(value);
+                    const svfloat64_t src_v = svld1_f64(pred, src + idx);
+
+                    const svbool_t cmp = ArithHelperF64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
+                    return cmp;
+                };
+
+                return op_mask_helper<T, decltype(handler)>(
+                    res_u8,
+                    size,
+                    handler
+                );
+            } else if (std::isfinite(value) && std::isfinite(right_operand) && right_operand < 0) {
+                // flip signs and go for the multiplication case
+                return OpArithCompareImpl<double, AOp, CompareOpDivFlip<CmpOp>::op>::op_arith_compare(
+                    res_u8, src, -right_operand, -value, size
+                );
+            }
+
+            // go with the default case
+        }
+
+        // a default case
+        {
             using T = double;
-            
-            auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
-                using sve_t = SVEVector<T>;
-
-                const auto right_v = svdup_n_f64(right_operand);
-                const auto value_v = svdup_n_f64(value);
-                const svfloat64_t src_v = svld1_f64(pred, src + idx);
-
-                const svbool_t cmp = ArithHelperF64<AOp, CmpOp>::op_special(pred, src_v, right_v, value_v);
-                return cmp;
-            };
-
-            return op_mask_helper<T, decltype(handler)>(
-                res_u8,
-                size,
-                handler
-            );
-        } else {
-            // fallback to the default division operation
-
-            using T = double;
-            
+        
             auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
                 using sve_t = SVEVector<T>;
 
@@ -1531,25 +1532,6 @@ bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
                 handler
             );
         }
-    } else {
-        using T = double;
-        
-        auto handler = [src, right_operand, value](const svbool_t pred, const size_t idx){
-            using sve_t = SVEVector<T>;
-
-            const auto right_v = svdup_n_f64(right_operand);
-            const auto value_v = svdup_n_f64(value);
-            const svfloat64_t src_v = svld1_f64(pred, src + idx);
-
-            const svbool_t cmp = ArithHelperF64<AOp, CmpOp>::op(pred, src_v, right_v, value_v);
-            return cmp;
-        };
-
-        return op_mask_helper<T, decltype(handler)>(
-            res_u8,
-            size,
-            handler
-        );
     }
 }
 

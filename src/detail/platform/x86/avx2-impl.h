@@ -1469,32 +1469,51 @@ bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
 ) {
     if constexpr(AOp == ArithOpType::Mod) {
         return false;
-    } else if constexpr(AOp == ArithOpType::Div) {
-        // the restriction of the API
-        assert((size % 8) == 0);
+    } else {
+        if constexpr (AOp == ArithOpType::Div) {
+            if (std::isfinite(value) && std::isfinite(right_operand) && right_operand > 0) {
+                // a special case that allows faster processing by using the multiplication
+                //   operation instead of the division one.
 
-        //
-        const __m256 right_v = _mm256_set1_ps(right_operand);
-        const __m256 value_v = _mm256_set1_ps(value);
+                // the restriction of the API
+                assert((size % 8) == 0);
 
-        // todo: aligned reads & writes
+                //
+                const __m256 right_v = _mm256_set1_ps(right_operand);
+                const __m256 value_v = _mm256_set1_ps(value);
 
-        if (right_operand > 0 || CmpOp == CompareOpType::EQ || CmpOp == CompareOpType::NE) {
-            // a special case that allows faster processing by using the multiplication
-            //   operation instead of the division one.
+                // todo: aligned reads & writes
 
-            const size_t size8 = (size / 8) * 8;
-            for (size_t i = 0; i < size8; i += 8) {
-                const __m256 v0s = _mm256_loadu_ps(src + i);
-                const __m256 cmp = ArithHelperF32<AOp, CmpOp>::op_special(v0s, right_v, value_v);
-                const uint8_t mmask = _mm256_movemask_ps(cmp);
+                const size_t size8 = (size / 8) * 8;
+                for (size_t i = 0; i < size8; i += 8) {
+                    const __m256 v0s = _mm256_loadu_ps(src + i);
+                    const __m256 cmp = ArithHelperF32<AOp, CmpOp>::op_special(v0s, right_v, value_v);
+                    const uint8_t mmask = _mm256_movemask_ps(cmp);
 
-                res_u8[i / 8] = mmask;
+                    res_u8[i / 8] = mmask;
+                }
+
+                return true;
+            } else if (std::isfinite(value) && std::isfinite(right_operand) && right_operand < 0) {
+                // flip signs and go for the multiplication case
+                return OpArithCompareImpl<float, AOp, CompareOpDivFlip<CmpOp>::op>::op_arith_compare(
+                    res_u8, src, -right_operand, -value, size
+                );
             }
 
-            return true;
-        } else {
-            // fallback to the default division operation
+            // go with the default case
+        }
+
+        // a default case
+        {
+            // the restriction of the API
+            assert((size % 8) == 0);
+
+            //
+            const __m256 right_v = _mm256_set1_ps(right_operand);
+            const __m256 value_v = _mm256_set1_ps(value);
+
+            // todo: aligned reads & writes
 
             const size_t size8 = (size / 8) * 8;
             for (size_t i = 0; i < size8; i += 8) {
@@ -1507,26 +1526,6 @@ bool OpArithCompareImpl<float, AOp, CmpOp>::op_arith_compare(
 
             return true;
         }
-    } else {
-        // the restriction of the API
-        assert((size % 8) == 0);
-
-        //
-        const __m256 right_v = _mm256_set1_ps(right_operand);
-        const __m256 value_v = _mm256_set1_ps(value);
-
-        // todo: aligned reads & writes
-
-        const size_t size8 = (size / 8) * 8;
-        for (size_t i = 0; i < size8; i += 8) {
-            const __m256 v0s = _mm256_loadu_ps(src + i);
-            const __m256 cmp = ArithHelperF32<AOp, CmpOp>::op(v0s, right_v, value_v);
-            const uint8_t mmask = _mm256_movemask_ps(cmp);
-
-            res_u8[i / 8] = mmask;
-        }
-
-        return true;
     }
 }
 
@@ -1540,35 +1539,54 @@ bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
 ) {
     if constexpr(AOp == ArithOpType::Mod) {
         return false;
-    } else if constexpr(AOp == ArithOpType::Div) {
-        // the restriction of the API
-        assert((size % 8) == 0);
+    } else {
+        if constexpr (AOp == ArithOpType::Div) {
+            if (std::isfinite(value) && std::isfinite(right_operand) && right_operand > 0) {
+                // a special case that allows faster processing by using the multiplication
+                //   operation instead of the division one.
 
-        //
-        const __m256d right_v = _mm256_set1_pd(right_operand);
-        const __m256d value_v = _mm256_set1_pd(value);
+                // the restriction of the API
+                assert((size % 8) == 0);
 
-        // todo: aligned reads & writes
+                //
+                const __m256d right_v = _mm256_set1_pd(right_operand);
+                const __m256d value_v = _mm256_set1_pd(value);
 
-        if (right_operand > 0 || CmpOp == CompareOpType::EQ || CmpOp == CompareOpType::NE) {
-            // a special case that allows faster processing by using the multiplication
-            //   operation instead of the division one.
+                // todo: aligned reads & writes
 
-            const size_t size8 = (size / 8) * 8;
-            for (size_t i = 0; i < size8; i += 8) {
-                const __m256d v0s = _mm256_loadu_pd(src + i);
-                const __m256d v1s = _mm256_loadu_pd(src + i + 4);
-                const __m256d cmp0 = ArithHelperF64<AOp, CmpOp>::op_special(v0s, right_v, value_v);
-                const __m256d cmp1 = ArithHelperF64<AOp, CmpOp>::op_special(v1s, right_v, value_v);
-                const uint8_t mmask0 = _mm256_movemask_pd(cmp0);
-                const uint8_t mmask1 = _mm256_movemask_pd(cmp1);
+                const size_t size8 = (size / 8) * 8;
+                for (size_t i = 0; i < size8; i += 8) {
+                    const __m256d v0s = _mm256_loadu_pd(src + i);
+                    const __m256d v1s = _mm256_loadu_pd(src + i + 4);
+                    const __m256d cmp0 = ArithHelperF64<AOp, CmpOp>::op_special(v0s, right_v, value_v);
+                    const __m256d cmp1 = ArithHelperF64<AOp, CmpOp>::op_special(v1s, right_v, value_v);
+                    const uint8_t mmask0 = _mm256_movemask_pd(cmp0);
+                    const uint8_t mmask1 = _mm256_movemask_pd(cmp1);
 
-                res_u8[i / 8] = mmask0 + mmask1 * 16;
+                    res_u8[i / 8] = mmask0 + mmask1 * 16;
+                }
+
+                return true;
+            } else if (std::isfinite(value) && std::isfinite(right_operand) && right_operand < 0) {
+                // flip signs and go for the multiplication case
+                return OpArithCompareImpl<double, AOp, CompareOpDivFlip<CmpOp>::op>::op_arith_compare(
+                    res_u8, src, -right_operand, -value, size
+                );
             }
 
-            return true;
-        } else {
-            // fallback to the default division operation
+            // go with the default case
+        }
+
+        // a default case
+        {
+            // the restriction of the API
+            assert((size % 8) == 0);
+
+            //
+            const __m256d right_v = _mm256_set1_pd(right_operand);
+            const __m256d value_v = _mm256_set1_pd(value);
+
+            // todo: aligned reads & writes
 
             const size_t size8 = (size / 8) * 8;
             for (size_t i = 0; i < size8; i += 8) {
@@ -1583,30 +1601,7 @@ bool OpArithCompareImpl<double, AOp, CmpOp>::op_arith_compare(
             }
 
             return true;
-        }    
-    } else {
-        // the restriction of the API
-        assert((size % 8) == 0);
-
-        //
-        const __m256d right_v = _mm256_set1_pd(right_operand);
-        const __m256d value_v = _mm256_set1_pd(value);
-
-        // todo: aligned reads & writes
-
-        const size_t size8 = (size / 8) * 8;
-        for (size_t i = 0; i < size8; i += 8) {
-            const __m256d v0s = _mm256_loadu_pd(src + i);
-            const __m256d v1s = _mm256_loadu_pd(src + i + 4);
-            const __m256d cmp0 = ArithHelperF64<AOp, CmpOp>::op(v0s, right_v, value_v);
-            const __m256d cmp1 = ArithHelperF64<AOp, CmpOp>::op(v1s, right_v, value_v);
-            const uint8_t mmask0 = _mm256_movemask_pd(cmp0);
-            const uint8_t mmask1 = _mm256_movemask_pd(cmp1);
-
-            res_u8[i / 8] = mmask0 + mmask1 * 16;
         }
-
-        return true;
     }
 }
 

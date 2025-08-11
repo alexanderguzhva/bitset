@@ -27,7 +27,7 @@
 #if defined(__aarch64__)
 #include <detail/platform/arm/neon.h>
 
-#ifdef __ARM_FEATURE_SVE
+#if defined(__ARM_FEATURE_SVE) && defined(BITSET_ENABLE_SVE_SUPPORT)
 #include <detail/platform/arm/sve.h>
 #endif
 
@@ -440,7 +440,7 @@ TYPED_TEST_P(FindSuite, Neon) {
 }
 
 TYPED_TEST_P(FindSuite, Sve) {
-#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE) && defined(BITSET_ENABLE_SVE_SUPPORT)
     using namespace milvus::bitset::detail::arm;
 
     using impl_traits =
@@ -644,7 +644,7 @@ TYPED_TEST_P(InplaceCompareColumnSuite, Neon) {
 
 //
 TYPED_TEST_P(InplaceCompareColumnSuite, Sve) {
-#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE) && defined(BITSET_ENABLE_SVE_SUPPORT)
     using namespace milvus::bitset::detail::arm;
 
     using impl_traits = 
@@ -848,7 +848,7 @@ TYPED_TEST_P(InplaceCompareValSuite, Neon) {
 }
 
 TYPED_TEST_P(InplaceCompareValSuite, Sve) {
-#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE) && defined(BITSET_ENABLE_SVE_SUPPORT)
     using namespace milvus::bitset::detail::arm;
 
     using impl_traits =
@@ -1053,7 +1053,7 @@ TYPED_TEST_P(InplaceWithinRangeColumnSuite, Neon) {
 }
 
 TYPED_TEST_P(InplaceWithinRangeColumnSuite, Sve) {
-#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE) && defined(BITSET_ENABLE_SVE_SUPPORT)
     using namespace milvus::bitset::detail::arm;
 
     using impl_traits =
@@ -1251,7 +1251,7 @@ TYPED_TEST_P(InplaceWithinRangeValSuite, Neon) {
 }
 
 TYPED_TEST_P(InplaceWithinRangeValSuite, Sve) {
-#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE) && defined(BITSET_ENABLE_SVE_SUPPORT)
     using namespace milvus::bitset::detail::arm;
 
     using impl_traits =
@@ -1618,7 +1618,7 @@ TYPED_TEST_P(InplaceArithCompareSuite, Neon) {
 }
 
 TYPED_TEST_P(InplaceArithCompareSuite, Sve) {
-#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE) && defined(BITSET_ENABLE_SVE_SUPPORT)
     using namespace milvus::bitset::detail::arm;
 
     using impl_traits =
@@ -1811,7 +1811,7 @@ TYPED_TEST_P(AppendSuite, Neon) {
 }
 
 TYPED_TEST_P(AppendSuite, Sve) {
-#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE) && defined(BITSET_ENABLE_SVE_SUPPORT)
     using namespace milvus::bitset::detail::arm;
 
     using impl_traits =
@@ -1981,7 +1981,7 @@ TYPED_TEST_P(CountSuite, Neon) {
 }
 
 TYPED_TEST_P(CountSuite, Sve) {
-#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE) && defined(BITSET_ENABLE_SVE_SUPPORT)
     using namespace milvus::bitset::detail::arm;
 
     using impl_traits =
@@ -2316,7 +2316,7 @@ TYPED_TEST_P(InplaceOpSuite, Neon) {
 }
 
 TYPED_TEST_P(InplaceOpSuite, Sve) {
-#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE) && defined(BITSET_ENABLE_SVE_SUPPORT)
     using namespace milvus::bitset::detail::arm;
 
     using impl_traits =
@@ -2556,7 +2556,7 @@ TYPED_TEST_P(InplaceOpMultipleSuite, Neon) {
 }
 
 TYPED_TEST_P(InplaceOpMultipleSuite, Sve) {
-#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE) && defined(BITSET_ENABLE_SVE_SUPPORT)
     using namespace milvus::bitset::detail::arm;
 
     using impl_traits =
@@ -2775,7 +2775,7 @@ TYPED_TEST_P(FillSuite, Neon) {
 }
 
 TYPED_TEST_P(FillSuite, Sve) {
-#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE)
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SVE) && defined(BITSET_ENABLE_SVE_SUPPORT)
     using namespace milvus::bitset::detail::arm;
 
     using impl_traits =
